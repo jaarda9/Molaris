@@ -1,0 +1,28 @@
+{
+  "name": "molaris-dental-assistant",
+  "version": "1.0.0",
+  "description": "M.O.L.A.R.I.S: Personal Senior Dental Advisor & Chairside Clinical Assistant",
+  "main": "server.ts",
+  "scripts": {
+    "dev": "tsx server.ts",
+    "build": "esbuild server.ts --bundle --platform=node --target=node20 --outfile=dist/server.cjs --external:express --external:@google/genai --external:ws --external:multer",
+    "start": "node dist/server.cjs",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@google/genai": "^2.0.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.10.5",
+    "@types/ws": "^8.5.13",
+    "esbuild": "^0.24.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

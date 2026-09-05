@@ -1,0 +1,10 @@
+{
+  "name": "M.O.L.A.R.I.S Dental Assistant",
+  "description": "Senior clinical dental advisor and chairside AI assistant for dental procedures, diagnosis, pharmacology, and practice management.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
