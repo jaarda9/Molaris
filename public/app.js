@@ -14,6 +14,9 @@ let systemState = {
   chatHistory: []
 };
 
+// Global state for voice recognition & chairside audio reactive HUD
+let isListening = false;
+
 // Web Audio synthesizer for chairside timers and chimes
 let audioCtx = null;
 function playClinicalBeep(freq = 880, type = 'sine', duration = 0.2) {
@@ -53,7 +56,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   initVisionUploader();
   initSOAPGenerator();
   initPreferencesForm();
+  initPatientManager();
+  initJarvisHudAndTelemetry();
 
+  await fetchPatients();
   await fetchSystemStatus();
   await fetchOdontogram();
   await fetchAnestheticsAndProtocols();
@@ -71,9 +77,7 @@ async function fetchSystemStatus() {
     }
     if (data.activePatient) {
       systemState.activePatient = data.activePatient;
-      document.getElementById('header-patient-id').textContent = data.activePatient.chartId;
-      document.getElementById('header-patient-asa').textContent = `${data.activePatient.asaStatus} (${data.activePatient.cardiacRisk ? 'Cardiac Risk' : 'Standard'})`;
-      document.getElementById('header-patient-weight').textContent = `${data.activePatient.weightKg} kg`;
+      updateActivePatientHeaderUI(data.activePatient);
       
       const calcWeightInput = document.getElementById('calc-weight-input');
       const calcWeightSlider = document.getElementById('calc-weight-slider');
@@ -91,17 +95,38 @@ async function fetchSystemStatus() {
   }
 }
 
+function updateActivePatientHeaderUI(patient) {
+  if (!patient) return;
+  const nameEl = document.getElementById('header-patient-name');
+  const idEl = document.getElementById('header-patient-id');
+  const asaEl = document.getElementById('header-patient-asa');
+  const cardiacBadge = document.getElementById('header-cardiac-badge');
+  const weightEl = document.getElementById('header-patient-weight');
+
+  if (nameEl) nameEl.textContent = patient.name;
+  if (idEl) idEl.textContent = patient.chartId;
+  if (asaEl) asaEl.textContent = patient.asaStatus || 'ASA I';
+  if (weightEl) weightEl.textContent = `${patient.weightKg} kg`;
+
+  if (cardiacBadge) {
+    if (patient.cardiacRisk) cardiacBadge.classList.remove('hidden');
+    else cardiacBadge.classList.add('hidden');
+  }
+}
+
 // -----------------------------------------------------------------------------
 // Navigation Tabs
 // -----------------------------------------------------------------------------
 function initNavigation() {
   const tabs = [
     { id: 'nav-tab-advisor', view: 'view-advisor' },
+    { id: 'nav-tab-patients', view: 'view-patients' },
     { id: 'nav-tab-odontogram', view: 'view-odontogram' },
     { id: 'nav-tab-anesthesia', view: 'view-anesthesia' },
     { id: 'nav-tab-vision', view: 'view-vision' },
     { id: 'nav-tab-protocols', view: 'view-protocols' },
     { id: 'nav-tab-soap', view: 'view-soap' },
+    { id: 'nav-tab-system', view: 'view-system' },
     { id: 'nav-tab-preferences', view: 'view-preferences' },
   ];
 
@@ -125,6 +150,10 @@ function initNavigation() {
       const targetView = document.getElementById(t.view);
       if (targetView) targetView.classList.remove('hidden');
       systemState.activeTab = t.view;
+
+      if (t.view === 'view-system') {
+        fetchTelemetry();
+      }
     });
   });
 
@@ -199,6 +228,8 @@ function initChairsideTimer() {
       }
     }, 1000);
   }
+
+  window.startChairsideTimer = startTimer;
 
   if (btn15) btn15.addEventListener('click', () => startTimer(15));
   if (btn20) btn20.addEventListener('click', () => startTimer(20));
@@ -279,7 +310,7 @@ function initSpeechRecognition() {
   recognition.interimResults = false;
   recognition.lang = 'en-US';
 
-  let isListening = false;
+  isListening = false;
 
   recognition.onstart = () => {
     isListening = true;
@@ -359,10 +390,15 @@ if (chatForm) {
       if (data.error) {
         appendMessage('molaris', `⚠️ Clinical Advisor Alert: ${data.error}`);
       } else {
-        appendMessage('molaris', data.reply);
+        appendMessage('molaris', data.reply, data.action);
         systemState.chatHistory.push({ role: 'user', content: query });
         systemState.chatHistory.push({ role: 'model', content: data.reply });
         speakAdvisorText(data.reply);
+
+        // Execute autonomous client actions triggered by M.O.L.A.R.I.S JARVIS action engine
+        if (data.action && data.action.executed) {
+          handleMolarisAutonomousAction(data.action);
+        }
       }
     } catch (err) {
       removeMessage(typingId);
@@ -371,7 +407,7 @@ if (chatForm) {
   });
 }
 
-function appendMessage(sender, text) {
+function appendMessage(sender, text, action = null) {
   const msgDiv = document.createElement('div');
   msgDiv.className = 'flex items-start space-x-3';
   const id = 'msg-' + Date.now();
@@ -390,6 +426,14 @@ function appendMessage(sender, text) {
       </div>
     `;
   } else {
+    const actionBadge = (action && action.executed) ? `
+      <div class="mb-2 p-2.5 rounded-xl bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 font-mono text-xs flex items-center space-x-2">
+        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+        <span class="font-bold">⚡ AUTONOMOUS ACTION [${escapeHtml(action.actionType)}]:</span>
+        <span class="text-cyan-100">${escapeHtml(action.summary)}</span>
+      </div>
+    ` : '';
+
     msgDiv.innerHTML = `
       <div class="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
         M
@@ -399,6 +443,7 @@ function appendMessage(sender, text) {
           <span class="font-bold text-teal-700 dark:text-teal-400">M.O.L.A.R.I.S SENIOR ADVISOR</span>
           <button onclick="navigator.clipboard.writeText(this.closest('.space-y-2').innerText)" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">Copy</button>
         </div>
+        ${actionBadge}
         <div class="markdown-content">${formatMarkdown(text)}</div>
       </div>
     `;
@@ -1200,4 +1245,595 @@ function updateSidebarPreferences(prefs) {
   if (prefs.implantSystem) {
     document.getElementById('side-pref-implant').textContent = prefs.implantSystem.slice(0, 22);
   }
+}
+
+// -----------------------------------------------------------------------------
+// Autonomous JARVIS Action Dispatcher (M.O.L.A.R.I.S Action Engine)
+// -----------------------------------------------------------------------------
+function handleMolarisAutonomousAction(action) {
+  if (!action || !action.executed) return;
+
+  // Sound feedback: High-tech dual chime
+  playClinicalBeep(880, 'sine', 0.08);
+  setTimeout(() => playClinicalBeep(1320, 'sine', 0.12), 90);
+
+  switch (action.actionType) {
+    case 'START_TIMER':
+      if (typeof window.startChairsideTimer === 'function') {
+        const secs = action.data && action.data.durationSeconds ? action.data.durationSeconds : 20;
+        window.startChairsideTimer(secs);
+      }
+      break;
+
+    case 'SWITCH_PATIENT':
+      fetchPatients().then(() => {
+        fetchOdontogram();
+        fetchSystemStatus();
+      });
+      break;
+
+    case 'UPDATE_TOOTH':
+      fetchOdontogram();
+      break;
+
+    case 'LOG_ANESTHESIA':
+      fetchPatients().then(() => {
+        recalculateLA();
+      });
+      break;
+
+    case 'CREATE_PATIENT':
+      fetchPatients();
+      break;
+
+    case 'TELEMETRY':
+      fetchTelemetry();
+      break;
+
+    default:
+      console.log('Action handled:', action);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Patient Manager & Local File Database Engine
+// -----------------------------------------------------------------------------
+async function fetchPatients() {
+  try {
+    const res = await fetch('/api/patients');
+    const data = await res.json();
+    systemState.patients = data.patients || [];
+    if (data.activePatient) {
+      systemState.activePatient = data.activePatient;
+      updateActivePatientHeaderUI(data.activePatient);
+    }
+    renderPatientsGrid();
+  } catch (err) {
+    console.error('Failed to fetch patients:', err);
+  }
+}
+
+function renderPatientsGrid(filterText = '') {
+  const grid = document.getElementById('patients-grid');
+  const countBadge = document.getElementById('patient-count-badge');
+  if (!grid) return;
+
+  const q = filterText.toLowerCase().trim();
+  const filtered = systemState.patients.filter(p => {
+    if (!q) return true;
+    return (
+      (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.chartId && p.chartId.toLowerCase().includes(q)) ||
+      (p.asaStatus && p.asaStatus.toLowerCase().includes(q)) ||
+      (p.chiefComplaint && p.chiefComplaint.toLowerCase().includes(q)) ||
+      (p.medicalAlerts && p.medicalAlerts.toLowerCase().includes(q))
+    );
+  });
+
+  if (countBadge) {
+    countBadge.textContent = `${filtered.length} of ${systemState.patients.length} patients`;
+  }
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `
+      <div class="col-span-full py-12 text-center text-slate-500 dark:text-slate-400 space-y-3">
+        <svg class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+        </svg>
+        <p class="text-sm font-medium">No patient records match "${escapeHtml(filterText)}"</p>
+        <button onclick="document.getElementById('btn-create-patient')?.click()" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer">
+          + Add New Patient Record
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = '';
+  filtered.forEach(patient => {
+    const isActive = systemState.activePatient && systemState.activePatient.id === patient.id;
+    const card = document.createElement('div');
+    card.className = `rounded-2xl border p-5 transition flex flex-col justify-between space-y-4 ${
+      isActive
+        ? 'border-teal-500 dark:border-teal-400 bg-teal-50/50 dark:bg-teal-950/30 ring-2 ring-teal-500/20 shadow-md'
+        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
+    }`;
+    card.id = `patient-card-${patient.id}`;
+
+    // Calculate metrics
+    const teethWithFindings = (patient.odontogram || []).filter(t => t.status && t.status !== 'sound').length;
+    const totalCarpulesGiven = (patient.anesthesiaLog || []).reduce((sum, item) => sum + (Number(item.carpules) || 0), 0);
+    const soapCount = (patient.soapNotes || []).length;
+
+    // Initials
+    const initials = patient.name
+      .split(' ')
+      .map(n => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+
+    card.innerHTML = `
+      <div class="space-y-3">
+        <!-- Top row: Avatar, Name, Active Badge -->
+        <div class="flex items-start justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl ${
+              isActive ? 'bg-teal-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+            } font-bold text-xs flex items-center justify-center shadow-xs">
+              ${initials}
+            </div>
+            <div>
+              <h3 class="font-bold text-sm text-slate-900 dark:text-white leading-snug">${escapeHtml(patient.name)}</h3>
+              <div class="flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                <span>${escapeHtml(patient.chartId)}</span>
+                <span>&bull;</span>
+                <span>${patient.age || 35}y / ${patient.gender || 'M'}</span>
+              </div>
+            </div>
+          </div>
+
+          ${
+            isActive
+              ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-600 text-white tracking-wide shadow-xs">ACTIVE CHART</span>'
+              : ''
+          }
+        </div>
+
+        <!-- Meta Pills: ASA, Cardiac, Weight -->
+        <div class="flex flex-wrap items-center gap-1.5 pt-1">
+          <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            ${escapeHtml(patient.asaStatus || 'ASA I')}
+          </span>
+          ${
+            patient.cardiacRisk
+              ? '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800 flex items-center space-x-1"><span>⚠️</span><span>CARDIAC ALERT</span></span>'
+              : '<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">Standard Epi</span>'
+          }
+          <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+            ${patient.weightKg || 70} kg
+          </span>
+        </div>
+
+        <!-- Chief Complaint -->
+        <div class="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-2.5 text-xs text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-800">
+          <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Chief Complaint</div>
+          <p class="italic line-clamp-2">${escapeHtml(patient.chiefComplaint || 'Routine comprehensive evaluation')}</p>
+        </div>
+
+        <!-- Medical Alerts / Allergies -->
+        ${
+          patient.medicalAlerts || patient.allergies
+            ? `<div class="text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5">
+                ${patient.medicalAlerts ? `<div class="truncate"><strong class="text-slate-700 dark:text-slate-300">Alerts:</strong> ${escapeHtml(patient.medicalAlerts)}</div>` : ''}
+                ${patient.allergies ? `<div class="truncate"><strong class="text-rose-600 dark:text-rose-400">Allergies:</strong> ${escapeHtml(patient.allergies)}</div>` : ''}
+              </div>`
+            : ''
+        }
+
+        <!-- Operatory Metrics Grid -->
+        <div class="grid grid-cols-3 gap-2 pt-1 text-center font-mono">
+          <div class="bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-lg border border-slate-100 dark:border-slate-800">
+            <div class="text-xs font-bold text-slate-900 dark:text-white">${teethWithFindings}</div>
+            <div class="text-[9px] text-slate-400">Teeth Charted</div>
+          </div>
+          <div class="bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-lg border border-slate-100 dark:border-slate-800">
+            <div class="text-xs font-bold text-teal-600 dark:text-teal-400">${totalCarpulesGiven}</div>
+            <div class="text-[9px] text-slate-400">Carpules LA</div>
+          </div>
+          <div class="bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-lg border border-slate-100 dark:border-slate-800">
+            <div class="text-xs font-bold text-cyan-600 dark:text-cyan-400">${soapCount}</div>
+            <div class="text-[9px] text-slate-400">SOAP Notes</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2">
+        <button class="btn-select-patient flex-1 py-2 rounded-xl text-xs font-semibold transition cursor-pointer shadow-xs ${
+          isActive
+            ? 'bg-teal-700 text-white'
+            : 'bg-teal-600 hover:bg-teal-700 text-white'
+        }" data-id="${patient.id}">
+          ${isActive ? '✓ Active Operatory Patient' : 'Select Patient &amp; Treat'}
+        </button>
+
+        <button class="btn-edit-patient p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition cursor-pointer" data-id="${patient.id}" title="Edit Patient Chart">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+        </button>
+
+        <button class="btn-delete-patient p-2 rounded-xl bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition cursor-pointer" data-id="${patient.id}" data-name="${escapeHtml(patient.name)}" title="Delete Patient Record">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+      </div>
+    `;
+
+    // Hook events
+    card.querySelector('.btn-select-patient')?.addEventListener('click', () => {
+      selectPatient(patient.id);
+    });
+
+    card.querySelector('.btn-edit-patient')?.addEventListener('click', () => {
+      openEditPatientModal(patient);
+    });
+
+    card.querySelector('.btn-delete-patient')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm(`Are you sure you want to delete patient record for "${patient.name}" (${patient.chartId})?`)) return;
+      try {
+        const res = await fetch(`/api/patients/${patient.id}`, { method: 'DELETE' });
+        const resData = await res.json();
+        if (resData.success) {
+          playClinicalBeep(520, 'sine', 0.1);
+          await fetchPatients();
+          await fetchOdontogram();
+          await fetchSystemStatus();
+        }
+      } catch (err) {
+        alert('Failed to delete patient: ' + err.message);
+      }
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+async function selectPatient(patientId) {
+  try {
+    const res = await fetch('/api/patients/select', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: patientId })
+    });
+    const data = await res.json();
+    if (data.patient) {
+      systemState.activePatient = data.patient;
+      updateActivePatientHeaderUI(data.patient);
+      renderPatientsGrid();
+      await fetchOdontogram();
+      
+      // Update LA calculator
+      const calcWeightInput = document.getElementById('calc-weight-input');
+      const calcWeightSlider = document.getElementById('calc-weight-slider');
+      if (calcWeightInput && calcWeightSlider) {
+        calcWeightInput.value = data.patient.weightKg || 70;
+        calcWeightSlider.value = data.patient.weightKg || 70;
+      }
+      const calcCardiac = document.getElementById('calc-cardiac-toggle');
+      if (calcCardiac) calcCardiac.checked = !!data.patient.cardiacRisk;
+      
+      // Reset delivered carpules to match patient's log
+      const totalCarpules = (data.patient.anesthesiaLog || []).reduce((sum, item) => sum + (Number(item.carpules) || 0), 0);
+      systemState.deliveredCarpules = totalCarpules;
+      const calcDelivered = document.getElementById('calc-delivered-carpules');
+      if (calcDelivered) calcDelivered.textContent = totalCarpules;
+      
+      recalculateLA();
+      playClinicalBeep(659.25, 'sine', 0.15);
+
+      // Add feedback notification in chat
+      appendMessage('molaris', `Operatory context switched to patient **${data.patient.name}** (${data.patient.chartId}). Loaded 32-tooth odontogram, medical alerts, and ASA ${data.patient.asaStatus} baseline.`);
+    }
+  } catch (err) {
+    console.error('Failed to select patient:', err);
+  }
+}
+
+function openEditPatientModal(patient) {
+  const modal = document.getElementById('modal-patient');
+  const title = document.getElementById('modal-patient-title');
+  if (!modal) return;
+
+  title.textContent = `Edit Patient: ${patient.name}`;
+  document.getElementById('form-patient-id').value = patient.id;
+  document.getElementById('form-patient-name').value = patient.name;
+  document.getElementById('form-patient-chart').value = patient.chartId;
+  document.getElementById('form-patient-age').value = patient.age || 35;
+  document.getElementById('form-patient-gender').value = patient.gender || 'Male';
+  document.getElementById('form-patient-weight').value = patient.weightKg || 70;
+  document.getElementById('form-patient-asa').value = patient.asaStatus || 'ASA I';
+  document.getElementById('form-patient-cardiac').checked = !!patient.cardiacRisk;
+  document.getElementById('form-patient-complaint').value = patient.chiefComplaint || '';
+  document.getElementById('form-patient-alerts').value = patient.medicalAlerts || '';
+  document.getElementById('form-patient-allergies').value = patient.allergies || '';
+
+  modal.classList.remove('hidden');
+}
+
+function initPatientManager() {
+  const searchInput = document.getElementById('patient-search-input');
+  const createBtn = document.getElementById('btn-create-patient');
+  const modal = document.getElementById('modal-patient');
+  const modalTitle = document.getElementById('modal-patient-title');
+  const closeBtn = document.getElementById('btn-close-modal-patient');
+  const cancelBtn = document.getElementById('btn-cancel-modal-patient');
+  const form = document.getElementById('patient-form');
+  const importInput = document.getElementById('input-import-db');
+
+  // Header switcher buttons
+  const patientSelectorBtn = document.getElementById('patient-selector-btn');
+  const openModalBtn = document.getElementById('btn-open-patient-modal');
+
+  if (patientSelectorBtn) {
+    patientSelectorBtn.addEventListener('click', () => {
+      document.getElementById('nav-tab-patients')?.click();
+    });
+  }
+
+  if (openModalBtn) {
+    openModalBtn.addEventListener('click', () => {
+      document.getElementById('nav-tab-patients')?.click();
+    });
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      renderPatientsGrid(e.target.value);
+    });
+  }
+
+  if (createBtn) {
+    createBtn.addEventListener('click', () => {
+      modalTitle.textContent = 'Add New Dental Patient';
+      form.reset();
+      document.getElementById('form-patient-id').value = '';
+      document.getElementById('form-patient-weight').value = 70;
+      document.getElementById('form-patient-age').value = 35;
+      modal.classList.remove('hidden');
+    });
+  }
+
+  if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+  if (cancelBtn) cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const patientId = document.getElementById('form-patient-id').value;
+      const payload = {
+        name: document.getElementById('form-patient-name').value.trim(),
+        chartId: document.getElementById('form-patient-chart').value.trim(),
+        age: Number(document.getElementById('form-patient-age').value) || 35,
+        gender: document.getElementById('form-patient-gender').value,
+        weightKg: Number(document.getElementById('form-patient-weight').value) || 70,
+        asaStatus: document.getElementById('form-patient-asa').value,
+        cardiacRisk: document.getElementById('form-patient-cardiac').checked,
+        chiefComplaint: document.getElementById('form-patient-complaint').value.trim(),
+        medicalAlerts: document.getElementById('form-patient-alerts').value.trim(),
+        allergies: document.getElementById('form-patient-allergies').value.trim(),
+      };
+
+      try {
+        let res;
+        if (patientId) {
+          res = await fetch(`/api/patients/${patientId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        } else {
+          res = await fetch('/api/patients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
+
+        const data = await res.json();
+        if (data.patient) {
+          modal.classList.add('hidden');
+          playClinicalBeep(880, 'sine', 0.15);
+          await fetchPatients();
+          await selectPatient(data.patient.id);
+        } else {
+          alert('Error saving patient: ' + (data.error || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Network error saving patient: ' + err.message);
+      }
+    });
+  }
+
+  // Database file import
+  if (importInput) {
+    importInput.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const json = JSON.parse(event.target.result);
+          const res = await fetch('/api/database/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(json)
+          });
+          const result = await res.json();
+          if (result.success) {
+            playClinicalBeep(880, 'sine', 0.3);
+            alert(`Database successfully imported! Loaded ${result.count} patient records.`);
+            await fetchPatients();
+            await fetchOdontogram();
+            await fetchSystemStatus();
+          } else {
+            alert('Import failed: ' + (result.error || 'Invalid file format'));
+          }
+        } catch (err) {
+          alert('Failed to parse database file: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Mark LII Telemetry & Real-Time Audio Reactive Waveform HUD
+// -----------------------------------------------------------------------------
+let telemetryPollInterval = null;
+
+function initJarvisHudAndTelemetry() {
+  initJarvisWaveformCanvas();
+
+  // Chairside autonomous macro buttons
+  document.querySelectorAll('.macro-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cmd = btn.dataset.cmd;
+      if (!cmd) return;
+      document.getElementById('nav-tab-advisor')?.click();
+      chatInput.value = cmd;
+      chatForm.dispatchEvent(new Event('submit'));
+    });
+  });
+
+  // Test action button
+  const testActionBtn = document.getElementById('btn-test-action');
+  if (testActionBtn) {
+    testActionBtn.addEventListener('click', () => {
+      // Iron Man Mark LII 4-tone powerup sequence
+      playClinicalBeep(523.25, 'sine', 0.1);
+      setTimeout(() => playClinicalBeep(659.25, 'sine', 0.1), 100);
+      setTimeout(() => playClinicalBeep(783.99, 'sine', 0.1), 200);
+      setTimeout(() => playClinicalBeep(1046.50, 'sine', 0.25), 300);
+
+      // Trigger 5-second test timer
+      if (typeof window.startChairsideTimer === 'function') {
+        window.startChairsideTimer(5);
+      }
+    });
+  }
+
+  // Periodic telemetry polling
+  fetchTelemetry();
+  telemetryPollInterval = setInterval(fetchTelemetry, 5000);
+}
+
+async function fetchTelemetry() {
+  try {
+    const res = await fetch('/api/system/telemetry');
+    const data = await res.json();
+
+    const heapEl = document.getElementById('telemetry-heap');
+    const rssEl = document.getElementById('telemetry-rss');
+    const freeRamEl = document.getElementById('telemetry-freeram');
+    const totalRamEl = document.getElementById('telemetry-totalram');
+    const uptimeEl = document.getElementById('telemetry-uptime');
+    const platformEl = document.getElementById('telemetry-platform');
+    const patientsEl = document.getElementById('telemetry-patients');
+    const chartEl = document.getElementById('telemetry-active-chart');
+
+    if (heapEl) heapEl.textContent = `${data.heapUsedMb} MB`;
+    if (rssEl) rssEl.textContent = `${data.rssMb}`;
+    if (freeRamEl) freeRamEl.textContent = `${data.systemFreeRamMb} MB Free`;
+    if (totalRamEl) totalRamEl.textContent = `${data.systemTotalRamMb}`;
+    if (uptimeEl) uptimeEl.textContent = data.uptimeFormatted || '0h 0m 0s';
+    if (platformEl) platformEl.textContent = `${data.platform} (${data.arch})`;
+    if (patientsEl) patientsEl.textContent = `${data.patientCount} Patients`;
+    if (chartEl) chartEl.textContent = data.activePatientChart || 'None';
+  } catch (err) {
+    console.warn('Telemetry fetch error:', err);
+  }
+}
+
+function initJarvisWaveformCanvas() {
+  const canvas = document.getElementById('jarvis-waveform-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let phase = 0;
+
+  function draw() {
+    requestAnimationFrame(draw);
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const centerY = height / 2;
+
+    ctx.clearRect(0, 0, width, height);
+
+    // Grid lines for Mark LII HUD look
+    ctx.strokeStyle = 'rgba(6, 182, 212, 0.1)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < width; x += 40) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }
+    for (let y = 0; y < height; y += 20) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+
+    // Dynamic amplitude based on speaking or microphone activity
+    const isSpeaking = window.speechSynthesis && window.speechSynthesis.speaking;
+    const isActive = isSpeaking || isListening;
+    const amplitude = isActive ? 28 : 10;
+    const frequency = isActive ? 0.04 : 0.015;
+    const speed = isActive ? 0.12 : 0.04;
+
+    phase += speed;
+
+    // Glowing main wave
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = '#06b6d4';
+    ctx.strokeStyle = '#22d3ee';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+
+    for (let x = 0; x < width; x++) {
+      const taper = Math.sin((x / width) * Math.PI); // Pin edges to zero
+      const y = centerY + Math.sin(x * frequency + phase) * amplitude * taper + Math.sin(x * frequency * 2.5 - phase * 1.5) * (amplitude * 0.4) * taper;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Harmonic companion wave
+    ctx.shadowBlur = 6;
+    ctx.shadowColor = '#0d9488';
+    ctx.strokeStyle = 'rgba(20, 184, 166, 0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+
+    for (let x = 0; x < width; x++) {
+      const taper = Math.sin((x / width) * Math.PI);
+      const y = centerY + Math.sin(x * frequency * 1.8 - phase) * (amplitude * 0.7) * taper;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  draw();
 }
