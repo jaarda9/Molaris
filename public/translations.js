@@ -1051,10 +1051,10 @@ window.applyMolarisLanguage = function(lang) {
   if (prefSaveBtn) prefSaveBtn.textContent = t('prefs.saveBtn');
 
   // Trigger dynamic component updates
-  if (typeof window.renderOdontogram === 'function') {
+  if (typeof window.renderOdontogram === 'function' && window.systemState && Array.isArray(window.systemState.teethData) && window.systemState.teethData.length > 0) {
     window.renderOdontogram();
   }
-  if (typeof window.renderPatientsGrid === 'function') {
+  if (typeof window.renderPatientsGrid === 'function' && window.systemState && Array.isArray(window.systemState.patients) && window.systemState.patients.length > 0) {
     window.renderPatientsGrid();
   }
   if (typeof window.recalculateLA === 'function') {

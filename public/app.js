@@ -14,13 +14,14 @@ function getTranslatedToothStatus(status, isFr) {
 }
 // M.O.L.A.R.I.S — Senior Dental Advisor & Chairside Assistant Engine
 
-let systemState = {
+let systemState = window.systemState = {
   language: localStorage.getItem('molaris_lang') || 'en',
   activeTab: 'advisor',
   voiceEnabled: true,
   numberingSystem: 'universal', // 'universal' | 'fdi'
   selectedTooth: null,
   teethData: [],
+  patients: [],
   anesthetics: [],
   selectedDrugId: 'lido_100k',
   deliveredCarpules: 0,
@@ -624,6 +625,7 @@ function renderOdontogram() {
   const maxGrid = document.getElementById('maxillary-teeth-grid');
   const manGrid = document.getElementById('mandibular-teeth-grid');
   if (!maxGrid || !manGrid) return;
+  if (!systemState.teethData || !Array.isArray(systemState.teethData)) return;
 
   maxGrid.innerHTML = '';
   manGrid.innerHTML = '';
@@ -1489,6 +1491,7 @@ function renderPatientsGrid(filterText = '') {
   const grid = document.getElementById('patients-grid');
   const countBadge = document.getElementById('patient-count-badge');
   if (!grid) return;
+  if (!systemState.patients || !Array.isArray(systemState.patients)) return;
 
   const q = filterText.toLowerCase().trim();
   const filtered = systemState.patients.filter(p => {
