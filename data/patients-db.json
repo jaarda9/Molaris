@@ -1,0 +1,875 @@
+{
+  "activePatientId": "pt_1",
+  "patients": [
+    {
+      "id": "pt_1",
+      "chartId": "PT-2026-084",
+      "name": "Marcus Vance",
+      "age": 48,
+      "gender": "Male",
+      "weightKg": 72,
+      "asaStatus": "ASA II",
+      "cardiacRisk": false,
+      "medicalAlerts": "Controlled hypertension (Lisinopril 10mg); No known drug allergies",
+      "allergies": "No known drug allergies (NKDA)",
+      "chiefComplaint": "Severe throbbing ache in lower right molar on cold and biting for 3 days",
+      "deliveredCarpules": 1,
+      "selectedDrugId": "arti_100k",
+      "teeth": [
+        {
+          "id": 1,
+          "fdi": 18,
+          "name": "Maxillary Right 3rd Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 2,
+          "fdi": 17,
+          "name": "Maxillary Right 2nd Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 3,
+          "fdi": 16,
+          "name": "Maxillary Right 1st Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "crown",
+          "notes": "Zirconia full contour crown placed 2022."
+        },
+        {
+          "id": 4,
+          "fdi": 15,
+          "name": "Maxillary Right 2nd Premolar",
+          "arch": "maxillary",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 5,
+          "fdi": 14,
+          "name": "Maxillary Right 1st Premolar",
+          "arch": "maxillary",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 6,
+          "fdi": 13,
+          "name": "Maxillary Right Canine",
+          "arch": "maxillary",
+          "type": "canine",
+          "status": "sound"
+        },
+        {
+          "id": 7,
+          "fdi": 12,
+          "name": "Maxillary Right Lateral Incisor",
+          "arch": "maxillary",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 8,
+          "fdi": 11,
+          "name": "Maxillary Right Central Incisor",
+          "arch": "maxillary",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 9,
+          "fdi": 21,
+          "name": "Maxillary Left Central Incisor",
+          "arch": "maxillary",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 10,
+          "fdi": 22,
+          "name": "Maxillary Left Lateral Incisor",
+          "arch": "maxillary",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 11,
+          "fdi": 23,
+          "name": "Maxillary Left Canine",
+          "arch": "maxillary",
+          "type": "canine",
+          "status": "sound"
+        },
+        {
+          "id": 12,
+          "fdi": 24,
+          "name": "Maxillary Left 1st Premolar",
+          "arch": "maxillary",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 13,
+          "fdi": 25,
+          "name": "Maxillary Left 2nd Premolar",
+          "arch": "maxillary",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 14,
+          "fdi": 26,
+          "name": "Maxillary Left 1st Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 15,
+          "fdi": 27,
+          "name": "Maxillary Left 2nd Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 16,
+          "fdi": 28,
+          "name": "Maxillary Left 3rd Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 17,
+          "fdi": 38,
+          "name": "Mandibular Left 3rd Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 18,
+          "fdi": 37,
+          "name": "Mandibular Left 2nd Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 19,
+          "fdi": 36,
+          "name": "Mandibular Left 1st Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "restoration",
+          "notes": "Existing MOD composite restoration, intact margins."
+        },
+        {
+          "id": 20,
+          "fdi": 35,
+          "name": "Mandibular Left 2nd Premolar",
+          "arch": "mandibular",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 21,
+          "fdi": 34,
+          "name": "Mandibular Left 1st Premolar",
+          "arch": "mandibular",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 22,
+          "fdi": 33,
+          "name": "Mandibular Left Canine",
+          "arch": "mandibular",
+          "type": "canine",
+          "status": "sound"
+        },
+        {
+          "id": 23,
+          "fdi": 32,
+          "name": "Mandibular Left Lateral Incisor",
+          "arch": "mandibular",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 24,
+          "fdi": 31,
+          "name": "Mandibular Left Central Incisor",
+          "arch": "mandibular",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 25,
+          "fdi": 41,
+          "name": "Mandibular Right Central Incisor",
+          "arch": "mandibular",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 26,
+          "fdi": 42,
+          "name": "Mandibular Right Lateral Incisor",
+          "arch": "mandibular",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 27,
+          "fdi": 43,
+          "name": "Mandibular Right Canine",
+          "arch": "mandibular",
+          "type": "canine",
+          "status": "sound"
+        },
+        {
+          "id": 28,
+          "fdi": 44,
+          "name": "Mandibular Right 1st Premolar",
+          "arch": "mandibular",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 29,
+          "fdi": 45,
+          "name": "Mandibular Right 2nd Premolar",
+          "arch": "mandibular",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 30,
+          "fdi": 46,
+          "name": "Mandibular Right 1st Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "caries",
+          "notes": "Deep distal-occlusal caries extending to inner third of dentin. Lingering cold response >20s."
+        },
+        {
+          "id": 31,
+          "fdi": 47,
+          "name": "Mandibular Right 2nd Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 32,
+          "fdi": 48,
+          "name": "Mandibular Right 3rd Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "sound"
+        }
+      ],
+      "anesthesiaLog": [
+        {
+          "id": "anes_1",
+          "timestamp": "2026-09-05T21:09:11.482Z",
+          "drugId": "arti_100k",
+          "drugName": "Articaine 4% with 1:100k Epinephrine",
+          "carpules": 1,
+          "mg": 68,
+          "epiMg": 0.017,
+          "site": "Buccal infiltration adjacent to #30"
+        }
+      ],
+      "soapNotes": [
+        {
+          "id": "soap_1",
+          "timestamp": "2026-09-05T21:09:11.482Z",
+          "procedure": "Emergency Endodontic Triage & Evaluation",
+          "toothId": 30,
+          "anesthesiaUsed": "1.0 carpule Septocaine 4% 1:100k buccal infiltration",
+          "content": "S: Patient reports constant throbbing pain exacerbated by cold liquids and mastication on right side.\nO: Tooth #30 cold test lingers 25s, percussion (+), palpation (-). Deep distal radiolucency approaching pulp.\nA: Symptomatic irreversible pulpitis with symptomatic apical periodontitis #30.\nP: Pulpal anesthesia obtained with Articaine 4% 1:100k. Caries excavation initiated under rubber dam isolation.",
+          "cdtCodes": [
+            "D0140 - Limited Oral Evaluation",
+            "D0220 - Intraoral Periapical Radiograph"
+          ],
+          "author": "Attending Doctor"
+        }
+      ],
+      "consultHistory": [],
+      "createdAt": "2026-08-10T09:00:00.000Z",
+      "updatedAt": "2026-09-05T21:09:11.482Z"
+    },
+    {
+      "id": "pt_2",
+      "chartId": "PT-2026-091",
+      "name": "Eleanor Davis",
+      "age": 67,
+      "gender": "Female",
+      "weightKg": 58,
+      "asaStatus": "ASA III",
+      "cardiacRisk": true,
+      "medicalAlerts": "History of Myocardial Infarction (Stent 14 mos ago); Daily baby aspirin (81mg); High sensitivity to vasoconstrictors",
+      "allergies": "Penicillin (Hives & Urticaria)",
+      "chiefComplaint": "Fractured palatal cusp of upper left premolar while chewing almonds",
+      "deliveredCarpules": 0,
+      "selectedDrugId": "mepi_plain",
+      "teeth": [
+        {
+          "id": 1,
+          "fdi": 18,
+          "name": "Maxillary Right 3rd Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 2,
+          "fdi": 17,
+          "name": "Maxillary Right 2nd Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 3,
+          "fdi": 16,
+          "name": "Maxillary Right 1st Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 4,
+          "fdi": 15,
+          "name": "Maxillary Right 2nd Premolar",
+          "arch": "maxillary",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 5,
+          "fdi": 14,
+          "name": "Maxillary Right 1st Premolar",
+          "arch": "maxillary",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 6,
+          "fdi": 13,
+          "name": "Maxillary Right Canine",
+          "arch": "maxillary",
+          "type": "canine",
+          "status": "sound"
+        },
+        {
+          "id": 7,
+          "fdi": 12,
+          "name": "Maxillary Right Lateral Incisor",
+          "arch": "maxillary",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 8,
+          "fdi": 11,
+          "name": "Maxillary Right Central Incisor",
+          "arch": "maxillary",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 9,
+          "fdi": 21,
+          "name": "Maxillary Left Central Incisor",
+          "arch": "maxillary",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 10,
+          "fdi": 22,
+          "name": "Maxillary Left Lateral Incisor",
+          "arch": "maxillary",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 11,
+          "fdi": 23,
+          "name": "Maxillary Left Canine",
+          "arch": "maxillary",
+          "type": "canine",
+          "status": "sound"
+        },
+        {
+          "id": 12,
+          "fdi": 24,
+          "name": "Maxillary Left 1st Premolar",
+          "arch": "maxillary",
+          "type": "premolar",
+          "status": "caries",
+          "notes": "Fractured lingual cusp, recurrent subgingival caries at mesial margin."
+        },
+        {
+          "id": 13,
+          "fdi": 25,
+          "name": "Maxillary Left 2nd Premolar",
+          "arch": "maxillary",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 14,
+          "fdi": 26,
+          "name": "Maxillary Left 1st Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "implant",
+          "notes": "Straumann bone level implant placed 2021."
+        },
+        {
+          "id": 15,
+          "fdi": 27,
+          "name": "Maxillary Left 2nd Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 16,
+          "fdi": 28,
+          "name": "Maxillary Left 3rd Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 17,
+          "fdi": 38,
+          "name": "Mandibular Left 3rd Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 18,
+          "fdi": 37,
+          "name": "Mandibular Left 2nd Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "missing",
+          "notes": "Extracted due to severe periodontitis."
+        },
+        {
+          "id": 19,
+          "fdi": 36,
+          "name": "Mandibular Left 1st Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 20,
+          "fdi": 35,
+          "name": "Mandibular Left 2nd Premolar",
+          "arch": "mandibular",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 21,
+          "fdi": 34,
+          "name": "Mandibular Left 1st Premolar",
+          "arch": "mandibular",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 22,
+          "fdi": 33,
+          "name": "Mandibular Left Canine",
+          "arch": "mandibular",
+          "type": "canine",
+          "status": "sound"
+        },
+        {
+          "id": 23,
+          "fdi": 32,
+          "name": "Mandibular Left Lateral Incisor",
+          "arch": "mandibular",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 24,
+          "fdi": 31,
+          "name": "Mandibular Left Central Incisor",
+          "arch": "mandibular",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 25,
+          "fdi": 41,
+          "name": "Mandibular Right Central Incisor",
+          "arch": "mandibular",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 26,
+          "fdi": 42,
+          "name": "Mandibular Right Lateral Incisor",
+          "arch": "mandibular",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 27,
+          "fdi": 43,
+          "name": "Mandibular Right Canine",
+          "arch": "mandibular",
+          "type": "canine",
+          "status": "sound"
+        },
+        {
+          "id": 28,
+          "fdi": 44,
+          "name": "Mandibular Right 1st Premolar",
+          "arch": "mandibular",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 29,
+          "fdi": 45,
+          "name": "Mandibular Right 2nd Premolar",
+          "arch": "mandibular",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 30,
+          "fdi": 46,
+          "name": "Mandibular Right 1st Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 31,
+          "fdi": 47,
+          "name": "Mandibular Right 2nd Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "missing",
+          "notes": "Extracted 2018."
+        },
+        {
+          "id": 32,
+          "fdi": 48,
+          "name": "Mandibular Right 3rd Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "sound"
+        }
+      ],
+      "anesthesiaLog": [],
+      "soapNotes": [],
+      "consultHistory": [],
+      "createdAt": "2026-08-22T14:30:00.000Z",
+      "updatedAt": "2026-09-05T21:09:11.482Z"
+    },
+    {
+      "id": "pt_3",
+      "chartId": "PT-2026-105",
+      "name": "Lucas Chen",
+      "age": 24,
+      "gender": "Male",
+      "weightKg": 81,
+      "asaStatus": "ASA I",
+      "cardiacRisk": false,
+      "medicalAlerts": "Healthy collegiate athlete; No systemic conditions",
+      "allergies": "NKDA",
+      "chiefComplaint": "Wisdom teeth pressure and lower left retromolar swelling and redness",
+      "deliveredCarpules": 0,
+      "selectedDrugId": "lido_100k",
+      "teeth": [
+        {
+          "id": 1,
+          "fdi": 18,
+          "name": "Maxillary Right 3rd Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "sound",
+          "notes": "Erupted, hygiene compromise."
+        },
+        {
+          "id": 2,
+          "fdi": 17,
+          "name": "Maxillary Right 2nd Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 3,
+          "fdi": 16,
+          "name": "Maxillary Right 1st Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 4,
+          "fdi": 15,
+          "name": "Maxillary Right 2nd Premolar",
+          "arch": "maxillary",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 5,
+          "fdi": 14,
+          "name": "Maxillary Right 1st Premolar",
+          "arch": "maxillary",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 6,
+          "fdi": 13,
+          "name": "Maxillary Right Canine",
+          "arch": "maxillary",
+          "type": "canine",
+          "status": "sound"
+        },
+        {
+          "id": 7,
+          "fdi": 12,
+          "name": "Maxillary Right Lateral Incisor",
+          "arch": "maxillary",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 8,
+          "fdi": 11,
+          "name": "Maxillary Right Central Incisor",
+          "arch": "maxillary",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 9,
+          "fdi": 21,
+          "name": "Maxillary Left Central Incisor",
+          "arch": "maxillary",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 10,
+          "fdi": 22,
+          "name": "Maxillary Left Lateral Incisor",
+          "arch": "maxillary",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 11,
+          "fdi": 23,
+          "name": "Maxillary Left Canine",
+          "arch": "maxillary",
+          "type": "canine",
+          "status": "sound"
+        },
+        {
+          "id": 12,
+          "fdi": 24,
+          "name": "Maxillary Left 1st Premolar",
+          "arch": "maxillary",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 13,
+          "fdi": 25,
+          "name": "Maxillary Left 2nd Premolar",
+          "arch": "maxillary",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 14,
+          "fdi": 26,
+          "name": "Maxillary Left 1st Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 15,
+          "fdi": 27,
+          "name": "Maxillary Left 2nd Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 16,
+          "fdi": 28,
+          "name": "Maxillary Left 3rd Molar",
+          "arch": "maxillary",
+          "type": "molar",
+          "status": "sound",
+          "notes": "Erupted, hygiene compromise."
+        },
+        {
+          "id": 17,
+          "fdi": 38,
+          "name": "Mandibular Left 3rd Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "caries",
+          "notes": "Partial soft tissue impaction with active pericoronitis."
+        },
+        {
+          "id": 18,
+          "fdi": 37,
+          "name": "Mandibular Left 2nd Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 19,
+          "fdi": 36,
+          "name": "Mandibular Left 1st Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 20,
+          "fdi": 35,
+          "name": "Mandibular Left 2nd Premolar",
+          "arch": "mandibular",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 21,
+          "fdi": 34,
+          "name": "Mandibular Left 1st Premolar",
+          "arch": "mandibular",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 22,
+          "fdi": 33,
+          "name": "Mandibular Left Canine",
+          "arch": "mandibular",
+          "type": "canine",
+          "status": "sound"
+        },
+        {
+          "id": 23,
+          "fdi": 32,
+          "name": "Mandibular Left Lateral Incisor",
+          "arch": "mandibular",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 24,
+          "fdi": 31,
+          "name": "Mandibular Left Central Incisor",
+          "arch": "mandibular",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 25,
+          "fdi": 41,
+          "name": "Mandibular Right Central Incisor",
+          "arch": "mandibular",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 26,
+          "fdi": 42,
+          "name": "Mandibular Right Lateral Incisor",
+          "arch": "mandibular",
+          "type": "incisor",
+          "status": "sound"
+        },
+        {
+          "id": 27,
+          "fdi": 43,
+          "name": "Mandibular Right Canine",
+          "arch": "mandibular",
+          "type": "canine",
+          "status": "sound"
+        },
+        {
+          "id": 28,
+          "fdi": 44,
+          "name": "Mandibular Right 1st Premolar",
+          "arch": "mandibular",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 29,
+          "fdi": 45,
+          "name": "Mandibular Right 2nd Premolar",
+          "arch": "mandibular",
+          "type": "premolar",
+          "status": "sound"
+        },
+        {
+          "id": 30,
+          "fdi": 46,
+          "name": "Mandibular Right 1st Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 31,
+          "fdi": 47,
+          "name": "Mandibular Right 2nd Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "sound"
+        },
+        {
+          "id": 32,
+          "fdi": 48,
+          "name": "Mandibular Right 3rd Molar",
+          "arch": "mandibular",
+          "type": "molar",
+          "status": "caries",
+          "notes": "Mesioangular impaction wedged into distal of #31."
+        }
+      ],
+      "anesthesiaLog": [],
+      "soapNotes": [],
+      "consultHistory": [],
+      "createdAt": "2026-09-01T11:15:00.000Z",
+      "updatedAt": "2026-09-05T21:09:11.482Z"
+    }
+  ]
+}
