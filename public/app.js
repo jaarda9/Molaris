@@ -1,3 +1,17 @@
+
+function getTranslatedToothStatus(status, isFr) {
+  if (!isFr) return status;
+  switch (status) {
+    case 'sound': return 'Saine';
+    case 'caries': return 'Carie';
+    case 'restoration': return 'Obturation';
+    case 'crown': return 'Couronne';
+    case 'rct': return 'Endo';
+    case 'implant': return 'Implant';
+    case 'missing': return 'Absente';
+    default: return status;
+  }
+}
 // M.O.L.A.R.I.S — Senior Dental Advisor & Chairside Assistant Engine
 
 let systemState = {
@@ -155,7 +169,14 @@ function initLanguageSwitcher() {
       updateActivePatientHeaderUI(systemState.activePatient);
     }
     renderPatientsGrid();
+    renderOdontogram();
+    if (systemState.selectedTooth) {
+      selectTooth(systemState.selectedTooth);
+    }
     recalculateLA();
+    if (typeof window.refreshProtocolsView === 'function') {
+      window.refreshProtocolsView();
+    }
     playClinicalBeep(lang === 'fr' ? 660 : 880, 'sine', 0.1);
   };
 
@@ -455,7 +476,8 @@ if (chatForm) {
       removeMessage(typingId);
 
       if (data.error) {
-        appendMessage('molaris', `⚠️ Clinical Advisor Alert: ${data.error}`);
+        const isFr = systemState.language === 'fr';
+        appendMessage('molaris', `${isFr ? '⚠️ Alerte Conseiller Clinique :' : '⚠️ Clinical Advisor Alert:'} ${data.error}`);
       } else {
         appendMessage('molaris', data.reply, data.action);
         systemState.chatHistory.push({ role: 'user', content: query });
@@ -532,7 +554,7 @@ function appendTypingIndicator() {
     </div>
     <div class="bg-slate-100 dark:bg-slate-800 rounded-2xl p-3 text-xs text-slate-500 dark:text-slate-400 flex items-center space-x-2">
       <span class="w-2 h-2 rounded-full bg-teal-500 animate-ping"></span>
-      <span>Reviewing clinical evidence and patient history...</span>
+      <span>${systemState.language === 'fr' ? 'Revue des données cliniques et du dossier patient...' : 'Reviewing clinical evidence and patient history...'}</span>
     </div>
   `;
   chatMessages.appendChild(div);
@@ -572,11 +594,12 @@ function initQuickPrompts() {
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
       systemState.chatHistory = [];
+      const isFr = systemState.language === 'fr';
       chatMessages.innerHTML = `
         <div class="flex items-start space-x-3">
           <div class="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">M</div>
           <div class="bg-slate-100 dark:bg-slate-800 rounded-2xl p-3 text-xs text-slate-600 dark:text-slate-300">
-            Feed cleared. M.O.L.A.R.I.S is ready for your next chairside consultation.
+            ${isFr ? 'Fil de discussion effacé. M.O.L.A.R.I.S est à votre disposition pour la prochaine consultation au fauteuil.' : 'Feed cleared. M.O.L.A.R.I.S is ready for your next chairside consultation.'}
           </div>
         </div>
       `;
@@ -635,7 +658,7 @@ function createToothCard(tooth) {
         ${getToothSvgPath(tooth.type)}
       </svg>
     </div>
-    <span class="text-[9px] uppercase tracking-wider font-semibold opacity-70 truncate w-full">${tooth.status}</span>
+    <span class="text-[9px] uppercase tracking-wider font-semibold opacity-70 truncate w-full">${getTranslatedToothStatus(tooth.status, systemState.language === 'fr')}</span>
   `;
 
   card.addEventListener('click', () => {
@@ -669,9 +692,17 @@ function selectTooth(tooth) {
   const notesEl = document.getElementById('detail-tooth-notes');
 
   detailCard.classList.remove('hidden');
+  const isFr = systemState.language === 'fr';
+  const frTooth = window.MOLARIS_FRENCH_TEETH && window.MOLARIS_FRENCH_TEETH[tooth.id];
+  const toothName = isFr && frTooth ? frTooth.name : tooth.name;
+  const archText = isFr ? (tooth.arch === 'maxillary' ? 'MAXILLAIRE' : 'MANDIBULAIRE') : tooth.arch.toUpperCase();
+  const typeText = isFr && frTooth ? frTooth.type.toUpperCase() : tooth.type.toUpperCase();
+
   numberEl.textContent = `#${tooth.id}`;
-  nameEl.textContent = tooth.name;
-  fdiEl.textContent = `FDI Notation: ${tooth.fdi} • Arch: ${tooth.arch.toUpperCase()} • Type: ${tooth.type.toUpperCase()}`;
+  nameEl.textContent = toothName;
+  fdiEl.textContent = isFr
+    ? `Notation FDI : ${tooth.fdi} • Arcade : ${archText} • Type : ${typeText}`
+    : `FDI Notation: ${tooth.fdi} • Arch: ${tooth.arch.toUpperCase()} • Type: ${tooth.type.toUpperCase()}`;
   notesEl.value = tooth.notes || '';
 
   // Highlight active status button
@@ -695,8 +726,12 @@ function updateChatToothBanner(tooth) {
 
   if (tooth) {
     banner.classList.remove('hidden');
-    nameSpan.textContent = `Tooth #${tooth.id} (${tooth.name})`;
-    statusSpan.textContent = `[${tooth.status.toUpperCase()}]`;
+    const isFr = systemState.language === 'fr';
+    const frTooth = window.MOLARIS_FRENCH_TEETH && window.MOLARIS_FRENCH_TEETH[tooth.id];
+    const toothName = isFr && frTooth ? frTooth.name : tooth.name;
+    const statusName = getTranslatedToothStatus(tooth.status, isFr);
+    nameSpan.textContent = isFr ? `Dent #${tooth.id} (${toothName})` : `Tooth #${tooth.id} (${tooth.name})`;
+    statusSpan.textContent = `[${statusName.toUpperCase()}]`;
   } else {
     banner.classList.add('hidden');
   }
@@ -929,12 +964,25 @@ async function recalculateLA() {
 // -----------------------------------------------------------------------------
 // Procedural Protocols Playbooks Engine
 // -----------------------------------------------------------------------------
+let molarisCachedProtocols = [];
+window.refreshProtocolsView = function() {
+  if (molarisCachedProtocols && molarisCachedProtocols.length > 0) {
+    renderProtocolsList(molarisCachedProtocols);
+  }
+};
+
 function renderProtocolsList(protocols) {
+  if (protocols && protocols.length > 0) {
+    molarisCachedProtocols = protocols;
+  }
   const container = document.getElementById('protocols-list-container');
   if (!container) return;
   container.innerHTML = '';
 
-  protocols.forEach(protocol => {
+  const isFr = systemState.language === 'fr';
+  const listToRender = (isFr && window.MOLARIS_FRENCH_PROTOCOLS) ? window.MOLARIS_FRENCH_PROTOCOLS : (protocols || molarisCachedProtocols);
+
+  listToRender.forEach(protocol => {
     const card = document.createElement('div');
     card.className = 'p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3';
     card.id = `protocol-card-${protocol.id}`;
@@ -953,7 +1001,7 @@ function renderProtocolsList(protocols) {
           <span class="text-[10px] font-mono text-teal-700 dark:text-teal-400 uppercase font-semibold">${protocol.category}</span>
         </div>
         <button class="ask-protocol-btn text-xs font-semibold px-2 py-1 rounded bg-teal-600 text-white hover:bg-teal-700" data-title="${protocol.title}">
-          Ask Advisor
+          ${isFr ? 'Consulter le Conseiller' : 'Ask Advisor'}
         </button>
       </div>
       <p class="text-xs text-slate-500 dark:text-slate-400 italic">${protocol.summary}</p>
@@ -969,7 +1017,10 @@ function renderProtocolsList(protocols) {
     btn.addEventListener('click', () => {
       const title = btn.dataset.title;
       document.getElementById('nav-tab-advisor')?.click();
-      chatInput.value = `Senior guidance requested on protocol: "${title}". What are your top chairside pearls, troubleshooting tips, and common pitfalls?`;
+      const isFr = systemState.language === 'fr';
+      chatInput.value = isFr
+        ? `Conseil clinique du senior demandé pour le protocole : "${title}". Quels sont vos meilleurs conseils opératoires, astuces et écueils à éviter ?`
+        : `Senior guidance requested on protocol: "${title}". What are your top chairside pearls, troubleshooting tips, and common pitfalls?`;
       chatInput.focus();
     });
   });
