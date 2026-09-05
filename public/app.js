@@ -1,6 +1,7 @@
 // M.O.L.A.R.I.S — Senior Dental Advisor & Chairside Assistant Engine
 
 let systemState = {
+  language: localStorage.getItem('molaris_lang') || 'en',
   activeTab: 'advisor',
   voiceEnabled: true,
   numberingSystem: 'universal', // 'universal' | 'fdi'
@@ -13,6 +14,7 @@ let systemState = {
   activePatient: null,
   chatHistory: []
 };
+window.systemState = systemState;
 
 // Global state for voice recognition & chairside audio reactive HUD
 let isListening = false;
@@ -47,6 +49,7 @@ function playClinicalBeep(freq = 880, type = 'sine', duration = 0.2) {
 // -----------------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
+  initLanguageSwitcher();
   initNavigation();
   initChairsideTimer();
   initSpeechSynthesis();
@@ -97,6 +100,7 @@ async function fetchSystemStatus() {
 
 function updateActivePatientHeaderUI(patient) {
   if (!patient) return;
+  const isFr = systemState.language === 'fr';
   const nameEl = document.getElementById('header-patient-name');
   const idEl = document.getElementById('header-patient-id');
   const asaEl = document.getElementById('header-patient-asa');
@@ -109,8 +113,63 @@ function updateActivePatientHeaderUI(patient) {
   if (weightEl) weightEl.textContent = `${patient.weightKg} kg`;
 
   if (cardiacBadge) {
+    cardiacBadge.textContent = isFr ? 'Risque Cardiaque (Épi Max 0,04mg)' : 'Cardiac Risk';
     if (patient.cardiacRisk) cardiacBadge.classList.remove('hidden');
     else cardiacBadge.classList.add('hidden');
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Bilingual Language Switcher (EN | FR)
+// -----------------------------------------------------------------------------
+function initLanguageSwitcher() {
+  const btnEn = document.getElementById('lang-btn-en');
+  const btnFr = document.getElementById('lang-btn-fr');
+
+  function updateLanguageButtonUI(lang) {
+    if (!btnEn || !btnFr) return;
+    if (lang === 'fr') {
+      btnFr.className = 'px-2 py-0.5 rounded-md bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs transition cursor-pointer font-bold';
+      btnEn.className = 'px-2 py-0.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition cursor-pointer font-normal';
+    } else {
+      btnEn.className = 'px-2 py-0.5 rounded-md bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs transition cursor-pointer font-bold';
+      btnFr.className = 'px-2 py-0.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition cursor-pointer font-normal';
+    }
+  }
+
+  window.setMolarisLanguage = function(lang) {
+    systemState.language = lang;
+    localStorage.setItem('molaris_lang', lang);
+    updateLanguageButtonUI(lang);
+
+    if (typeof window.applyMolarisLanguage === 'function') {
+      window.applyMolarisLanguage(lang);
+    }
+
+    if (window.molarisRecognition) {
+      window.molarisRecognition.lang = lang === 'fr' ? 'fr-FR' : 'en-US';
+    }
+
+    // Refresh dynamically rendered subviews
+    if (systemState.activePatient) {
+      updateActivePatientHeaderUI(systemState.activePatient);
+    }
+    renderPatientsGrid();
+    recalculateLA();
+    playClinicalBeep(lang === 'fr' ? 660 : 880, 'sine', 0.1);
+  };
+
+  if (btnEn) {
+    btnEn.addEventListener('click', () => window.setMolarisLanguage('en'));
+  }
+  if (btnFr) {
+    btnFr.addEventListener('click', () => window.setMolarisLanguage('fr'));
+  }
+
+  // Initial apply
+  updateLanguageButtonUI(systemState.language);
+  if (typeof window.applyMolarisLanguage === 'function') {
+    window.applyMolarisLanguage(systemState.language);
   }
 }
 
@@ -281,9 +340,15 @@ function speakAdvisorText(text) {
   utterance.rate = 1.05;
   utterance.pitch = 0.95; // professional, composed tone
   
+  const isFr = systemState.language === 'fr';
+  utterance.lang = isFr ? 'fr-FR' : 'en-US';
+
   const voices = window.speechSynthesis.getVoices();
-  const naturalVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Alex')));
+  const prefix = isFr ? 'fr' : 'en';
+  const naturalVoice = voices.find(v => v.lang.startsWith(prefix) && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Thomas') || v.name.includes('Audrey') || v.name.includes('Alex')));
+  const fallbackVoice = voices.find(v => v.lang.startsWith(prefix));
   if (naturalVoice) utterance.voice = naturalVoice;
+  else if (fallbackVoice) utterance.voice = fallbackVoice;
 
   window.speechSynthesis.speak(utterance);
 }
@@ -308,7 +373,8 @@ function initSpeechRecognition() {
   const recognition = new SpeechRecognition();
   recognition.continuous = false;
   recognition.interimResults = false;
-  recognition.lang = 'en-US';
+  recognition.lang = systemState.language === 'fr' ? 'fr-FR' : 'en-US';
+  window.molarisRecognition = recognition;
 
   isListening = false;
 
@@ -375,7 +441,8 @@ if (chatForm) {
       const payload = {
         message: query,
         toothId: systemState.selectedTooth ? systemState.selectedTooth.id : undefined,
-        conversationHistory: systemState.chatHistory
+        conversationHistory: systemState.chatHistory,
+        language: systemState.language || 'en'
       };
 
       const res = await fetch('/api/chat', {
@@ -834,12 +901,14 @@ async function recalculateLA() {
         drugId: systemState.selectedDrugId,
         weightKg: weight,
         isCardiacRisk: isCardiac,
-        carpulesGiven: systemState.deliveredCarpules
+        carpulesGiven: systemState.deliveredCarpules,
+        language: systemState.language || 'en'
       })
     });
 
     const data = await res.json();
-    document.getElementById('calc-limiting-factor').textContent = `Limiting Factor: ${data.limitingFactor}`;
+    const isFr = systemState.language === 'fr';
+    document.getElementById('calc-limiting-factor').textContent = `${isFr ? 'Facteur Limitant :' : 'Limiting Factor:'} ${data.limitingFactor}`;
     document.getElementById('calc-res-max-carpules').textContent = `${data.safeMaxCarpules} carpules`;
     document.getElementById('calc-res-max-mg').textContent = `${data.allowedMaxMg} mg`;
     document.getElementById('calc-res-remaining').textContent = `${data.remainingCarpules}`;
@@ -994,6 +1063,7 @@ function initVisionUploader() {
         const formData = new FormData();
         formData.append('image', currentImageFile);
         formData.append('query', query);
+        formData.append('language', systemState.language || 'en');
         if (systemState.selectedTooth) {
           formData.append('toothId', systemState.selectedTooth.id);
         }
@@ -1146,7 +1216,8 @@ function initSOAPGenerator() {
             toothId: toothId,
             anesthesiaUsed: anesthesia,
             materialsUsed: materials,
-            details: details
+            details: details,
+            language: systemState.language || 'en'
           })
         });
 
@@ -1260,24 +1331,38 @@ function handleMolarisAutonomousAction(action) {
   switch (action.actionType) {
     case 'START_TIMER':
       if (typeof window.startChairsideTimer === 'function') {
-        const secs = action.data && action.data.durationSeconds ? action.data.durationSeconds : 20;
+        const secs = (action.data && (action.data.seconds || action.data.durationSeconds)) ? (action.data.seconds || action.data.durationSeconds) : 20;
         window.startChairsideTimer(secs);
       }
       break;
 
     case 'SWITCH_PATIENT':
-      fetchPatients().then(() => {
-        fetchOdontogram();
-        fetchSystemStatus();
-      });
+      if (action.data && action.data.patientId) {
+        selectPatient(action.data.patientId);
+      } else {
+        fetchPatients().then(() => {
+          fetchOdontogram();
+          fetchSystemStatus();
+        });
+      }
       break;
 
     case 'UPDATE_TOOTH':
-      fetchOdontogram();
+      fetchOdontogram().then(() => {
+        if (action.data && action.data.tooth) {
+          systemState.selectedTooth = action.data.tooth;
+          updateChatToothBanner(action.data.tooth);
+        }
+      });
       break;
 
     case 'LOG_ANESTHESIA':
       fetchPatients().then(() => {
+        if (action.data && action.data.patient) {
+          systemState.deliveredCarpules = action.data.patient.deliveredCarpules;
+          const calcDelivered = document.getElementById('calc-delivered-carpules');
+          if (calcDelivered) calcDelivered.textContent = action.data.patient.deliveredCarpules;
+        }
         recalculateLA();
       });
       break;
@@ -1286,7 +1371,43 @@ function handleMolarisAutonomousAction(action) {
       fetchPatients();
       break;
 
+    case 'LAUNCH_APP':
+      if (action.data && action.data.targetView) {
+        const tabBtn = document.getElementById(`nav-tab-${action.data.targetView}`);
+        if (tabBtn) tabBtn.click();
+      }
+      break;
+
+    case 'EXPORT_DATABASE':
+      const a = document.createElement('a');
+      a.href = '/api/database/export';
+      a.download = 'molaris-patients-database.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      break;
+
+    case 'AUDIO_MUTE':
+      systemState.voiceEnabled = false;
+      const voiceIconOnM = document.getElementById('voice-icon-on');
+      const voiceIconOffM = document.getElementById('voice-icon-off');
+      if (voiceIconOnM) voiceIconOnM.classList.add('hidden');
+      if (voiceIconOffM) voiceIconOffM.classList.remove('hidden');
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      break;
+
+    case 'AUDIO_UNMUTE':
+      systemState.voiceEnabled = true;
+      const voiceIconOnU = document.getElementById('voice-icon-on');
+      const voiceIconOffU = document.getElementById('voice-icon-off');
+      if (voiceIconOnU) voiceIconOnU.classList.remove('hidden');
+      if (voiceIconOffU) voiceIconOffU.classList.add('hidden');
+      break;
+
+    case 'SYSTEM_TELEMETRY':
     case 'TELEMETRY':
+      const sysTab = document.getElementById('nav-tab-system');
+      if (sysTab) sysTab.click();
       fetchTelemetry();
       break;
 
@@ -1331,25 +1452,30 @@ function renderPatientsGrid(filterText = '') {
   });
 
   if (countBadge) {
-    countBadge.textContent = `${filtered.length} of ${systemState.patients.length} patients`;
+    const isFr = systemState.language === 'fr';
+    countBadge.textContent = isFr
+      ? `${filtered.length} sur ${systemState.patients.length} patients`
+      : `${filtered.length} of ${systemState.patients.length} patients`;
   }
 
   if (filtered.length === 0) {
+    const isFr = systemState.language === 'fr';
     grid.innerHTML = `
       <div class="col-span-full py-12 text-center text-slate-500 dark:text-slate-400 space-y-3">
         <svg class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="8" y1="12" x2="16" y2="12"></line>
         </svg>
-        <p class="text-sm font-medium">No patient records match "${escapeHtml(filterText)}"</p>
+        <p class="text-sm font-medium">${isFr ? `Aucun dossier ne correspond à "${escapeHtml(filterText)}"` : `No patient records match "${escapeHtml(filterText)}"`}</p>
         <button onclick="document.getElementById('btn-create-patient')?.click()" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer">
-          + Add New Patient Record
+          ${isFr ? '+ Ajouter un Nouveau Dossier Patient' : '+ Add New Patient Record'}
         </button>
       </div>
     `;
     return;
   }
 
+  const isFr = systemState.language === 'fr';
   grid.innerHTML = '';
   filtered.forEach(patient => {
     const isActive = systemState.activePatient && systemState.activePatient.id === patient.id;
@@ -1389,14 +1515,14 @@ function renderPatientsGrid(filterText = '') {
               <div class="flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                 <span>${escapeHtml(patient.chartId)}</span>
                 <span>&bull;</span>
-                <span>${patient.age || 35}y / ${patient.gender || 'M'}</span>
+                <span>${patient.age || 35}${isFr ? ' ans' : 'y'} / ${patient.gender || 'M'}</span>
               </div>
             </div>
           </div>
 
           ${
             isActive
-              ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-600 text-white tracking-wide shadow-xs">ACTIVE CHART</span>'
+              ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-600 text-white tracking-wide shadow-xs">${isFr ? 'DOSSIER ACTIF' : 'ACTIVE CHART'}</span>`
               : ''
           }
         </div>
@@ -1408,8 +1534,8 @@ function renderPatientsGrid(filterText = '') {
           </span>
           ${
             patient.cardiacRisk
-              ? '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800 flex items-center space-x-1"><span>⚠️</span><span>CARDIAC ALERT</span></span>'
-              : '<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">Standard Epi</span>'
+              ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800 flex items-center space-x-1"><span>⚠️</span><span>${isFr ? 'ALERTE CARDIAQUE' : 'CARDIAC ALERT'}</span></span>`
+              : `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">${isFr ? 'Épi Standard' : 'Standard Epi'}</span>`
           }
           <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
             ${patient.weightKg || 70} kg
@@ -1418,16 +1544,16 @@ function renderPatientsGrid(filterText = '') {
 
         <!-- Chief Complaint -->
         <div class="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-2.5 text-xs text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-800">
-          <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Chief Complaint</div>
-          <p class="italic line-clamp-2">${escapeHtml(patient.chiefComplaint || 'Routine comprehensive evaluation')}</p>
+          <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">${isFr ? 'Motif de Consultation' : 'Chief Complaint'}</div>
+          <p class="italic line-clamp-2">${escapeHtml(patient.chiefComplaint || (isFr ? 'Bilan bucco-dentaire complet de routine' : 'Routine comprehensive evaluation'))}</p>
         </div>
 
         <!-- Medical Alerts / Allergies -->
         ${
           patient.medicalAlerts || patient.allergies
             ? `<div class="text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5">
-                ${patient.medicalAlerts ? `<div class="truncate"><strong class="text-slate-700 dark:text-slate-300">Alerts:</strong> ${escapeHtml(patient.medicalAlerts)}</div>` : ''}
-                ${patient.allergies ? `<div class="truncate"><strong class="text-rose-600 dark:text-rose-400">Allergies:</strong> ${escapeHtml(patient.allergies)}</div>` : ''}
+                ${patient.medicalAlerts ? `<div class="truncate"><strong class="text-slate-700 dark:text-slate-300">${isFr ? 'Alertes :' : 'Alerts:'}</strong> ${escapeHtml(patient.medicalAlerts)}</div>` : ''}
+                ${patient.allergies ? `<div class="truncate"><strong class="text-rose-600 dark:text-rose-400">${isFr ? 'Allergies :' : 'Allergies:'}</strong> ${escapeHtml(patient.allergies)}</div>` : ''}
               </div>`
             : ''
         }
@@ -1436,15 +1562,15 @@ function renderPatientsGrid(filterText = '') {
         <div class="grid grid-cols-3 gap-2 pt-1 text-center font-mono">
           <div class="bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-lg border border-slate-100 dark:border-slate-800">
             <div class="text-xs font-bold text-slate-900 dark:text-white">${teethWithFindings}</div>
-            <div class="text-[9px] text-slate-400">Teeth Charted</div>
+            <div class="text-[9px] text-slate-400">${isFr ? 'Dents Chartées' : 'Teeth Charted'}</div>
           </div>
           <div class="bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-lg border border-slate-100 dark:border-slate-800">
             <div class="text-xs font-bold text-teal-600 dark:text-teal-400">${totalCarpulesGiven}</div>
-            <div class="text-[9px] text-slate-400">Carpules LA</div>
+            <div class="text-[9px] text-slate-400">${isFr ? 'Carpules AL' : 'Carpules LA'}</div>
           </div>
           <div class="bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-lg border border-slate-100 dark:border-slate-800">
             <div class="text-xs font-bold text-cyan-600 dark:text-cyan-400">${soapCount}</div>
-            <div class="text-[9px] text-slate-400">SOAP Notes</div>
+            <div class="text-[9px] text-slate-400">${isFr ? 'Notes SOAP' : 'SOAP Notes'}</div>
           </div>
         </div>
       </div>
@@ -1456,17 +1582,17 @@ function renderPatientsGrid(filterText = '') {
             ? 'bg-teal-700 text-white'
             : 'bg-teal-600 hover:bg-teal-700 text-white'
         }" data-id="${patient.id}">
-          ${isActive ? '✓ Active Operatory Patient' : 'Select Patient &amp; Treat'}
+          ${isActive ? (isFr ? '✓ Dossier Actif au Fauteuil' : '✓ Active Operatory Patient') : (isFr ? 'Sélectionner &amp; Soigner' : 'Select Patient &amp; Treat')}
         </button>
 
-        <button class="btn-edit-patient p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition cursor-pointer" data-id="${patient.id}" title="Edit Patient Chart">
+        <button class="btn-edit-patient p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition cursor-pointer" data-id="${patient.id}" title="${isFr ? 'Modifier le Dossier Patient' : 'Edit Patient Chart'}">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 20h9"></path>
             <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
           </svg>
         </button>
 
-        <button class="btn-delete-patient p-2 rounded-xl bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition cursor-pointer" data-id="${patient.id}" data-name="${escapeHtml(patient.name)}" title="Delete Patient Record">
+        <button class="btn-delete-patient p-2 rounded-xl bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition cursor-pointer" data-id="${patient.id}" data-name="${escapeHtml(patient.name)}" title="${isFr ? 'Supprimer le Dossier' : 'Delete Patient Record'}">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6"></polyline>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -1486,7 +1612,10 @@ function renderPatientsGrid(filterText = '') {
 
     card.querySelector('.btn-delete-patient')?.addEventListener('click', async (e) => {
       e.stopPropagation();
-      if (!confirm(`Are you sure you want to delete patient record for "${patient.name}" (${patient.chartId})?`)) return;
+      const confirmPrompt = isFr
+        ? `Êtes-vous certain de vouloir supprimer le dossier du patient "${patient.name}" (${patient.chartId}) ?`
+        : `Are you sure you want to delete patient record for "${patient.name}" (${patient.chartId})?`;
+      if (!confirm(confirmPrompt)) return;
       try {
         const res = await fetch(`/api/patients/${patient.id}`, { method: 'DELETE' });
         const resData = await res.json();
@@ -1539,7 +1668,11 @@ async function selectPatient(patientId) {
       playClinicalBeep(659.25, 'sine', 0.15);
 
       // Add feedback notification in chat
-      appendMessage('molaris', `Operatory context switched to patient **${data.patient.name}** (${data.patient.chartId}). Loaded 32-tooth odontogram, medical alerts, and ASA ${data.patient.asaStatus} baseline.`);
+      const isFr = systemState.language === 'fr';
+      const notificationMsg = isFr
+        ? `Contexte opératoire basculé sur le patient **${data.patient.name}** (${data.patient.chartId}). Chargement de l'odontogramme 32 dents, alertes médicales et référence ASA ${data.patient.asaStatus}.`
+        : `Operatory context switched to patient **${data.patient.name}** (${data.patient.chartId}). Loaded 32-tooth odontogram, medical alerts, and ASA ${data.patient.asaStatus} baseline.`;
+      appendMessage('molaris', notificationMsg);
     }
   } catch (err) {
     console.error('Failed to select patient:', err);
@@ -1551,7 +1684,8 @@ function openEditPatientModal(patient) {
   const title = document.getElementById('modal-patient-title');
   if (!modal) return;
 
-  title.textContent = `Edit Patient: ${patient.name}`;
+  const isFr = systemState.language === 'fr';
+  title.textContent = isFr ? `Modifier la Fiche Patient : ${patient.name}` : `Edit Patient: ${patient.name}`;
   document.getElementById('form-patient-id').value = patient.id;
   document.getElementById('form-patient-name').value = patient.name;
   document.getElementById('form-patient-chart').value = patient.chartId;
@@ -1601,7 +1735,8 @@ function initPatientManager() {
 
   if (createBtn) {
     createBtn.addEventListener('click', () => {
-      modalTitle.textContent = 'Add New Dental Patient';
+      const isFr = systemState.language === 'fr';
+      modalTitle.textContent = isFr ? 'Ajouter un Nouveau Patient' : 'Add New Dental Patient';
       form.reset();
       document.getElementById('form-patient-id').value = '';
       document.getElementById('form-patient-weight').value = 70;

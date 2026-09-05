@@ -252,7 +252,7 @@ app.get('/api/anesthetics', (req: Request, res: Response) => {
 app.post('/api/calc-la', (req: Request, res: Response) => {
   try {
     const activePatient = patientDb.getActivePatient();
-    const { drugId, weightKg, isCardiacRisk, carpulesGiven } = req.body;
+    const { drugId, weightKg, isCardiacRisk, carpulesGiven, language = 'en' } = req.body;
     const drug = ANESTHETICS.find(a => a.id === drugId) || ANESTHETICS[0];
 
     const weight = weightKg !== undefined ? Number(weightKg) : activePatient.weightKg;
@@ -285,23 +285,29 @@ app.post('/api/calc-la', (req: Request, res: Response) => {
     const remainingCarpules = Math.max(0, Math.round((safeMaxCarpules - carpules) * 10) / 10);
     const isExceeded = carpules > safeMaxCarpules;
 
+    const limitingFactor = safeMaxCarpules === maxCarpulesByEpi
+      ? (language === 'fr' ? 'Épinéphrine (Plafond cardiovasculaire max 0,04 mg)' : 'Epinephrine (Cardiac threshold)')
+      : (language === 'fr' ? 'Toxicité du principe actif (Limite mg/kg)' : 'Anesthetic agent toxicity (Mg/kg limit)');
+
+    const warningMessage = isExceeded
+      ? (language === 'fr' ? 'DANGER : Dose maximale recommandée dépassée. Surveillez le patient pour tout signe de toxicité systémique (LAST) et tachycardie.' : 'DANGER: Maximum recommended dose exceeded. Monitor patient for Local Anesthetic Systemic Toxicity (LAST) and tachycardia.')
+      : cardiac && safeMaxCarpules <= 2.2
+      ? (language === 'fr' ? 'NOTE : Alerte cardiaque active. Épinéphrine plafonnée à 0,04 mg (~2 cartouches dosées à 1:100 000).' : 'NOTE: Patient has cardiac alerts. Epinephrine restricted to 0.04mg (~2 cartridges of 1:100k).')
+      : null;
+
     res.json({
       drugName: drug.name,
       patientWeightKg: weight,
       isCardiacRisk: cardiac,
       allowedMaxMg: Math.round(allowedMaxMg),
       safeMaxCarpules,
-      limitingFactor: safeMaxCarpules === maxCarpulesByEpi ? 'Epinephrine (Cardiac threshold)' : 'Anesthetic agent toxicity (Mg/kg limit)',
+      limitingFactor,
       carpulesDelivered: carpules,
       mgDelivered: Math.round(mgDelivered),
       epiDeliveredMg: Math.round(epiDelivered * 1000) / 1000,
       remainingCarpules,
       isExceeded,
-      warning: isExceeded
-        ? 'DANGER: Maximum recommended dose exceeded. Monitor patient for Local Anesthetic Systemic Toxicity (LAST) and tachycardia.'
-        : cardiac && safeMaxCarpules <= 2.2
-        ? 'NOTE: Patient has cardiac alerts. Epinephrine restricted to 0.04mg (~2 cartridges of 1:100k).'
-        : null
+      warning: warningMessage
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -338,13 +344,13 @@ app.post('/api/anesthesia/log', (req: Request, res: Response) => {
 // Senior Dental Advisor & Autonomous JARVIS Action Engine
 app.post('/api/chat', async (req: Request, res: Response) => {
   try {
-    const { message, toothId, conversationHistory = [] } = req.body;
+    const { message, toothId, conversationHistory = [], language = 'en' } = req.body;
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'Message text is required' });
     }
 
     // Step 1: Check for Autonomous Chairside / System Actions
-    const actionResult = executeMolarisAction(message);
+    const actionResult = executeMolarisAction(message, language);
 
     // Refresh active patient and preferences after potential action
     const memory = loadMemory();
@@ -375,6 +381,15 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       contextPrompt += `\n[M.O.L.A.R.I.S JARVIS ACTION JUST EXECUTED IN DATABASE]: ${actionResult.summary}\n`;
     }
 
+    if (language === 'fr') {
+      contextPrompt += `\n### DIRECTIVE DE LANGUE OBLIGATOIRE (FRANÇAIS):\n` +
+        `- Vous DEVEZ répondre ENTIÈREMENT en français médical et odontologique professionnel, précis et chaleureux.\n` +
+        `- Adressez-vous au praticien avec "Docteur" ou "Cher confrère".\n` +
+        `- Utilisez la terminologie dentaire francophone de référence : anesthésie tronculaire à l'épine de Spix (ou Spix), bloc de Gow-Gates, coiffage pulpaire direct/indirect au MTA ou Biodentine, digue dentaire, surélévation de marge cervicale (DME), alvéolite sèche, dépassement d'hypochlorite de sodium, pulpite aiguë irréversible, tenon fibré, etc.\n` +
+        `- Si une action a été exécutée, confirmez-la clairement en français.\n` +
+        `- Signalez tout risque ou mise en garde avec ⚠️ **ALERTE CLINIQUE**.\n`;
+    }
+
     // Build chat contents
     const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
 
@@ -401,9 +416,11 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       }
     });
 
-    let replyText = result.text || 'I reviewed the case, Doctor. Could you clarify the clinical presentation?';
+    let replyText = result.text || (language === 'fr' ? 'J\'ai examiné le cas, Docteur. Pourriez-vous préciser la présentation clinique ?' : 'I reviewed the case, Doctor. Could you clarify the clinical presentation?');
     if (actionResult.executed && !replyText.includes(actionResult.summary || '')) {
-      replyText = `⚡ **Operatory Action Executed:** ${actionResult.summary}\n\n${replyText}`;
+      replyText = language === 'fr'
+        ? `⚡ **Action Opératoire Autonome Exécutée :** ${actionResult.summary}\n\n${replyText}`
+        : `⚡ **Operatory Action Executed:** ${actionResult.summary}\n\n${replyText}`;
     }
 
     res.json({
@@ -431,6 +448,7 @@ app.post('/api/analyze-image', upload.single('image'), async (req: Request, res:
 
     const clinicalQuery = req.body.query || 'Perform a comprehensive clinical diagnostic evaluation of this dental image (periapical, bitewing, panoramic, or intraoral clinical photograph).';
     const toothNumber = req.body.toothId;
+    const language = req.body.language || 'en';
 
     const base64Image = req.file.buffer.toString('base64');
     const mimeType = req.file.mimetype || 'image/jpeg';
@@ -438,7 +456,7 @@ app.post('/api/analyze-image', upload.single('image'), async (req: Request, res:
     const memory = loadMemory();
     const activePatient = patientDb.getActivePatient();
 
-    const visionPrompt = `
+    let visionPrompt = `
 You are M.O.L.A.R.I.S, senior board-certified dental diagnostic specialist and chairside advisor.
 Analyze this dental clinical radiograph or intraoral image thoroughly.
 
@@ -457,6 +475,10 @@ Please provide a structured clinical assessment:
 4. **Senior Treatment Recommendations & Procedural Steps**: Evidence-based recommendation for the attending doctor.
 5. **⚠️ Red Flags & Chairside Precautions**: (Anatomical risks: Mental foramen, Inferior Alveolar Canal, Maxillary Sinus floor, root fractures).
 `;
+
+    if (language === 'fr') {
+      visionPrompt += `\n[DIRECTIVE DE LANGUE OBLIGATOIRE] : Rédigez l'ensemble de votre rapport diagnostique radiologique et vos recommandations thérapeutiques exclusivement en français médical/odontologique professionnel, rigoureux et bienveillant.\n`;
+    }
 
     const result = await callGeminiWithResilience({
       preferredModel: 'gemini-3.8-flash',
@@ -504,12 +526,40 @@ app.get('/api/soap/history', (req: Request, res: Response) => {
 
 app.post('/api/generate-soap', async (req: Request, res: Response) => {
   try {
-    const { procedure, toothId, details, anesthesiaUsed, materialsUsed } = req.body;
+    const { procedure, toothId, details, anesthesiaUsed, materialsUsed, language = 'en' } = req.body;
     const memory = loadMemory();
     const activePatient = patientDb.getActivePatient();
     const tooth = toothId ? activePatient.teeth.find(t => t.id === Number(toothId)) : null;
 
-    const soapPrompt = `
+    let soapPrompt = '';
+    if (language === 'fr') {
+      soapPrompt = `
+Générez un compte-rendu d'évolution clinique dentaire formel au format SOAP (médico-légalement rigoureux et conforme aux recommandations professionnelles) et assignez les codes d'actes correspondants.
+
+ACTE RÉALISÉ : ${procedure || 'Soin conservateur / Traitement endodontique / Chirurgie'}
+DENT CONCERNÉE : ${tooth ? `Dent Universelle #${tooth.id} (Notation FDI ${tooth.fdi}) - ${tooth.name}` : 'Général / Non spécifié'}
+DÉTAILS CLINIQUES : ${details || 'Acte réalisé avec succès sans complication'}
+ANESTHÉSIE LOCALE : ${anesthesiaUsed || `${activePatient.deliveredCarpules} carpules administrées`}
+MATÉRIAUX UTILISÉS : ${materialsUsed || 'Digue dentaire, mordançage sélectif, composite'}
+PATIENT : ${activePatient.name} | Dossier: ${activePatient.chartId} | Statut ASA: ${activePatient.asaStatus} | Poids: ${activePatient.weightKg}kg | Alertes: ${activePatient.medicalAlerts}
+
+Rédigez STRICTEMENT en français professionnel selon la structure suivante :
+- **Date & Identifiant du Patient**
+- **S (Subjectif)** : Motif de consultation, anamnèse médicale vérifiée, évaluation de la douleur (EVA 0-10), recueil du consentement éclairé du patient.
+- **O (Objectif)** : Examen clinique visuel, tests de vitalité pulpaire (froid, test électrique, percussion axiale/latérale, palpation vestibulaire, sondage parodontal), constatations radiologiques pré-opératoires.
+- **A (Analyse & Diagnostic)** : Diagnostic pulpaire et péri-apical formel et argumenté.
+- **P (Plan de traitement & Déroulement de l'Acte)** :
+  - Anesthésie locale (molécule, %, vasoconstricteur, volume/carpules, technique, test d'aspiration négatif).
+  - Champ opératoire (pose de la digue dentaire, étanchéité).
+  - Étapes opératoires détaillées.
+  - Matériaux d'obturation / collage mis en œuvre (adhésif, système de matrice, teinte de composite, temps d'insolation).
+  - Contrôle occlusal statique et dynamique.
+  - Consignes post-opératoires et protocole antalgique non opioïde.
+  - Prochain rendez-vous / suivi programmé.
+- **Codes Actes / CDT** : Codification standard des actes réalisés avec libellé clair.
+`;
+    } else {
+      soapPrompt = `
 Generate a formal, medicolegally bulletproof, board-standard dental SOAP clinical progress note and assign the exact CDT procedural codes.
 
 PROCEDURE: ${procedure || 'Operative Restoration / Endodontic / Surgical treatment'}
@@ -534,6 +584,7 @@ Format strictly as:
   - Next appointment / recall interval.
 - **CDT Procedure Codes**: List all applicable ADA CDT codes (e.g. D0140, D0220, D2392, D3330, etc.) with description and tooth surface.
 `;
+    }
 
     const result = await callGeminiWithResilience({
       preferredModel: 'gemini-3.8-flash',

@@ -201,6 +201,16 @@
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
             </svg>
           </button>
+
+          <!-- Language Selector: EN | FR -->
+          <div id="language-switcher" class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-300 dark:border-slate-700 text-xs font-semibold ml-1">
+            <button type="button" id="lang-btn-en" class="px-2 py-0.5 rounded-md bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs transition cursor-pointer" title="Switch to English">
+              EN
+            </button>
+            <button type="button" id="lang-btn-fr" class="px-2 py-0.5 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition cursor-pointer" title="Passer en Français">
+              FR
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1254,7 +1264,8 @@
 
   </main>
 
-  <!-- AUDIO SYNTHESIS & SPEECH RECOGNITION SCRIPT + CORE APP ENGINE -->
+  <!-- BILINGUAL TRANSLATIONS, AUDIO SYNTHESIS & CORE APP ENGINE -->
+  <script src="/translations.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>
