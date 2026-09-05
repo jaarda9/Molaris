@@ -59,9 +59,78 @@ function getGemini(): GoogleGenAI {
     throw new Error('GEMINI_API_KEY environment variable is not configured.');
   }
   if (!geminiClient) {
-    geminiClient = new GoogleGenAI({ apiKey });
+    geminiClient = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build'
+        }
+      }
+    });
   }
   return geminiClient;
+}
+
+// Resilient model cascade: if primary model has a temporary 503 capacity surge or rate limit,
+// cascade seamlessly to verified fast approved models so chairside clinical queries never fail.
+const MODEL_CANDIDATES = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+
+interface GenerateResilientOptions {
+  contents: any;
+  config?: any;
+  preferredModel?: string;
+}
+
+async function callGeminiWithResilience(options: GenerateResilientOptions): Promise<{ text: string; modelUsed: string }> {
+  const ai = getGemini();
+  const models = options.preferredModel
+    ? [options.preferredModel, ...MODEL_CANDIDATES.filter(m => m !== options.preferredModel)]
+    : MODEL_CANDIDATES;
+
+  let lastError: any = null;
+
+  for (const model of models) {
+    // Attempt up to 2 times for each model if transient network/server error
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: options.contents,
+          config: options.config
+        });
+        const text = response.text || '';
+        return { text, modelUsed: model };
+      } catch (err: any) {
+        lastError = err;
+        const msg = err?.message || String(err);
+        const isTransient =
+          msg.includes('503') ||
+          msg.includes('UNAVAILABLE') ||
+          msg.includes('high demand') ||
+          msg.includes('429') ||
+          msg.includes('ResourceExhausted') ||
+          msg.includes('overloaded');
+
+        console.warn(`[M.O.L.A.R.I.S AI Resilience] Model ${model} (attempt ${attempt + 1}/2) failed: ${msg.slice(0, 160)}`);
+
+        if (isTransient && attempt === 0) {
+          // brief backoff before retrying
+          await new Promise(r => setTimeout(r, 600));
+          continue;
+        }
+
+        // If it's a capacity/transient error, break immediately to try the next model candidate
+        if (isTransient) {
+          break;
+        }
+
+        // If it's not a transient server capacity error, rethrow
+        throw err;
+      }
+    }
+  }
+
+  throw lastError || new Error('All clinical models are temporarily experiencing high demand. Please retry in a few moments.');
 }
 
 // System Status Endpoint
@@ -253,9 +322,8 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       parts: [{ text: userTurnText }]
     });
 
-    const ai = getGemini();
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const result = await callGeminiWithResilience({
+      preferredModel: 'gemini-3.8-flash',
       contents,
       config: {
         systemInstruction: MOLARIS_SYSTEM_PROMPT,
@@ -264,11 +332,12 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       }
     });
 
-    const replyText = response.text || 'I reviewed the case, Doctor. Could you clarify the clinical presentation?';
+    const replyText = result.text || 'I reviewed the case, Doctor. Could you clarify the clinical presentation?';
 
     res.json({
       reply: replyText,
       toothTargeted: tooth ? tooth.id : null,
+      modelUsed: result.modelUsed,
       timestamp: new Date().toISOString()
     });
   } catch (err: any) {
@@ -314,9 +383,8 @@ Please provide a structured clinical assessment:
 5. **⚠️ Red Flags & Chairside Precautions**: (Anatomical risks: Mental foramen, Inferior Alveolar Canal, Maxillary Sinus floor, root fractures).
 `;
 
-    const ai = getGemini();
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const result = await callGeminiWithResilience({
+      preferredModel: 'gemini-3.8-flash',
       contents: [
         {
           role: 'user',
@@ -338,7 +406,8 @@ Please provide a structured clinical assessment:
     });
 
     res.json({
-      analysis: response.text,
+      analysis: result.text,
+      modelUsed: result.modelUsed,
       timestamp: new Date().toISOString()
     });
   } catch (err: any) {
@@ -380,9 +449,8 @@ Format strictly as:
 - **CDT Procedure Codes**: List all applicable ADA CDT codes (e.g. D0140, D0220, D2392, D3330, etc.) with description and tooth surface.
 `;
 
-    const ai = getGemini();
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const result = await callGeminiWithResilience({
+      preferredModel: 'gemini-3.8-flash',
       contents: [{ role: 'user', parts: [{ text: soapPrompt }] }],
       config: {
         systemInstruction: MOLARIS_SYSTEM_PROMPT,
@@ -391,7 +459,8 @@ Format strictly as:
     });
 
     res.json({
-      soapNote: response.text,
+      soapNote: result.text,
+      modelUsed: result.modelUsed,
       timestamp: new Date().toISOString()
     });
   } catch (err: any) {
