@@ -212,7 +212,11 @@ class PatientDatabaseManager {
       if (!fs.existsSync(DATA_DIR)) {
         fs.mkdirSync(DATA_DIR, { recursive: true });
       }
-      fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+      // Write to a temp file and rename atomically so a crash mid-write
+      // can never leave patients-db.json truncated or corrupted.
+      const tmpFile = `${DB_FILE}.tmp-${process.pid}`;
+      fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2), 'utf-8');
+      fs.renameSync(tmpFile, DB_FILE);
     } catch (err) {
       console.error('[Patient DB] Failed to persist database file:', err);
     }

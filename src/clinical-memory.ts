@@ -79,7 +79,9 @@ export function loadMemory(): ClinicalMemoryState {
 
 export function saveMemory(memory: ClinicalMemoryState): void {
   try {
-    fs.writeFileSync(MEMORY_FILE, JSON.stringify(memory, null, 2), 'utf-8');
+    const tmpFile = `${MEMORY_FILE}.tmp-${process.pid}`;
+    fs.writeFileSync(tmpFile, JSON.stringify(memory, null, 2), 'utf-8');
+    fs.renameSync(tmpFile, MEMORY_FILE);
   } catch (err) {
     console.error('Failed to write clinical memory file', err);
   }

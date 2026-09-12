@@ -569,7 +569,7 @@ function removeMessage(id) {
 }
 
 function formatMarkdown(text) {
-  return text
+  return escapeHtml(text)
     .replace(/^### (.*$)/gim, '<h4 class="font-bold text-teal-700 dark:text-teal-300 text-sm mt-2">$1</h4>')
     .replace(/^## (.*$)/gim, '<h3 class="font-bold text-slate-900 dark:text-white text-base mt-3">$1</h3>')
     .replace(/\*\*(.*?)\*\*/gim, '<strong class="font-semibold text-slate-900 dark:text-slate-100">$1</strong>')

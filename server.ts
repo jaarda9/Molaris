@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
+import session from 'express-session';
+import rateLimit from 'express-rate-limit';
 import http from 'http';
 import path from 'path';
 import fs from 'fs';
@@ -8,16 +10,83 @@ import multer from 'multer';
 import { GoogleGenAI } from '@google/genai';
 import { MOLARIS_SYSTEM_PROMPT } from './src/molaris-protocol.js';
 import { ToothInfo, ANESTHETICS, QUICK_PROTOCOLS } from './src/dental-data.js';
+import { calculateAnestheticDose } from './src/anesthesia-calc.js';
 import { loadMemory, saveMemory, ClinicalMemoryState } from './src/clinical-memory.js';
 import { patientDb, PatientRecord } from './src/patient-db.js';
 import { executeMolarisAction } from './src/molaris-actions.js';
+import { AUTH_ENABLED, requireAuth, checkPassword } from './src/auth.js';
 
 const app = express();
 const server = http.createServer(app);
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
+if (!AUTH_ENABLED) {
+  console.warn(
+    '[SECURITY WARNING] APP_PASSWORD is not set (or is still "change_me") — ' +
+    'M.O.L.A.R.I.S is running with NO authentication. Every patient record and ' +
+    'endpoint is open to anyone who can reach this server. Set a real APP_PASSWORD ' +
+    'in .env before exposing this beyond your own machine.'
+  );
+}
+
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'dev-only-insecure-secret-change-me',
+  name: 'molaris.sid',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 12 * 60 * 60 * 1000 // 12 hours
+  }
+}));
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Try again later.' }
+});
+
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Rate limit exceeded. Please slow down and try again shortly.' }
+});
+
+app.post('/api/auth/login', loginLimiter, (req: Request, res: Response) => {
+  if (!AUTH_ENABLED) {
+    res.json({ success: true });
+    return;
+  }
+  const { password } = req.body;
+  if (!checkPassword(password)) {
+    res.status(401).json({ error: 'Incorrect password' });
+    return;
+  }
+  req.session.authenticated = true;
+  res.json({ success: true });
+});
+
+app.post('/api/auth/logout', (req: Request, res: Response) => {
+  req.session.destroy(() => res.json({ success: true }));
+});
+
+app.get('/api/auth/status', (req: Request, res: Response) => {
+  res.json({
+    authEnabled: AUTH_ENABLED,
+    authenticated: !AUTH_ENABLED || !!req.session.authenticated
+  });
+});
+
+app.use(requireAuth);
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -259,56 +328,15 @@ app.post('/api/calc-la', (req: Request, res: Response) => {
     const cardiac = isCardiacRisk !== undefined ? !!isCardiacRisk : activePatient.cardiacRisk;
     const carpules = carpulesGiven !== undefined ? Number(carpulesGiven) : activePatient.deliveredCarpules;
 
-    // Weight based max mg
-    const weightMaxMg = weight * drug.maxDoseMgKg;
-    const allowedMaxMg = Math.min(weightMaxMg, drug.absoluteMaxMg);
-
-    // Maximum safe carpules based on anesthetic agent
-    const maxCarpulesByAgent = Math.floor((allowedMaxMg / drug.mgPerCartridge) * 10) / 10;
-
-    // Epinephrine limitations
-    let maxCarpulesByEpi = 999;
-    let epiPerCartridge = 0;
-    if (drug.epiRatio === '1:100,000') {
-      epiPerCartridge = drug.cartridgeVolume * 0.01; // ~0.017-0.018 mg
-      const epiLimit = cardiac ? 0.04 : 0.2;
-      maxCarpulesByEpi = Math.floor((epiLimit / epiPerCartridge) * 10) / 10;
-    } else if (drug.epiRatio === '1:200,000') {
-      epiPerCartridge = drug.cartridgeVolume * 0.005; // ~0.009 mg
-      const epiLimit = cardiac ? 0.04 : 0.2;
-      maxCarpulesByEpi = Math.floor((epiLimit / epiPerCartridge) * 10) / 10;
-    }
-
-    const safeMaxCarpules = Math.min(maxCarpulesByAgent, maxCarpulesByEpi);
-    const mgDelivered = carpules * drug.mgPerCartridge;
-    const epiDelivered = carpules * epiPerCartridge;
-    const remainingCarpules = Math.max(0, Math.round((safeMaxCarpules - carpules) * 10) / 10);
-    const isExceeded = carpules > safeMaxCarpules;
-
-    const limitingFactor = safeMaxCarpules === maxCarpulesByEpi
-      ? (language === 'fr' ? 'Épinéphrine (Plafond cardiovasculaire max 0,04 mg)' : 'Epinephrine (Cardiac threshold)')
-      : (language === 'fr' ? 'Toxicité du principe actif (Limite mg/kg)' : 'Anesthetic agent toxicity (Mg/kg limit)');
-
-    const warningMessage = isExceeded
-      ? (language === 'fr' ? 'DANGER : Dose maximale recommandée dépassée. Surveillez le patient pour tout signe de toxicité systémique (LAST) et tachycardie.' : 'DANGER: Maximum recommended dose exceeded. Monitor patient for Local Anesthetic Systemic Toxicity (LAST) and tachycardia.')
-      : cardiac && safeMaxCarpules <= 2.2
-      ? (language === 'fr' ? 'NOTE : Alerte cardiaque active. Épinéphrine plafonnée à 0,04 mg (~2 cartouches dosées à 1:100 000).' : 'NOTE: Patient has cardiac alerts. Epinephrine restricted to 0.04mg (~2 cartridges of 1:100k).')
-      : null;
-
-    res.json({
-      drugName: drug.name,
-      patientWeightKg: weight,
+    const result = calculateAnestheticDose({
+      drug,
+      weightKg: weight,
       isCardiacRisk: cardiac,
-      allowedMaxMg: Math.round(allowedMaxMg),
-      safeMaxCarpules,
-      limitingFactor,
-      carpulesDelivered: carpules,
-      mgDelivered: Math.round(mgDelivered),
-      epiDeliveredMg: Math.round(epiDelivered * 1000) / 1000,
-      remainingCarpules,
-      isExceeded,
-      warning: warningMessage
+      carpulesGiven: carpules,
+      language
     });
+
+    res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -342,7 +370,7 @@ app.post('/api/anesthesia/log', (req: Request, res: Response) => {
 });
 
 // Senior Dental Advisor & Autonomous JARVIS Action Engine
-app.post('/api/chat', async (req: Request, res: Response) => {
+app.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
   try {
     const { message, toothId, conversationHistory = [], language = 'en' } = req.body;
     if (!message || typeof message !== 'string') {
@@ -440,7 +468,7 @@ app.post('/api/chat', async (req: Request, res: Response) => {
 });
 
 // Dental Vision / Radiograph & Photo Diagnostics
-app.post('/api/analyze-image', upload.single('image'), async (req: Request, res: Response) => {
+app.post('/api/analyze-image', aiLimiter, upload.single('image'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image file uploaded' });
@@ -524,7 +552,7 @@ app.get('/api/soap/history', (req: Request, res: Response) => {
   });
 });
 
-app.post('/api/generate-soap', async (req: Request, res: Response) => {
+app.post('/api/generate-soap', aiLimiter, async (req: Request, res: Response) => {
   try {
     const { procedure, toothId, details, anesthesiaUsed, materialsUsed, language = 'en' } = req.body;
     const memory = loadMemory();
