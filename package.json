@@ -8,7 +8,7 @@
     "build": "esbuild server.ts --bundle --platform=node --target=node20 --outfile=dist/server.cjs --external:express --external:@google/genai --external:ws --external:multer --external:express-session --external:express-rate-limit",
     "start": "node dist/server.cjs",
     "lint": "tsc --noEmit",
-    "test": "node --import tsx --test src/anesthesia-calc.test.ts"
+    "test": "node --import tsx --test src/anesthesia-calc.test.ts src/clinical-safety.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.0.0",
