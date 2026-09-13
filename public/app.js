@@ -1767,9 +1767,9 @@ async function selectPatient(patientId) {
       body: JSON.stringify({ id: patientId })
     });
     const data = await res.json();
-    if (data.patient) {
-      systemState.activePatient = data.patient;
-      updateActivePatientHeaderUI(data.patient);
+    if (data.activePatient) {
+      systemState.activePatient = data.activePatient;
+      updateActivePatientHeaderUI(data.activePatient);
       renderPatientsGrid();
       await fetchOdontogram();
       await fetchActivePatientSafetyAlerts();
@@ -1783,26 +1783,26 @@ async function selectPatient(patientId) {
       const calcWeightInput = document.getElementById('calc-weight-input');
       const calcWeightSlider = document.getElementById('calc-weight-slider');
       if (calcWeightInput && calcWeightSlider) {
-        calcWeightInput.value = data.patient.weightKg || 70;
-        calcWeightSlider.value = data.patient.weightKg || 70;
+        calcWeightInput.value = data.activePatient.weightKg || 70;
+        calcWeightSlider.value = data.activePatient.weightKg || 70;
       }
       const calcCardiac = document.getElementById('calc-cardiac-toggle');
-      if (calcCardiac) calcCardiac.checked = !!data.patient.cardiacRisk;
-      
+      if (calcCardiac) calcCardiac.checked = !!data.activePatient.cardiacRisk;
+
       // Reset delivered carpules to match patient's log
-      const totalCarpules = (data.patient.anesthesiaLog || []).reduce((sum, item) => sum + (Number(item.carpules) || 0), 0);
+      const totalCarpules = (data.activePatient.anesthesiaLog || []).reduce((sum, item) => sum + (Number(item.carpules) || 0), 0);
       systemState.deliveredCarpules = totalCarpules;
       const calcDelivered = document.getElementById('calc-delivered-carpules');
       if (calcDelivered) calcDelivered.textContent = totalCarpules;
-      
+
       recalculateLA();
       playClinicalBeep(659.25, 'sine', 0.15);
 
       // Add feedback notification in chat
       const isFr = systemState.language === 'fr';
       const notificationMsg = isFr
-        ? `Contexte opératoire basculé sur le patient **${data.patient.name}** (${data.patient.chartId}). Chargement de l'odontogramme 32 dents, alertes médicales et référence ASA ${data.patient.asaStatus}.`
-        : `Operatory context switched to patient **${data.patient.name}** (${data.patient.chartId}). Loaded 32-tooth odontogram, medical alerts, and ASA ${data.patient.asaStatus} baseline.`;
+        ? `Contexte opératoire basculé sur le patient **${data.activePatient.name}** (${data.activePatient.chartId}). Chargement de l'odontogramme 32 dents, alertes médicales et référence ASA ${data.activePatient.asaStatus}.`
+        : `Operatory context switched to patient **${data.activePatient.name}** (${data.activePatient.chartId}). Loaded 32-tooth odontogram, medical alerts, and ASA ${data.activePatient.asaStatus} baseline.`;
       appendMessage('molaris', notificationMsg);
     }
   } catch (err) {

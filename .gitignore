@@ -1,6 +1,9 @@
 node_modules/
 dist/
 
+# Unrelated vendored project, not part of Molaris — never commit
+Mark-LII-main/
+
 .env
 .env.local
 .env.*.local
