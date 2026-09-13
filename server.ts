@@ -15,6 +15,8 @@ import { loadMemory, saveMemory, ClinicalMemoryState } from './src/clinical-memo
 import { patientDb, PatientRecord } from './src/patient-db.js';
 import { executeMolarisAction } from './src/molaris-actions.js';
 import { AUTH_ENABLED, requireAuth, checkPassword } from './src/auth.js';
+import { checkDrugInteractions, checkAllergyConflict, suggestProphylaxisReview, SafetyAlert } from './src/clinical-safety.js';
+import { createDefaultPerioTeeth } from './src/clinical-records.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -182,6 +184,44 @@ async function callGeminiWithResilience(options: GenerateResilientOptions): Prom
   throw lastError || new Error('All clinical models are temporarily experiencing high demand. Please retry in a few moments.');
 }
 
+// Maps an uploaded image's MIME type to a file extension for on-disk storage
+// under data/images/, so a stored record's id + mimeType is enough to find it
+// again without needing a separate stored-path field.
+function mimeTypeToExtension(mimeType: string): string {
+  const map: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif'
+  };
+  return map[mimeType] || 'bin';
+}
+
+// Computes the standing safety alerts for a patient chart: active drug
+// interactions/contraindications plus antibiotic-prophylaxis history flags.
+// `plannedDrugs` lets a specific action (logging an anesthetic, adding a
+// medication) also screen that drug against the patient's existing list.
+function computeActivePatientSafetyAlerts(
+  patient: PatientRecord,
+  plannedDrugs: string[] = [],
+  language: 'en' | 'fr' = 'en'
+): SafetyAlert[] {
+  const alerts: SafetyAlert[] = checkDrugInteractions(patient.medications, plannedDrugs, language);
+
+  const prophylaxisReasons = suggestProphylaxisReview(patient.medicalAlerts);
+  prophylaxisReasons.forEach(reason => {
+    alerts.push({
+      severity: 'info',
+      message: language === 'fr'
+        ? `Antécédents médicaux mentionnant « ${reason} » — vérifier les recommandations de prophylaxie antibiotique (AHA) avant tout acte invasif.`
+        : `Medical history mentions "${reason}" — review AHA antibiotic prophylaxis guidance before invasive procedures.`
+    });
+  });
+
+  return alerts;
+}
+
 // System Status Endpoint
 app.get('/api/status', (req: Request, res: Response) => {
   const hasKey = !!process.env.GEMINI_API_KEY;
@@ -213,15 +253,18 @@ app.get('/api/patients', (req: Request, res: Response) => {
 });
 
 app.get('/api/patients/active', (req: Request, res: Response) => {
-  res.json(patientDb.getActivePatient());
+  const patient = patientDb.getActivePatient();
+  const language = req.query.language === 'fr' ? 'fr' : 'en';
+  res.json({ ...patient, safetyAlerts: computeActivePatientSafetyAlerts(patient, [], language) });
 });
 
 app.post('/api/patients/select', (req: Request, res: Response) => {
   try {
-    const { id } = req.body;
+    const { id, language } = req.body;
     if (!id) return res.status(400).json({ error: 'Patient ID is required' });
     const patient = patientDb.setActivePatient(id);
-    res.json({ success: true, activePatient: patient });
+    const safetyAlerts = computeActivePatientSafetyAlerts(patient, [], language === 'fr' ? 'fr' : 'en');
+    res.json({ success: true, activePatient: { ...patient, safetyAlerts } });
   } catch (err: any) {
     res.status(404).json({ error: err.message });
   }
@@ -309,6 +352,176 @@ app.post('/api/odontogram/reset', (req: Request, res: Response) => {
   res.json({ success: true, odontogram: teeth });
 });
 
+// Medication List (also feeds the drug-interaction / allergy safety checks)
+app.get('/api/medications', (req: Request, res: Response) => {
+  res.json({ medications: patientDb.getMedicationsForActivePatient() });
+});
+
+app.post('/api/medications', (req: Request, res: Response) => {
+  try {
+    const { name, dosage, frequency, prescribedFor, language } = req.body;
+    if (!name || typeof name !== 'string') {
+      return res.status(400).json({ error: 'Medication name is required' });
+    }
+    const lang: 'en' | 'fr' = language === 'fr' ? 'fr' : 'en';
+    const patientBefore = patientDb.getActivePatient();
+    const allergyAlert = checkAllergyConflict(patientBefore.allergies, name, lang);
+
+    const medication = patientDb.addMedicationForActivePatient({
+      name,
+      dosage: dosage || '',
+      frequency: frequency || '',
+      prescribedFor
+    });
+
+    const patient = patientDb.getActivePatient();
+    const safetyAlerts: SafetyAlert[] = [];
+    if (allergyAlert) safetyAlerts.push(allergyAlert);
+    safetyAlerts.push(...checkDrugInteractions(patient.medications, [name], lang));
+
+    res.status(201).json({ success: true, medication, patient, safetyAlerts });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/medications/:id', (req: Request, res: Response) => {
+  try {
+    const medication = patientDb.updateMedicationForActivePatient(String(req.params.id), req.body);
+    res.json({ success: true, medication });
+  } catch (err: any) {
+    res.status(404).json({ error: err.message });
+  }
+});
+
+app.delete('/api/medications/:id', (req: Request, res: Response) => {
+  try {
+    const success = patientDb.deleteMedicationForActivePatient(String(req.params.id));
+    res.json({ success });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Periodontal Charting (6-site probing depths per tooth, snapshotted by date)
+app.get('/api/perio-charts', (req: Request, res: Response) => {
+  res.json({ charts: patientDb.getPerioChartsForActivePatient() });
+});
+
+app.get('/api/perio-charts/latest', (req: Request, res: Response) => {
+  const latest = patientDb.getLatestPerioChartForActivePatient();
+  if (latest) {
+    res.json({ chart: latest, isNew: false });
+  } else {
+    res.json({
+      chart: { id: '', date: new Date().toISOString(), teeth: createDefaultPerioTeeth(), notes: '' },
+      isNew: true
+    });
+  }
+});
+
+app.post('/api/perio-charts', (req: Request, res: Response) => {
+  try {
+    const { teeth, notes } = req.body;
+    if (!Array.isArray(teeth) || teeth.length === 0) {
+      return res.status(400).json({ error: 'A full teeth array is required to save a perio chart snapshot' });
+    }
+    const snapshot = patientDb.savePerioChartForActivePatient(teeth, notes);
+    res.status(201).json({ success: true, chart: snapshot });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Treatment Plan (per-tooth proposed/accepted/completed procedures)
+app.get('/api/treatment-plan', (req: Request, res: Response) => {
+  res.json({ items: patientDb.getTreatmentPlanForActivePatient() });
+});
+
+app.post('/api/treatment-plan', (req: Request, res: Response) => {
+  try {
+    const { toothId, procedure, cdtCode, priority, estimatedCost, notes } = req.body;
+    if (!procedure || typeof procedure !== 'string') {
+      return res.status(400).json({ error: 'Procedure description is required' });
+    }
+    const item = patientDb.addTreatmentPlanItemForActivePatient({
+      toothId: toothId !== undefined && toothId !== '' ? Number(toothId) : undefined,
+      procedure,
+      cdtCode,
+      priority: priority || 'routine',
+      estimatedCost: estimatedCost !== undefined && estimatedCost !== '' ? Number(estimatedCost) : undefined,
+      notes
+    });
+    res.status(201).json({ success: true, item });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/treatment-plan/:id', (req: Request, res: Response) => {
+  try {
+    const item = patientDb.updateTreatmentPlanItemForActivePatient(String(req.params.id), req.body);
+    res.json({ success: true, item });
+  } catch (err: any) {
+    res.status(404).json({ error: err.message });
+  }
+});
+
+app.delete('/api/treatment-plan/:id', (req: Request, res: Response) => {
+  try {
+    const success = patientDb.deleteTreatmentPlanItemForActivePatient(String(req.params.id));
+    res.json({ success });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Lab Cases (crown & bridge / denture / appliance workflow with a lab)
+app.get('/api/lab-cases', (req: Request, res: Response) => {
+  res.json({ cases: patientDb.getLabCasesForActivePatient() });
+});
+
+app.post('/api/lab-cases', (req: Request, res: Response) => {
+  try {
+    const { toothId, caseType, material, shade, marginDesign, occlusalNotes, labName, dueDate, notes } = req.body;
+    if (!caseType || typeof caseType !== 'string') {
+      return res.status(400).json({ error: 'Case type is required' });
+    }
+    const labCase = patientDb.addLabCaseForActivePatient({
+      toothId: toothId !== undefined && toothId !== '' ? Number(toothId) : undefined,
+      caseType,
+      material,
+      shade,
+      marginDesign,
+      occlusalNotes,
+      labName,
+      dueDate,
+      notes
+    });
+    res.status(201).json({ success: true, labCase });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/lab-cases/:id', (req: Request, res: Response) => {
+  try {
+    const labCase = patientDb.updateLabCaseForActivePatient(String(req.params.id), req.body);
+    res.json({ success: true, labCase });
+  } catch (err: any) {
+    res.status(404).json({ error: err.message });
+  }
+});
+
+app.delete('/api/lab-cases/:id', (req: Request, res: Response) => {
+  try {
+    const success = patientDb.deleteLabCaseForActivePatient(String(req.params.id));
+    res.json({ success });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Anesthetics List & Data
 app.get('/api/anesthetics', (req: Request, res: Response) => {
   res.json({
@@ -345,9 +558,10 @@ app.post('/api/calc-la', (req: Request, res: Response) => {
 // Anesthesia Logging Endpoint
 app.post('/api/anesthesia/log', (req: Request, res: Response) => {
   try {
-    const { drugId, carpules, site, notes } = req.body;
+    const { drugId, carpules, site, notes, language } = req.body;
     const drug = ANESTHETICS.find(a => a.id === drugId) || ANESTHETICS[0];
     const carp = Number(carpules) || 1.0;
+    const lang: 'en' | 'fr' = language === 'fr' ? 'fr' : 'en';
 
     let epiPerCartridge = 0;
     if (drug.epiRatio === '1:100,000') epiPerCartridge = drug.cartridgeVolume * 0.01;
@@ -363,7 +577,9 @@ app.post('/api/anesthesia/log', (req: Request, res: Response) => {
       notes
     });
 
-    res.json({ success: true, patient: result.patient, entry: result.entry });
+    const safetyAlerts = checkDrugInteractions(result.patient.medications, [drug.name], lang);
+
+    res.json({ success: true, patient: result.patient, entry: result.entry, safetyAlerts });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -407,6 +623,14 @@ app.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
 
     if (actionResult.executed) {
       contextPrompt += `\n[M.O.L.A.R.I.S JARVIS ACTION JUST EXECUTED IN DATABASE]: ${actionResult.summary}\n`;
+    }
+
+    const safetyAlerts = computeActivePatientSafetyAlerts(activePatient, [], language === 'fr' ? 'fr' : 'en');
+    if (safetyAlerts.length > 0) {
+      contextPrompt += `\n[STANDING SAFETY ALERTS FOR THIS PATIENT — already surfaced to the doctor, acknowledge briefly rather than re-deriving]:\n`;
+      safetyAlerts.forEach(a => {
+        contextPrompt += `- (${a.severity.toUpperCase()}) ${a.message}\n`;
+      });
     }
 
     if (language === 'fr') {
@@ -455,6 +679,7 @@ app.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
       reply: replyText,
       action: actionResult,
       activePatient: patientDb.getActivePatient(),
+      safetyAlerts,
       toothTargeted: tooth ? tooth.id : null,
       modelUsed: result.modelUsed,
       timestamp: new Date().toISOString()
@@ -530,15 +755,52 @@ Please provide a structured clinical assessment:
       }
     });
 
+    // Persist the image to disk and record it on the patient's chart so past
+    // radiographs/photos and their AI reads are reviewable later, instead of
+    // vanishing once the response is sent.
+    const imageId = `img_${Date.now()}`;
+    const ext = mimeTypeToExtension(mimeType);
+    const imagesDir = path.join(process.cwd(), 'data', 'images');
+    if (!fs.existsSync(imagesDir)) {
+      fs.mkdirSync(imagesDir, { recursive: true });
+    }
+    fs.writeFileSync(path.join(imagesDir, `${imageId}.${ext}`), req.file.buffer);
+
+    const imageRecord = patientDb.addImageRecordForActivePatient({
+      id: imageId,
+      filename: req.file.originalname || `${imageId}.${ext}`,
+      mimeType,
+      toothId: toothNumber ? Number(toothNumber) : undefined,
+      query: clinicalQuery,
+      analysis: result.text,
+      modelUsed: result.modelUsed
+    });
+
     res.json({
       analysis: result.text,
       modelUsed: result.modelUsed,
+      image: imageRecord,
       timestamp: new Date().toISOString()
     });
   } catch (err: any) {
     console.error('Vision analysis error:', err);
     res.status(500).json({ error: err.message || 'Radiographic analysis failed' });
   }
+});
+
+// Serves a previously analyzed clinical image back from disk by its record id.
+app.get('/api/images/:id', (req: Request, res: Response) => {
+  const found = patientDb.findImageRecord(String(req.params.id));
+  if (!found) {
+    return res.status(404).json({ error: 'Image record not found' });
+  }
+  const ext = mimeTypeToExtension(found.image.mimeType);
+  const filePath = path.join(process.cwd(), 'data', 'images', `${found.image.id}.${ext}`);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Image file is missing from disk' });
+  }
+  res.setHeader('Content-Type', found.image.mimeType);
+  res.sendFile(filePath);
 });
 
 // SOAP Note and CDT Coding Generator & Historical Registry

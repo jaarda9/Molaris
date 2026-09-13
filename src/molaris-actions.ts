@@ -1,4 +1,5 @@
 import { patientDb, PatientRecord } from './patient-db.js';
+import { checkDrugInteractions } from './clinical-safety.js';
 import os from 'os';
 
 export interface ActionResult {
@@ -162,15 +163,22 @@ export function executeMolarisAction(commandText: string, language: string = 'en
       notes: isFr ? 'Enregistré via action vocale M.O.L.A.R.I.S' : 'Logged via chairside assistant action'
     });
 
-    const summary = isFr
+    const safetyAlerts = checkDrugInteractions(res.patient.medications, [drugName], isFr ? 'fr' : 'en');
+
+    let summary = isFr
       ? `**${carpules} carpule(s)** de **${drugName}** ajoutée(s) au dossier de ${res.patient.name} (Total délivré aujourd'hui : ${res.patient.deliveredCarpules} carpules).`
       : `Logged **${carpules} carpules** of **${drugName}** to ${res.patient.name}'s chart (Total delivered: ${res.patient.deliveredCarpules} carpules).`;
+
+    if (safetyAlerts.length > 0) {
+      const alertPrefix = isFr ? '⚠️ ALERTE : ' : '⚠️ ALERT: ';
+      summary += `\n\n${safetyAlerts.map(a => `${alertPrefix}${a.message}`).join('\n')}`;
+    }
 
     return {
       executed: true,
       actionType: 'LOG_ANESTHESIA',
       summary,
-      data: { patient: res.patient, logEntry: res.entry }
+      data: { patient: res.patient, logEntry: res.entry, safetyAlerts }
     };
   }
 

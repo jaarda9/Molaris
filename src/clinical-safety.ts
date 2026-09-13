@@ -42,31 +42,39 @@ function containsAny(haystack: string, needles: string[]): boolean {
  */
 export function checkDrugInteractions(
   medications: MedicationLike[],
-  plannedDrugs: string[] = []
+  plannedDrugs: string[] = [],
+  language: 'en' | 'fr' = 'en'
 ): SafetyAlert[] {
   const alerts: SafetyAlert[] = [];
   const activeMedText = medications.filter(m => m.active).map(m => m.name.toLowerCase()).join(' | ');
   const plannedText = plannedDrugs.map(d => d.toLowerCase()).join(' | ');
   const combinedText = `${activeMedText} | ${plannedText}`;
+  const isFr = language === 'fr';
 
   if (containsAny(activeMedText, ANTICOAGULANTS) && containsAny(combinedText, NSAIDS)) {
     alerts.push({
       severity: 'critical',
-      message: 'Patient is on an anticoagulant/antiplatelet and NSAID use (current or planned) increases bleeding risk. Consider acetaminophen for analgesia and confirm with the prescriber before invasive procedures.'
+      message: isFr
+        ? 'Le patient est sous anticoagulant/antiagrégant et une exposition aux AINS (actuelle ou prévue) augmente le risque hémorragique. Privilégier le paracétamol pour l\'analgésie et confirmer avec le prescripteur avant tout acte invasif.'
+        : 'Patient is on an anticoagulant/antiplatelet and NSAID use (current or planned) increases bleeding risk. Consider acetaminophen for analgesia and confirm with the prescriber before invasive procedures.'
     });
   }
 
   if (containsAny(activeMedText, BISPHOSPHONATES)) {
     alerts.push({
       severity: 'critical',
-      message: 'Patient has a history of antiresorptive therapy (bisphosphonate/denosumab). Elevated MRONJ risk with extractions, implants, or bone surgery — discuss drug holiday with the prescriber and favor conservative management where possible.'
+      message: isFr
+        ? 'Le patient a des antécédents de traitement antirésorptif (bisphosphonate/dénosumab). Risque élevé d\'ostéonécrose (MRONJ) lors d\'extractions, d\'implants ou de chirurgie osseuse — discuter d\'une fenêtre thérapeutique avec le prescripteur et privilégier une prise en charge conservatrice si possible.'
+        : 'Patient has a history of antiresorptive therapy (bisphosphonate/denosumab). Elevated MRONJ risk with extractions, implants, or bone surgery — discuss drug holiday with the prescriber and favor conservative management where possible.'
     });
   }
 
   if (containsAny(activeMedText, MAOIS) && containsAny(plannedText, VASOCONSTRICTOR_TERMS)) {
     alerts.push({
       severity: 'warning',
-      message: 'Patient is on an MAOI. Vasoconstrictor-containing anesthetics carry a theoretical hypertensive crisis risk — use the minimum effective epinephrine dose and monitor vitals.'
+      message: isFr
+        ? 'Le patient est sous IMAO. Les anesthésiques contenant un vasoconstricteur comportent un risque théorique de crise hypertensive — utiliser la dose minimale efficace d\'épinéphrine et surveiller les constantes.'
+        : 'Patient is on an MAOI. Vasoconstrictor-containing anesthetics carry a theoretical hypertensive crisis risk — use the minimum effective epinephrine dose and monitor vitals.'
     });
   }
 
@@ -78,13 +86,15 @@ export function checkDrugInteractions(
  * Currently covers the penicillin-class cross-reactivity case, the most
  * common real-world prescribing error in dental practice.
  */
-export function checkAllergyConflict(allergies: string, drugName: string): SafetyAlert | null {
+export function checkAllergyConflict(allergies: string, drugName: string, language: 'en' | 'fr' = 'en'): SafetyAlert | null {
   const allergyText = (allergies || '').toLowerCase();
   const drug = (drugName || '').toLowerCase();
   if (PENICILLIN_CLASS.some(p => drug.includes(p)) && allergyText.includes('penicillin')) {
     return {
       severity: 'critical',
-      message: `Patient has a documented penicillin allergy — ${drugName} is contraindicated. Consider clindamycin or azithromycin instead.`
+      message: language === 'fr'
+        ? `Le patient a une allergie documentée à la pénicilline — ${drugName} est contre-indiqué. Envisager la clindamycine ou l'azithromycine à la place.`
+        : `Patient has a documented penicillin allergy — ${drugName} is contraindicated. Consider clindamycin or azithromycin instead.`
     };
   }
   return null;

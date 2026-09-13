@@ -83,6 +83,50 @@
     .dark .status-missing { background-color: #0f172a; border-color: #475569; color: #64748b; border-style: dashed; }
     .dark .status-implant { background-color: #042f2e; border-color: #0d9488; color: #99f6e4; }
 
+    /* Treatment plan priority chips */
+    .priority-urgent { background-color: #fef2f2; border-color: #f87171; color: #b91c1c; }
+    .priority-high { background-color: #fff7ed; border-color: #fb923c; color: #c2410c; }
+    .priority-routine { background-color: #eff6ff; border-color: #60a5fa; color: #1d4ed8; }
+    .priority-elective { background-color: #f8fafc; border-color: #cbd5e1; color: #475569; }
+    .dark .priority-urgent { background-color: #450a0a; border-color: #dc2626; color: #fca5a5; }
+    .dark .priority-high { background-color: #431407; border-color: #ea580c; color: #fdba74; }
+    .dark .priority-routine { background-color: #172554; border-color: #2563eb; color: #bfdbfe; }
+    .dark .priority-elective { background-color: #1e293b; border-color: #334155; color: #cbd5e1; }
+
+    /* Treatment plan status chips */
+    .tstatus-proposed { background-color: #f8fafc; border-color: #cbd5e1; color: #475569; }
+    .tstatus-accepted { background-color: #eff6ff; border-color: #60a5fa; color: #1d4ed8; }
+    .tstatus-in_progress { background-color: #fefce8; border-color: #facc15; color: #a16207; }
+    .tstatus-completed { background-color: #f0fdf4; border-color: #4ade80; color: #15803d; }
+    .tstatus-declined { background-color: #fef2f2; border-color: #f87171; color: #b91c1c; }
+    .dark .tstatus-proposed { background-color: #1e293b; border-color: #334155; color: #cbd5e1; }
+    .dark .tstatus-accepted { background-color: #172554; border-color: #2563eb; color: #bfdbfe; }
+    .dark .tstatus-in_progress { background-color: #422006; border-color: #d97706; color: #fde68a; }
+    .dark .tstatus-completed { background-color: #052e16; border-color: #16a34a; color: #86efac; }
+    .dark .tstatus-declined { background-color: #450a0a; border-color: #dc2626; color: #fca5a5; }
+
+    /* Lab case status chips */
+    .labstatus-planned { background-color: #f8fafc; border-color: #cbd5e1; color: #475569; }
+    .labstatus-sent { background-color: #eff6ff; border-color: #60a5fa; color: #1d4ed8; }
+    .labstatus-in_lab { background-color: #faf5ff; border-color: #c084fc; color: #7e22ce; }
+    .labstatus-returned { background-color: #fefce8; border-color: #facc15; color: #a16207; }
+    .labstatus-seated { background-color: #f0fdf4; border-color: #4ade80; color: #15803d; }
+    .labstatus-remake { background-color: #fef2f2; border-color: #f87171; color: #b91c1c; }
+    .dark .labstatus-planned { background-color: #1e293b; border-color: #334155; color: #cbd5e1; }
+    .dark .labstatus-sent { background-color: #172554; border-color: #2563eb; color: #bfdbfe; }
+    .dark .labstatus-in_lab { background-color: #3b0764; border-color: #9333ea; color: #e9d5ff; }
+    .dark .labstatus-returned { background-color: #422006; border-color: #d97706; color: #fde68a; }
+    .dark .labstatus-seated { background-color: #052e16; border-color: #16a34a; color: #86efac; }
+    .dark .labstatus-remake { background-color: #450a0a; border-color: #dc2626; color: #fca5a5; }
+
+    /* Safety alert severity chips */
+    .severity-critical { background-color: #fef2f2; border-color: #f87171; color: #b91c1c; }
+    .severity-warning { background-color: #fffbeb; border-color: #fbbf24; color: #b45309; }
+    .severity-info { background-color: #eff6ff; border-color: #60a5fa; color: #1d4ed8; }
+    .dark .severity-critical { background-color: #450a0a; border-color: #dc2626; color: #fca5a5; }
+    .dark .severity-warning { background-color: #451a03; border-color: #d97706; color: #fcd34d; }
+    .dark .severity-info { background-color: #172554; border-color: #2563eb; color: #bfdbfe; }
+
     /* Custom scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -299,6 +343,44 @@
         </svg>
         <span data-i18n="nav.preferences">Doctor Profile &amp; Memory</span>
       </button>
+
+      <button id="nav-tab-treatment" class="nav-tab px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+          <line x1="9" y1="12" x2="15" y2="12"></line>
+          <line x1="9" y1="16" x2="13" y2="16"></line>
+        </svg>
+        <span data-i18n="nav.treatment">Treatment Plan</span>
+      </button>
+
+      <button id="nav-tab-medications" class="nav-tab px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"></path>
+          <path d="m8.5 8.5 7 7"></path>
+        </svg>
+        <span data-i18n="nav.medications">Medications</span>
+      </button>
+
+      <button id="nav-tab-perio" class="nav-tab px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.4 2.4 0 0 1 0-3.4l2.6-2.6a2.4 2.4 0 0 1 3.4 0Z"></path>
+          <path d="m14.5 12.5 2-2"></path>
+          <path d="m11.5 9.5 2-2"></path>
+          <path d="m8.5 6.5 2-2"></path>
+          <path d="m17.5 15.5 2-2"></path>
+        </svg>
+        <span data-i18n="nav.perio">Perio Chart</span>
+      </button>
+
+      <button id="nav-tab-labcases" class="nav-tab px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path>
+          <polyline points="3.29 7 12 12 20.71 7"></polyline>
+          <line x1="12" y1="22" x2="12" y2="12"></line>
+        </svg>
+        <span data-i18n="nav.labcases">Lab Cases</span>
+      </button>
     </div>
   </nav>
 
@@ -360,6 +442,9 @@
           </div>
           <button id="remove-tooth-context-btn" class="text-teal-600 hover:text-teal-900 dark:hover:text-teal-100 font-bold">&times; Remove</button>
         </div>
+
+        <!-- Chat-context Safety Alerts (populated after /api/chat responses) -->
+        <div id="chat-safety-alerts" class="hidden px-4 py-2 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 space-y-1.5"></div>
 
         <!-- Chat Input & Hands-free Controls -->
         <div class="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
@@ -429,6 +514,14 @@
               <span><strong>Cardiac Anesthesia:</strong> Maximum Articaine vs Mepivacaine carpules?</span>
             </button>
           </div>
+        </div>
+
+        <!-- Standing Patient Safety Alerts Banner -->
+        <div id="safety-alerts-card" class="hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm space-y-2 text-xs">
+          <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+            <span class="font-semibold text-slate-700 dark:text-slate-200" data-i18n="safety.title">Standing Safety Alerts</span>
+          </div>
+          <div id="safety-alerts-sidebar" class="space-y-1.5"></div>
         </div>
 
         <!-- Current Doctor Preferences Summary -->
@@ -583,6 +676,33 @@
             </div>
           </div>
 
+          <!-- Tooth Surfaces Selector -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" data-i18n="odonto.surfacesLabel">Affected Surfaces:</label>
+            <div class="flex flex-wrap gap-3 text-xs text-slate-700 dark:text-slate-300">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" id="surface-mesial" class="w-3.5 h-3.5 text-teal-600 rounded border-slate-300 dark:border-slate-600">
+                <span data-i18n="odonto.surfaceMesial">Mesial</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" id="surface-distal" class="w-3.5 h-3.5 text-teal-600 rounded border-slate-300 dark:border-slate-600">
+                <span data-i18n="odonto.surfaceDistal">Distal</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" id="surface-occlusal" class="w-3.5 h-3.5 text-teal-600 rounded border-slate-300 dark:border-slate-600">
+                <span data-i18n="odonto.surfaceOcclusal">Occlusal</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" id="surface-buccal" class="w-3.5 h-3.5 text-teal-600 rounded border-slate-300 dark:border-slate-600">
+                <span data-i18n="odonto.surfaceBuccal">Buccal</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" id="surface-lingual" class="w-3.5 h-3.5 text-teal-600 rounded border-slate-300 dark:border-slate-600">
+                <span data-i18n="odonto.surfaceLingual">Lingual</span>
+              </label>
+            </div>
+          </div>
+
           <!-- Notes for this tooth -->
           <div class="flex gap-2">
             <input type="text" id="detail-tooth-notes" placeholder="Clinical notes (e.g. 'DO composite planned, cold lingered 15s, distolingual fracture')..." class="flex-1 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
@@ -606,6 +726,9 @@
             </h2>
             <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="la.subtitle">Determine safe cartridge limits based on patient body weight and vasoconstrictor cardiac threshold.</p>
           </div>
+
+          <!-- Safety Alerts (standing + anesthesia-log) -->
+          <div id="safety-alerts-anesthesia" class="hidden space-y-1.5"></div>
 
           <!-- Drug Selection -->
           <div class="space-y-2">
@@ -1166,6 +1289,135 @@
       </div>
     </section>
 
+    <!-- VIEW 10: TREATMENT PLAN -->
+    <section id="view-treatment" class="hidden space-y-6">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white" data-i18n="treatment.title">Treatment Plan</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="treatment.subtitle">Propose, prioritize, and track per-tooth procedures through to completion.</p>
+          </div>
+          <button id="btn-add-treatment-item" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 shadow-sm transition cursor-pointer">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span data-i18n="treatment.addBtn">+ Add Item</span>
+          </button>
+        </div>
+
+        <div id="treatment-plan-list" class="space-y-3">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 11: MEDICATIONS -->
+    <section id="view-medications" class="hidden space-y-6">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white" data-i18n="meds.title">Medications</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="meds.subtitle">Maintain the active medication list that feeds drug-interaction and allergy safety checks.</p>
+          </div>
+          <button id="btn-add-medication" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 shadow-sm transition cursor-pointer">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span data-i18n="meds.addBtn">+ Add Medication</span>
+          </button>
+        </div>
+
+        <!-- Prominent Safety Alert Banner (populated right after a medication is added) -->
+        <div id="medication-safety-alerts" class="hidden space-y-1.5"></div>
+
+        <div id="medications-list" class="space-y-3">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 12: PERIODONTAL CHART -->
+    <section id="view-perio" class="hidden space-y-6">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span data-i18n="perio.title">Full-Mouth Perio Chart</span>
+              <span id="perio-chart-date-badge" class="text-xs font-mono font-normal bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded"></span>
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="perio.subtitle">Click a tooth to record 6-site probing depths, recession, bleeding, mobility &amp; furcation. Save creates a new dated snapshot.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="text" id="perio-notes-input" placeholder="Snapshot notes (optional)..." class="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 w-48">
+            <button id="btn-save-perio-snapshot" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer whitespace-nowrap">
+              <span data-i18n="perio.saveSnapshot">Save Snapshot</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="perio-save-confirmation" class="hidden p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 font-medium">
+          ✓ <span data-i18n="perio.saved">Snapshot saved to periodontal chart history.</span>
+        </div>
+
+        <!-- Perio Grid: Maxillary Arch -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span data-i18n="odonto.maxillaryArch">Upper Arch • Maxillary (Right → Left)</span>
+          </div>
+          <div id="perio-maxillary-grid" class="grid grid-cols-4 sm:grid-cols-8 gap-2">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <div class="relative py-2">
+          <div class="border-t border-dashed border-slate-300 dark:border-slate-700"></div>
+        </div>
+
+        <!-- Perio Grid: Mandibular Arch -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span data-i18n="odonto.mandibularArch">Lower Arch • Mandibular (Right → Left)</span>
+          </div>
+          <div id="perio-mandibular-grid" class="grid grid-cols-4 sm:grid-cols-8 gap-2">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Snapshot History -->
+        <div class="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-2">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400" data-i18n="perio.history">Snapshot History</h3>
+          <div id="perio-history-list" class="space-y-1.5 text-xs">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 13: LAB CASES -->
+    <section id="view-labcases" class="hidden space-y-6">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white" data-i18n="labcases.title">Lab Cases</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="labcases.subtitle">Track crown &amp; bridge, denture, and appliance cases through the outside dental lab workflow.</p>
+          </div>
+          <button id="btn-add-lab-case" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 shadow-sm transition cursor-pointer">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span data-i18n="labcases.addBtn">+ Add Case</span>
+          </button>
+        </div>
+
+        <div id="lab-cases-list" class="space-y-4">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </section>
+
     <!-- MODAL: ADD / EDIT PATIENT -->
     <div id="modal-patient" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
       <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
@@ -1257,6 +1509,230 @@
             <button type="submit" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer">
               Save Patient to Database
             </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: ADD TREATMENT PLAN ITEM -->
+    <div id="modal-treatment-item" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <h3 class="font-bold text-base text-slate-900 dark:text-white" data-i18n="treatment.modalTitle">Add Treatment Plan Item</h3>
+          <button id="btn-close-modal-treatment" type="button" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <form id="treatment-item-form" class="space-y-3.5 text-xs">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="treatment.tooth">Tooth #</label>
+              <select id="form-treatment-tooth" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-slate-900 dark:text-white">
+                <option value="" data-i18n="common.none">None / Full Mouth</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="treatment.priority">Priority</label>
+              <select id="form-treatment-priority" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-slate-900 dark:text-white">
+                <option value="urgent" data-i18n="treatment.priorityUrgent">Urgent</option>
+                <option value="high" data-i18n="treatment.priorityHigh">High</option>
+                <option value="routine" selected data-i18n="treatment.priorityRoutine">Routine</option>
+                <option value="elective" data-i18n="treatment.priorityElective">Elective</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="treatment.procedure">Procedure *</label>
+            <input type="text" id="form-treatment-procedure" required placeholder="e.g. Crown, Composite restoration, Extraction" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="treatment.cdtCode">CDT Code</label>
+              <input type="text" id="form-treatment-cdt" placeholder="e.g. D2740" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="treatment.cost">Estimated Cost</label>
+              <input type="number" id="form-treatment-cost" min="0" step="1" placeholder="0" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="treatment.notes">Notes</label>
+            <textarea id="form-treatment-notes" rows="2" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white"></textarea>
+          </div>
+
+          <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end space-x-2">
+            <button type="button" id="btn-cancel-modal-treatment" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold cursor-pointer" data-i18n="treatment.cancel">Cancel</button>
+            <button type="submit" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer" data-i18n="treatment.save">Save Item</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: ADD MEDICATION -->
+    <div id="modal-medication" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <h3 class="font-bold text-base text-slate-900 dark:text-white" data-i18n="meds.modalTitle">Add Medication</h3>
+          <button id="btn-close-modal-medication" type="button" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <form id="medication-form" class="space-y-3.5 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="meds.name">Medication Name *</label>
+            <input type="text" id="form-med-name" required placeholder="e.g. Warfarin" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="meds.dosage">Dosage</label>
+              <input type="text" id="form-med-dosage" placeholder="e.g. 5mg" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="meds.frequency">Frequency</label>
+              <input type="text" id="form-med-frequency" placeholder="e.g. Once daily" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+            </div>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="meds.prescribedFor">Prescribed For</label>
+            <input type="text" id="form-med-prescribedfor" placeholder="e.g. Atrial fibrillation" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+          </div>
+
+          <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end space-x-2">
+            <button type="button" id="btn-cancel-modal-medication" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold cursor-pointer" data-i18n="meds.cancel">Cancel</button>
+            <button type="submit" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer" data-i18n="meds.save">Save Medication</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: ADD LAB CASE -->
+    <div id="modal-lab-case" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <h3 class="font-bold text-base text-slate-900 dark:text-white" data-i18n="labcases.modalTitle">Add Lab Case</h3>
+          <button id="btn-close-modal-labcase" type="button" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <form id="lab-case-form" class="space-y-3.5 text-xs">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="labcases.tooth">Tooth #</label>
+              <select id="form-labcase-tooth" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-slate-900 dark:text-white">
+                <option value="" data-i18n="common.none">None / Full Arch</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="labcases.caseType">Case Type *</label>
+              <input type="text" id="form-labcase-type" required placeholder="e.g. Crown, Bridge, Denture" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="labcases.material">Material</label>
+              <input type="text" id="form-labcase-material" placeholder="e.g. Zirconia" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="labcases.shade">Shade</label>
+              <input type="text" id="form-labcase-shade" placeholder="e.g. A2" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="labcases.marginDesign">Margin Design</label>
+            <input type="text" id="form-labcase-margin" placeholder="e.g. Deep chamfer, feather-edge" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="labcases.occlusalNotes">Occlusal Notes</label>
+            <input type="text" id="form-labcase-occlusal" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="labcases.labName">Lab Name</label>
+              <input type="text" id="form-labcase-labname" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="labcases.dueDate">Due Date</label>
+              <input type="date" id="form-labcase-duedate" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="labcases.notes">Notes</label>
+            <textarea id="form-labcase-notes" rows="2" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white"></textarea>
+          </div>
+
+          <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end space-x-2">
+            <button type="button" id="btn-cancel-modal-labcase" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold cursor-pointer" data-i18n="labcases.cancel">Cancel</button>
+            <button type="submit" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer" data-i18n="labcases.save">Save Case</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: PERIO TOOTH ENTRY -->
+    <div id="modal-perio-tooth" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <h3 id="modal-perio-title" class="font-bold text-base text-slate-900 dark:text-white" data-i18n="perio.modalTitle">Perio Entry — Tooth</h3>
+          <button id="btn-close-modal-perio" type="button" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <form id="perio-tooth-form" class="space-y-4 text-xs">
+          <input type="hidden" id="form-perio-tooth-id" value="">
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="perio.mobility">Mobility</label>
+              <select id="form-perio-mobility" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-slate-900 dark:text-white">
+                <option value="0">0</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="perio.furcation">Furcation</label>
+              <select id="form-perio-furcation" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-slate-900 dark:text-white">
+                <option value="null" data-i18n="common.none">N/A</option>
+                <option value="0">0</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="perio-sites-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- 6 site sub-forms rendered by JS -->
+          </div>
+
+          <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end space-x-2">
+            <button type="button" id="btn-cancel-modal-perio" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold cursor-pointer" data-i18n="perio.cancel">Cancel</button>
+            <button type="submit" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer" data-i18n="perio.saveEntry">Update Tooth (In Memory)</button>
           </div>
         </form>
       </div>

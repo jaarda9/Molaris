@@ -76,11 +76,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   initPreferencesForm();
   initPatientManager();
   initJarvisHudAndTelemetry();
+  initTreatmentPlanManager();
+  initMedicationManager();
+  initPerioChartManager();
+  initLabCaseManager();
 
   await fetchPatients();
   await fetchSystemStatus();
   await fetchOdontogram();
   await fetchAnestheticsAndProtocols();
+  await fetchActivePatientSafetyAlerts();
+  await fetchTreatmentPlan();
+  await fetchMedications();
+  await fetchLabCases();
+  await fetchPerioLatest();
+  await fetchPerioHistory();
 });
 
 // -----------------------------------------------------------------------------
@@ -178,6 +188,11 @@ function initLanguageSwitcher() {
     if (typeof window.refreshProtocolsView === 'function') {
       window.refreshProtocolsView();
     }
+    renderTreatmentPlanList();
+    renderMedicationsList();
+    renderPerioGrid();
+    renderPerioHistory();
+    renderLabCasesList();
     playClinicalBeep(lang === 'fr' ? 660 : 880, 'sine', 0.1);
   };
 
@@ -209,6 +224,10 @@ function initNavigation() {
     { id: 'nav-tab-soap', view: 'view-soap' },
     { id: 'nav-tab-system', view: 'view-system' },
     { id: 'nav-tab-preferences', view: 'view-preferences' },
+    { id: 'nav-tab-treatment', view: 'view-treatment' },
+    { id: 'nav-tab-medications', view: 'view-medications' },
+    { id: 'nav-tab-perio', view: 'view-perio' },
+    { id: 'nav-tab-labcases', view: 'view-labcases' },
   ];
 
   tabs.forEach(t => {
@@ -235,6 +254,10 @@ function initNavigation() {
       if (t.view === 'view-system') {
         fetchTelemetry();
       }
+      if (t.view === 'view-treatment') fetchTreatmentPlan();
+      if (t.view === 'view-medications') fetchMedications();
+      if (t.view === 'view-perio') { fetchPerioLatest(); fetchPerioHistory(); }
+      if (t.view === 'view-labcases') fetchLabCases();
     });
   });
 
@@ -484,6 +507,8 @@ if (chatForm) {
         systemState.chatHistory.push({ role: 'user', content: query });
         systemState.chatHistory.push({ role: 'model', content: data.reply });
         speakAdvisorText(data.reply);
+        renderSafetyAlertsInto('chat-safety-alerts', data.safetyAlerts);
+        renderSafetyAlertsInto('safety-alerts-sidebar', data.safetyAlerts, { parentCardId: 'safety-alerts-card' });
 
         // Execute autonomous client actions triggered by M.O.L.A.R.I.S JARVIS action engine
         if (data.action && data.action.executed) {
@@ -707,6 +732,13 @@ function selectTooth(tooth) {
     : `FDI Notation: ${tooth.fdi} • Arch: ${tooth.arch.toUpperCase()} • Type: ${tooth.type.toUpperCase()}`;
   notesEl.value = tooth.notes || '';
 
+  // Initialize tooth surfaces checkboxes from persisted data
+  const surfaces = tooth.surfaces || {};
+  ['mesial', 'distal', 'occlusal', 'buccal', 'lingual'].forEach(s => {
+    const cb = document.getElementById(`surface-${s}`);
+    if (cb) cb.checked = !!surfaces[s];
+  });
+
   // Highlight active status button
   document.querySelectorAll('.status-choice-btn').forEach(btn => {
     if (btn.dataset.status === tooth.status) {
@@ -762,12 +794,23 @@ document.querySelectorAll('.status-choice-btn').forEach(btn => {
   });
 });
 
+function collectToothSurfaces() {
+  const surfaces = {};
+  ['mesial', 'distal', 'occlusal', 'buccal', 'lingual'].forEach(s => {
+    const cb = document.getElementById(`surface-${s}`);
+    if (cb) surfaces[s] = cb.checked;
+  });
+  return surfaces;
+}
+
 const saveNoteBtn = document.getElementById('save-tooth-note-btn');
 if (saveNoteBtn) {
   saveNoteBtn.addEventListener('click', async () => {
     if (!systemState.selectedTooth) return;
     const notes = document.getElementById('detail-tooth-notes').value;
+    const surfaces = collectToothSurfaces();
     systemState.selectedTooth.notes = notes;
+    systemState.selectedTooth.surfaces = surfaces;
 
     try {
       await fetch('/api/odontogram', {
@@ -775,7 +818,8 @@ if (saveNoteBtn) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           toothId: systemState.selectedTooth.id,
-          notes
+          notes,
+          surfaces
         })
       });
       playClinicalBeep(700, 'sine', 0.1);
@@ -784,6 +828,29 @@ if (saveNoteBtn) {
     }
   });
 }
+
+// Immediate-save on any surface checkbox toggle (mirrors the status-choice-btn pattern)
+['mesial', 'distal', 'occlusal', 'buccal', 'lingual'].forEach(s => {
+  const cb = document.getElementById(`surface-${s}`);
+  if (!cb) return;
+  cb.addEventListener('change', async () => {
+    if (!systemState.selectedTooth) return;
+    const surfaces = collectToothSurfaces();
+    systemState.selectedTooth.surfaces = surfaces;
+    try {
+      await fetch('/api/odontogram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          toothId: systemState.selectedTooth.id,
+          surfaces
+        })
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  });
+});
 
 const consultToothAdvisorBtn = document.getElementById('consult-tooth-advisor-btn');
 if (consultToothAdvisorBtn) {
@@ -1396,6 +1463,7 @@ function handleMolarisAutonomousAction(action) {
         fetchPatients().then(() => {
           fetchOdontogram();
           fetchSystemStatus();
+          fetchActivePatientSafetyAlerts();
         });
       }
       break;
@@ -1417,6 +1485,9 @@ function handleMolarisAutonomousAction(action) {
           if (calcDelivered) calcDelivered.textContent = action.data.patient.deliveredCarpules;
         }
         recalculateLA();
+        if (action.data && action.data.safetyAlerts) {
+          renderSafetyAlertsInto('safety-alerts-anesthesia', action.data.safetyAlerts);
+        }
       });
       break;
 
@@ -1701,7 +1772,13 @@ async function selectPatient(patientId) {
       updateActivePatientHeaderUI(data.patient);
       renderPatientsGrid();
       await fetchOdontogram();
-      
+      await fetchActivePatientSafetyAlerts();
+      await fetchTreatmentPlan();
+      await fetchMedications();
+      await fetchLabCases();
+      await fetchPerioLatest();
+      await fetchPerioHistory();
+
       // Update LA calculator
       const calcWeightInput = document.getElementById('calc-weight-input');
       const calcWeightSlider = document.getElementById('calc-weight-slider');
@@ -2025,4 +2102,774 @@ function initJarvisWaveformCanvas() {
   }
 
   draw();
+}
+
+// -----------------------------------------------------------------------------
+// Shared Safety Alerts Banner Renderer (critical / warning / info)
+// -----------------------------------------------------------------------------
+function renderSafetyAlertsInto(containerId, alerts, opts = {}) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const parentCard = opts.parentCardId ? document.getElementById(opts.parentCardId) : null;
+
+  if (!alerts || alerts.length === 0) {
+    container.innerHTML = '';
+    container.classList.add('hidden');
+    if (parentCard) parentCard.classList.add('hidden');
+    return;
+  }
+
+  const isFr = systemState.language === 'fr';
+  container.innerHTML = alerts.map(a => {
+    const label = a.severity === 'critical' ? (isFr ? 'CRITIQUE' : 'CRITICAL')
+      : a.severity === 'warning' ? (isFr ? 'AVERTISSEMENT' : 'WARNING')
+      : 'INFO';
+    const icon = a.severity === 'info' ? 'ℹ️' : '⚠️';
+    return `
+      <div class="severity-${a.severity} border rounded-lg px-3 py-2 flex items-start gap-2 text-xs">
+        <span class="font-bold whitespace-nowrap">${icon} ${label}:</span>
+        <span>${escapeHtml(a.message)}</span>
+      </div>
+    `;
+  }).join('');
+  container.classList.remove('hidden');
+  if (parentCard) parentCard.classList.remove('hidden');
+}
+
+async function fetchActivePatientSafetyAlerts() {
+  try {
+    const lang = systemState.language || 'en';
+    const res = await fetch(`/api/patients/active?language=${lang}`);
+    const data = await res.json();
+    renderSafetyAlertsInto('safety-alerts-sidebar', data.safetyAlerts, { parentCardId: 'safety-alerts-card' });
+    renderSafetyAlertsInto('safety-alerts-anesthesia', data.safetyAlerts);
+  } catch (err) {
+    console.warn('Failed to fetch active patient safety alerts:', err);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Shared Tooth Select Populator (Treatment Plan / Lab Cases)
+// -----------------------------------------------------------------------------
+function populateToothSelect(selectEl) {
+  if (!selectEl) return;
+  const firstOption = selectEl.options.length > 0 ? selectEl.options[0].cloneNode(true) : null;
+  selectEl.innerHTML = '';
+  if (firstOption) selectEl.appendChild(firstOption);
+
+  const teeth = (systemState.teethData && systemState.teethData.length === 32)
+    ? systemState.teethData
+    : Array.from({ length: 32 }, (_, i) => ({ id: i + 1, name: '' }));
+
+  teeth.slice().sort((a, b) => a.id - b.id).forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = String(t.id);
+    opt.textContent = t.name ? `#${t.id} — ${t.name}` : `#${t.id}`;
+    selectEl.appendChild(opt);
+  });
+}
+
+function isMaxillaryToothId(id) {
+  return id >= 1 && id <= 16;
+}
+
+function isMolarToothId(id) {
+  return [1, 2, 3, 14, 15, 16, 17, 18, 19, 30, 31, 32].includes(id);
+}
+
+// -----------------------------------------------------------------------------
+// Treatment Plan Engine
+// -----------------------------------------------------------------------------
+function getTreatmentPriorityLabel(priority, isFr) {
+  switch (priority) {
+    case 'urgent': return isFr ? 'Urgent' : 'Urgent';
+    case 'high': return isFr ? 'Élevée' : 'High';
+    case 'routine': return isFr ? 'Routine' : 'Routine';
+    case 'elective': return isFr ? 'Optionnel' : 'Elective';
+    default: return priority;
+  }
+}
+
+function getTreatmentStatusLabel(status, isFr) {
+  switch (status) {
+    case 'proposed': return isFr ? 'Proposé' : 'Proposed';
+    case 'accepted': return isFr ? 'Accepté' : 'Accepted';
+    case 'in_progress': return isFr ? 'En Cours' : 'In Progress';
+    case 'completed': return isFr ? 'Terminé' : 'Completed';
+    case 'declined': return isFr ? 'Refusé' : 'Declined';
+    default: return status;
+  }
+}
+
+async function fetchTreatmentPlan() {
+  try {
+    const res = await fetch('/api/treatment-plan');
+    const data = await res.json();
+    systemState.treatmentPlan = data.items || [];
+    renderTreatmentPlanList();
+  } catch (err) {
+    console.error('Failed to fetch treatment plan:', err);
+  }
+}
+
+function renderTreatmentPlanList() {
+  const container = document.getElementById('treatment-plan-list');
+  if (!container) return;
+  const items = systemState.treatmentPlan || [];
+  const isFr = systemState.language === 'fr';
+
+  if (items.length === 0) {
+    container.innerHTML = `<div class="text-center py-10 text-slate-400 text-xs">${isFr ? 'Aucun acte planifié pour l\'instant. Ajoutez le premier acte proposé.' : 'No treatment plan items yet. Add the first proposed procedure.'}</div>`;
+    return;
+  }
+
+  const priorityOrder = { urgent: 0, high: 1, routine: 2, elective: 3 };
+  const sorted = [...items].sort((a, b) => (priorityOrder[a.priority] ?? 9) - (priorityOrder[b.priority] ?? 9));
+
+  container.innerHTML = '';
+  sorted.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3';
+
+    row.innerHTML = `
+      <div class="flex-1 min-w-[220px] space-y-1">
+        <div class="flex items-center gap-2 flex-wrap">
+          ${item.toothId ? `<span class="font-mono font-bold text-xs bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-1.5 py-0.5 rounded">#${item.toothId}</span>` : ''}
+          <span class="font-semibold text-sm text-slate-900 dark:text-white">${escapeHtml(item.procedure)}</span>
+          ${item.cdtCode ? `<span class="text-[10px] font-mono text-slate-500 dark:text-slate-400">${escapeHtml(item.cdtCode)}</span>` : ''}
+          <span class="px-2 py-0.5 rounded border text-[10px] font-semibold priority-${item.priority}">${getTreatmentPriorityLabel(item.priority, isFr)}</span>
+        </div>
+        ${item.notes ? `<p class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(item.notes)}</p>` : ''}
+        ${(item.estimatedCost !== undefined && item.estimatedCost !== null) ? `<p class="text-xs font-mono text-teal-700 dark:text-teal-400">$${Number(item.estimatedCost).toFixed(2)}</p>` : ''}
+      </div>
+      <div class="flex items-center gap-2">
+        <select class="treatment-status-select text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5">
+          <option value="proposed">${getTreatmentStatusLabel('proposed', isFr)}</option>
+          <option value="accepted">${getTreatmentStatusLabel('accepted', isFr)}</option>
+          <option value="in_progress">${getTreatmentStatusLabel('in_progress', isFr)}</option>
+          <option value="completed">${getTreatmentStatusLabel('completed', isFr)}</option>
+          <option value="declined">${getTreatmentStatusLabel('declined', isFr)}</option>
+        </select>
+        <button class="btn-delete-treatment-item p-2 rounded-lg bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400" title="${isFr ? 'Supprimer' : 'Delete'}">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+      </div>
+    `;
+
+    const statusSelect = row.querySelector('.treatment-status-select');
+    if (statusSelect) {
+      statusSelect.value = item.status;
+      statusSelect.addEventListener('change', async (e) => {
+        try {
+          const res = await fetch(`/api/treatment-plan/${item.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: e.target.value })
+          });
+          const resData = await res.json();
+          if (resData.success) {
+            item.status = resData.item.status;
+            playClinicalBeep(700, 'sine', 0.1);
+          }
+        } catch (err) {
+          alert('Failed to update status: ' + err.message);
+        }
+      });
+    }
+
+    row.querySelector('.btn-delete-treatment-item')?.addEventListener('click', async () => {
+      const isFr2 = systemState.language === 'fr';
+      if (!confirm(isFr2 ? 'Supprimer cet acte du plan de traitement ?' : 'Delete this treatment plan item?')) return;
+      try {
+        await fetch(`/api/treatment-plan/${item.id}`, { method: 'DELETE' });
+        await fetchTreatmentPlan();
+      } catch (err) {
+        alert('Failed to delete item: ' + err.message);
+      }
+    });
+
+    container.appendChild(row);
+  });
+}
+
+function initTreatmentPlanManager() {
+  const addBtn = document.getElementById('btn-add-treatment-item');
+  const modal = document.getElementById('modal-treatment-item');
+  const closeBtn = document.getElementById('btn-close-modal-treatment');
+  const cancelBtn = document.getElementById('btn-cancel-modal-treatment');
+  const form = document.getElementById('treatment-item-form');
+  if (!modal || !form) return;
+
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      form.reset();
+      populateToothSelect(document.getElementById('form-treatment-tooth'));
+      modal.classList.remove('hidden');
+    });
+  }
+  if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+  if (cancelBtn) cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const toothVal = document.getElementById('form-treatment-tooth').value;
+    const costVal = document.getElementById('form-treatment-cost').value;
+    const payload = {
+      toothId: toothVal ? Number(toothVal) : undefined,
+      procedure: document.getElementById('form-treatment-procedure').value.trim(),
+      cdtCode: document.getElementById('form-treatment-cdt').value.trim() || undefined,
+      priority: document.getElementById('form-treatment-priority').value,
+      estimatedCost: costVal !== '' ? Number(costVal) : undefined,
+      notes: document.getElementById('form-treatment-notes').value.trim() || undefined
+    };
+    try {
+      const res = await fetch('/api/treatment-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        modal.classList.add('hidden');
+        playClinicalBeep(880, 'sine', 0.15);
+        await fetchTreatmentPlan();
+      } else {
+        alert('Error: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Network error saving treatment plan item: ' + err.message);
+    }
+  });
+}
+
+// -----------------------------------------------------------------------------
+// Medications Engine (feeds drug-interaction & allergy safety checks)
+// -----------------------------------------------------------------------------
+async function fetchMedications() {
+  try {
+    const res = await fetch('/api/medications');
+    const data = await res.json();
+    systemState.medications = data.medications || [];
+    renderMedicationsList();
+  } catch (err) {
+    console.error('Failed to fetch medications:', err);
+  }
+}
+
+function renderMedicationsList() {
+  const container = document.getElementById('medications-list');
+  if (!container) return;
+  const meds = systemState.medications || [];
+  const isFr = systemState.language === 'fr';
+
+  if (meds.length === 0) {
+    container.innerHTML = `<div class="text-center py-10 text-slate-400 text-xs">${isFr ? 'Aucun médicament enregistré pour ce patient.' : 'No medications on file for this patient.'}</div>`;
+    return;
+  }
+
+  container.innerHTML = '';
+  meds.forEach(med => {
+    const row = document.createElement('div');
+    row.className = 'bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3';
+    row.innerHTML = `
+      <div class="flex-1 min-w-[200px] space-y-0.5">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="font-semibold text-sm text-slate-900 dark:text-white">${escapeHtml(med.name)}</span>
+          ${med.dosage ? `<span class="text-xs font-mono text-slate-500 dark:text-slate-400">${escapeHtml(med.dosage)}</span>` : ''}
+          ${med.frequency ? `<span class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(med.frequency)}</span>` : ''}
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${med.active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}">
+            ${med.active ? (isFr ? 'Actif' : 'Active') : (isFr ? 'Inactif' : 'Inactive')}
+          </span>
+        </div>
+        ${med.prescribedFor ? `<p class="text-xs text-slate-500 dark:text-slate-400 italic">${isFr ? 'Prescrit pour :' : 'Prescribed for:'} ${escapeHtml(med.prescribedFor)}</p>` : ''}
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="btn-toggle-med px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+          ${med.active ? (isFr ? 'Désactiver' : 'Deactivate') : (isFr ? 'Activer' : 'Activate')}
+        </button>
+        <button class="btn-delete-med p-2 rounded-lg bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400" title="${isFr ? 'Supprimer' : 'Delete'}">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+      </div>
+    `;
+
+    row.querySelector('.btn-toggle-med')?.addEventListener('click', async () => {
+      try {
+        const res = await fetch(`/api/medications/${med.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ active: !med.active })
+        });
+        const data = await res.json();
+        if (data.success) {
+          await fetchMedications();
+        }
+      } catch (err) {
+        alert('Failed to update medication: ' + err.message);
+      }
+    });
+
+    row.querySelector('.btn-delete-med')?.addEventListener('click', async () => {
+      const isFr2 = systemState.language === 'fr';
+      if (!confirm(isFr2 ? 'Supprimer ce médicament ?' : 'Delete this medication?')) return;
+      try {
+        await fetch(`/api/medications/${med.id}`, { method: 'DELETE' });
+        await fetchMedications();
+      } catch (err) {
+        alert('Failed to delete medication: ' + err.message);
+      }
+    });
+
+    container.appendChild(row);
+  });
+}
+
+function initMedicationManager() {
+  const addBtn = document.getElementById('btn-add-medication');
+  const modal = document.getElementById('modal-medication');
+  const closeBtn = document.getElementById('btn-close-modal-medication');
+  const cancelBtn = document.getElementById('btn-cancel-modal-medication');
+  const form = document.getElementById('medication-form');
+  if (!modal || !form) return;
+
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      form.reset();
+      modal.classList.remove('hidden');
+    });
+  }
+  if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+  if (cancelBtn) cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      name: document.getElementById('form-med-name').value.trim(),
+      dosage: document.getElementById('form-med-dosage').value.trim(),
+      frequency: document.getElementById('form-med-frequency').value.trim(),
+      prescribedFor: document.getElementById('form-med-prescribedfor').value.trim() || undefined,
+      language: systemState.language || 'en'
+    };
+    try {
+      const res = await fetch('/api/medications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        modal.classList.add('hidden');
+        playClinicalBeep(880, 'sine', 0.15);
+        await fetchMedications();
+        // Critical: surface any returned drug-interaction / allergy safety alerts prominently
+        renderSafetyAlertsInto('medication-safety-alerts', data.safetyAlerts);
+        await fetchActivePatientSafetyAlerts();
+        if (data.safetyAlerts && data.safetyAlerts.length > 0) {
+          playClinicalBeep(300, 'sawtooth', 0.25);
+        }
+      } else {
+        alert('Error: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Network error saving medication: ' + err.message);
+    }
+  });
+}
+
+// -----------------------------------------------------------------------------
+// Full-Mouth Perio Chart Engine (6-site probing, snapshotted by date)
+// -----------------------------------------------------------------------------
+const PERIO_SITE_KEYS = ['mesiobuccal', 'buccal', 'distobuccal', 'distolingual', 'lingual', 'mesiolingual'];
+
+function getPerioSiteLabel(key, isFr) {
+  const map = {
+    mesiobuccal: isFr ? 'Mésio-vestibulaire' : 'Mesiobuccal',
+    buccal: isFr ? 'Vestibulaire' : 'Buccal',
+    distobuccal: isFr ? 'Disto-vestibulaire' : 'Distobuccal',
+    distolingual: isFr ? 'Disto-lingual' : 'Distolingual',
+    lingual: isFr ? 'Lingual' : 'Lingual',
+    mesiolingual: isFr ? 'Mésio-lingual' : 'Mesiolingual'
+  };
+  return map[key] || key;
+}
+
+async function fetchPerioLatest() {
+  try {
+    const res = await fetch('/api/perio-charts/latest');
+    const data = await res.json();
+    systemState.perioTeeth = data.chart.teeth;
+    systemState.perioChartId = data.chart.id;
+    systemState.perioIsNew = data.isNew;
+
+    const notesInput = document.getElementById('perio-notes-input');
+    if (notesInput) notesInput.value = data.chart.notes || '';
+
+    const dateBadge = document.getElementById('perio-chart-date-badge');
+    if (dateBadge) {
+      const isFr = systemState.language === 'fr';
+      dateBadge.textContent = data.isNew
+        ? (isFr ? 'Nouveau relevé' : 'New Chart')
+        : new Date(data.chart.date).toLocaleDateString(isFr ? 'fr-FR' : 'en-US');
+    }
+
+    renderPerioGrid();
+  } catch (err) {
+    console.error('Failed to fetch latest perio chart:', err);
+  }
+}
+
+async function fetchPerioHistory() {
+  try {
+    const res = await fetch('/api/perio-charts');
+    const data = await res.json();
+    systemState.perioHistory = data.charts || [];
+    renderPerioHistory();
+  } catch (err) {
+    console.error('Failed to fetch perio chart history:', err);
+  }
+}
+
+function renderPerioHistory() {
+  const container = document.getElementById('perio-history-list');
+  if (!container) return;
+  const history = systemState.perioHistory || [];
+  const isFr = systemState.language === 'fr';
+
+  if (history.length === 0) {
+    container.innerHTML = `<div class="text-slate-400 py-2">${isFr ? 'Aucun relevé antérieur enregistré.' : 'No prior snapshots saved yet.'}</div>`;
+    return;
+  }
+
+  const sorted = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
+  container.innerHTML = sorted.map(snap => `
+    <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2">
+      <span class="font-mono font-semibold text-slate-700 dark:text-slate-300">${new Date(snap.date).toLocaleString(isFr ? 'fr-FR' : 'en-US')}</span>
+      ${snap.notes ? `<span class="text-slate-500 dark:text-slate-400 italic truncate ml-3">${escapeHtml(snap.notes)}</span>` : ''}
+    </div>
+  `).join('');
+}
+
+function renderPerioGrid() {
+  const maxGrid = document.getElementById('perio-maxillary-grid');
+  const manGrid = document.getElementById('perio-mandibular-grid');
+  if (!maxGrid || !manGrid) return;
+  const teeth = systemState.perioTeeth || [];
+  if (teeth.length === 0) return;
+
+  maxGrid.innerHTML = '';
+  manGrid.innerHTML = '';
+
+  const maxillary = teeth.filter(t => isMaxillaryToothId(t.toothId)).sort((a, b) => a.toothId - b.toothId);
+  const mandibular = teeth.filter(t => !isMaxillaryToothId(t.toothId)).sort((a, b) => b.toothId - a.toothId);
+
+  maxillary.forEach(t => maxGrid.appendChild(createPerioToothCard(t)));
+  mandibular.forEach(t => manGrid.appendChild(createPerioToothCard(t)));
+}
+
+function createPerioToothCard(entry) {
+  const sites = Object.values(entry.sites);
+  const maxDepth = Math.max(...sites.map(s => s.pocketDepth));
+  const anyBleeding = sites.some(s => s.bleeding);
+  const anySuppuration = sites.some(s => s.suppuration);
+
+  let severityClass = 'status-sound';
+  if (maxDepth >= 6) severityClass = 'status-caries';
+  else if (maxDepth >= 4) severityClass = 'status-crown';
+
+  const card = document.createElement('div');
+  card.className = `cursor-pointer p-2 rounded-xl border text-center flex flex-col items-center justify-between gap-1 min-h-[72px] ${severityClass}`;
+  card.innerHTML = `
+    <span class="text-[10px] font-mono font-bold">#${entry.toothId}</span>
+    <span class="text-sm font-bold">${maxDepth}mm</span>
+    <span class="flex items-center gap-1 h-3">
+      ${anyBleeding ? '<span class="w-2 h-2 rounded-full bg-rose-500" title="Bleeding on probing"></span>' : ''}
+      ${anySuppuration ? '<span class="w-2 h-2 rounded-full bg-amber-500" title="Suppuration"></span>' : ''}
+      ${entry.mobility > 0 ? `<span class="text-[9px] font-mono">M${entry.mobility}</span>` : ''}
+    </span>
+  `;
+  card.addEventListener('click', () => openPerioToothModal(entry));
+  return card;
+}
+
+function openPerioToothModal(entry) {
+  const modal = document.getElementById('modal-perio-tooth');
+  const title = document.getElementById('modal-perio-title');
+  if (!modal) return;
+  const isFr = systemState.language === 'fr';
+
+  document.getElementById('form-perio-tooth-id').value = entry.toothId;
+  title.textContent = isFr ? `Saisie Parodontale — Dent #${entry.toothId}` : `Perio Entry — Tooth #${entry.toothId}`;
+  document.getElementById('form-perio-mobility').value = String(entry.mobility);
+  document.getElementById('form-perio-furcation').value = (entry.furcation === null || entry.furcation === undefined) ? 'null' : String(entry.furcation);
+
+  const sitesContainer = document.getElementById('perio-sites-container');
+  sitesContainer.innerHTML = PERIO_SITE_KEYS.map(key => {
+    const site = entry.sites[key];
+    return `
+      <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 space-y-1.5" data-site="${key}">
+        <div class="font-semibold text-slate-700 dark:text-slate-300">${getPerioSiteLabel(key, isFr)}</div>
+        <div class="grid grid-cols-2 gap-1.5">
+          <label class="flex flex-col gap-0.5">
+            <span class="text-[10px] text-slate-500">${isFr ? 'Profondeur (mm)' : 'Pocket (mm)'}</span>
+            <input type="number" min="0" max="15" class="site-pocket w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2 py-1" value="${site.pocketDepth}">
+          </label>
+          <label class="flex flex-col gap-0.5">
+            <span class="text-[10px] text-slate-500">${isFr ? 'Récession (mm)' : 'Recession (mm)'}</span>
+            <input type="number" min="0" max="15" class="site-recession w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2 py-1" value="${site.recession}">
+          </label>
+        </div>
+        <div class="flex items-center gap-3 pt-0.5">
+          <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="site-bleeding" ${site.bleeding ? 'checked' : ''}> <span>${isFr ? 'Saignement' : 'Bleeding'}</span></label>
+          <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="site-suppuration" ${site.suppuration ? 'checked' : ''}> <span>${isFr ? 'Suppuration' : 'Suppuration'}</span></label>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  modal.classList.remove('hidden');
+}
+
+function initPerioChartManager() {
+  const modal = document.getElementById('modal-perio-tooth');
+  const closeBtn = document.getElementById('btn-close-modal-perio');
+  const cancelBtn = document.getElementById('btn-cancel-modal-perio');
+  const form = document.getElementById('perio-tooth-form');
+  const saveSnapshotBtn = document.getElementById('btn-save-perio-snapshot');
+  if (!modal || !form) return;
+
+  if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+  if (cancelBtn) cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const toothId = Number(document.getElementById('form-perio-tooth-id').value);
+    const entry = (systemState.perioTeeth || []).find(t => t.toothId === toothId);
+    if (!entry) return;
+
+    entry.mobility = Number(document.getElementById('form-perio-mobility').value);
+    const furcationVal = document.getElementById('form-perio-furcation').value;
+    entry.furcation = furcationVal === 'null' ? null : Number(furcationVal);
+
+    document.querySelectorAll('#perio-sites-container [data-site]').forEach(siteDiv => {
+      const key = siteDiv.dataset.site;
+      const pocket = Number(siteDiv.querySelector('.site-pocket').value) || 0;
+      const recession = Number(siteDiv.querySelector('.site-recession').value) || 0;
+      const bleeding = siteDiv.querySelector('.site-bleeding').checked;
+      const suppuration = siteDiv.querySelector('.site-suppuration').checked;
+      entry.sites[key] = { pocketDepth: pocket, recession, bleeding, suppuration };
+    });
+
+    modal.classList.add('hidden');
+    renderPerioGrid();
+    playClinicalBeep(700, 'sine', 0.1);
+  });
+
+  if (saveSnapshotBtn) {
+    saveSnapshotBtn.addEventListener('click', async () => {
+      const notes = document.getElementById('perio-notes-input')?.value || '';
+      const confirmEl = document.getElementById('perio-save-confirmation');
+      if (confirmEl) confirmEl.classList.add('hidden');
+      try {
+        const res = await fetch('/api/perio-charts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ teeth: systemState.perioTeeth, notes })
+        });
+        const data = await res.json();
+        if (data.success) {
+          playClinicalBeep(880, 'sine', 0.2);
+          if (confirmEl) confirmEl.classList.remove('hidden');
+          await fetchPerioLatest();
+          await fetchPerioHistory();
+        } else {
+          alert('Error saving perio snapshot: ' + (data.error || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Network error saving perio snapshot: ' + err.message);
+      }
+    });
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Lab Cases Engine (crown & bridge / denture / appliance workflow with a lab)
+// -----------------------------------------------------------------------------
+function getLabStatusLabel(status, isFr) {
+  switch (status) {
+    case 'planned': return isFr ? 'Planifié' : 'Planned';
+    case 'sent': return isFr ? 'Envoyé' : 'Sent';
+    case 'in_lab': return isFr ? 'Au Laboratoire' : 'In Lab';
+    case 'returned': return isFr ? 'Retourné' : 'Returned';
+    case 'seated': return isFr ? 'Posé' : 'Seated';
+    case 'remake': return isFr ? 'À Refaire' : 'Remake';
+    default: return status;
+  }
+}
+
+async function fetchLabCases() {
+  try {
+    const res = await fetch('/api/lab-cases');
+    const data = await res.json();
+    systemState.labCases = data.cases || [];
+    renderLabCasesList();
+  } catch (err) {
+    console.error('Failed to fetch lab cases:', err);
+  }
+}
+
+function renderLabCasesList() {
+  const container = document.getElementById('lab-cases-list');
+  if (!container) return;
+  const cases = systemState.labCases || [];
+  const isFr = systemState.language === 'fr';
+
+  if (cases.length === 0) {
+    container.innerHTML = `<div class="text-center py-10 text-slate-400 text-xs">${isFr ? 'Aucun cas de laboratoire enregistré pour ce patient.' : 'No lab cases on file for this patient.'}</div>`;
+    return;
+  }
+
+  const statusOrder = { planned: 0, sent: 1, in_lab: 2, returned: 3, seated: 4, remake: 5 };
+  const sorted = [...cases].sort((a, b) => (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9));
+
+  container.innerHTML = '';
+  sorted.forEach(lc => {
+    const now = new Date();
+    let dueBadge = '';
+    if (lc.dueDate && lc.status !== 'seated') {
+      const due = new Date(lc.dueDate);
+      const diffDays = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+      if (diffDays < 0) {
+        dueBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">${isFr ? 'EN RETARD' : 'OVERDUE'}</span>`;
+      } else if (diffDays <= 2) {
+        dueBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">${isFr ? 'ÉCHÉANCE PROCHE' : 'DUE SOON'}</span>`;
+      }
+    }
+
+    const row = document.createElement('div');
+    row.className = 'bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3';
+    row.innerHTML = `
+      <div class="flex-1 min-w-[220px] space-y-1">
+        <div class="flex items-center gap-2 flex-wrap">
+          ${lc.toothId ? `<span class="font-mono font-bold text-xs bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-1.5 py-0.5 rounded">#${lc.toothId}</span>` : ''}
+          <span class="font-semibold text-sm text-slate-900 dark:text-white">${escapeHtml(lc.caseType)}</span>
+          ${lc.material ? `<span class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(lc.material)}${lc.shade ? ' • ' + escapeHtml(lc.shade) : ''}</span>` : ''}
+          <span class="px-2 py-0.5 rounded border text-[10px] font-semibold labstatus-${lc.status}">${getLabStatusLabel(lc.status, isFr)}</span>
+          ${dueBadge}
+        </div>
+        <div class="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap gap-x-3">
+          ${lc.labName ? `<span>${isFr ? 'Labo :' : 'Lab:'} ${escapeHtml(lc.labName)}</span>` : ''}
+          ${lc.dueDate ? `<span>${isFr ? 'Échéance :' : 'Due:'} ${new Date(lc.dueDate).toLocaleDateString(isFr ? 'fr-FR' : 'en-US')}</span>` : ''}
+        </div>
+        ${lc.notes ? `<p class="text-xs text-slate-500 dark:text-slate-400 italic">${escapeHtml(lc.notes)}</p>` : ''}
+      </div>
+      <div class="flex items-center gap-2">
+        <select class="labcase-status-select text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5">
+          <option value="planned">${getLabStatusLabel('planned', isFr)}</option>
+          <option value="sent">${getLabStatusLabel('sent', isFr)}</option>
+          <option value="in_lab">${getLabStatusLabel('in_lab', isFr)}</option>
+          <option value="returned">${getLabStatusLabel('returned', isFr)}</option>
+          <option value="seated">${getLabStatusLabel('seated', isFr)}</option>
+          <option value="remake">${getLabStatusLabel('remake', isFr)}</option>
+        </select>
+        <button class="btn-delete-labcase p-2 rounded-lg bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400" title="${isFr ? 'Supprimer' : 'Delete'}">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+      </div>
+    `;
+
+    const statusSelect = row.querySelector('.labcase-status-select');
+    if (statusSelect) {
+      statusSelect.value = lc.status;
+      statusSelect.addEventListener('change', async (e) => {
+        try {
+          const res = await fetch(`/api/lab-cases/${lc.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: e.target.value })
+          });
+          const data = await res.json();
+          if (data.success) {
+            playClinicalBeep(700, 'sine', 0.1);
+            await fetchLabCases();
+          }
+        } catch (err) {
+          alert('Failed to update lab case status: ' + err.message);
+        }
+      });
+    }
+
+    row.querySelector('.btn-delete-labcase')?.addEventListener('click', async () => {
+      const isFr2 = systemState.language === 'fr';
+      if (!confirm(isFr2 ? 'Supprimer ce cas de laboratoire ?' : 'Delete this lab case?')) return;
+      try {
+        await fetch(`/api/lab-cases/${lc.id}`, { method: 'DELETE' });
+        await fetchLabCases();
+      } catch (err) {
+        alert('Failed to delete lab case: ' + err.message);
+      }
+    });
+
+    container.appendChild(row);
+  });
+}
+
+function initLabCaseManager() {
+  const addBtn = document.getElementById('btn-add-lab-case');
+  const modal = document.getElementById('modal-lab-case');
+  const closeBtn = document.getElementById('btn-close-modal-labcase');
+  const cancelBtn = document.getElementById('btn-cancel-modal-labcase');
+  const form = document.getElementById('lab-case-form');
+  if (!modal || !form) return;
+
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      form.reset();
+      populateToothSelect(document.getElementById('form-labcase-tooth'));
+      modal.classList.remove('hidden');
+    });
+  }
+  if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+  if (cancelBtn) cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const toothVal = document.getElementById('form-labcase-tooth').value;
+    const payload = {
+      toothId: toothVal ? Number(toothVal) : undefined,
+      caseType: document.getElementById('form-labcase-type').value.trim(),
+      material: document.getElementById('form-labcase-material').value.trim() || undefined,
+      shade: document.getElementById('form-labcase-shade').value.trim() || undefined,
+      marginDesign: document.getElementById('form-labcase-margin').value.trim() || undefined,
+      occlusalNotes: document.getElementById('form-labcase-occlusal').value.trim() || undefined,
+      labName: document.getElementById('form-labcase-labname').value.trim() || undefined,
+      dueDate: document.getElementById('form-labcase-duedate').value || undefined,
+      notes: document.getElementById('form-labcase-notes').value.trim() || undefined
+    };
+    try {
+      const res = await fetch('/api/lab-cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        modal.classList.add('hidden');
+        playClinicalBeep(880, 'sine', 0.15);
+        await fetchLabCases();
+      } else {
+        alert('Error: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Network error saving lab case: ' + err.message);
+    }
+  });
 }
