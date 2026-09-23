@@ -10,5 +10,9 @@
     "outDir": "./dist",
     "resolveJsonModule": true
   },
-  "include": ["server.ts", "src/**/*"]
+  "include": [
+    "server.ts",
+    "src/**/*",
+    "scripts/**/*.ts"
+  ]
 }

@@ -1,10 +1,9 @@
 import fs from 'fs';
 import path from 'path';
-import { ToothInfo, DEFAULT_TEETH } from './dental-data.js';
+import { ToothInfo, DEFAULT_TEETH } from '../domain/dental-data.js';
 import {
   Medication,
   PerioChartSnapshot,
-  createDefaultPerioTeeth,
   TreatmentPlanItem,
   ConsentRecord,
   ClinicalImageRecord,
@@ -12,12 +11,16 @@ import {
   RecallInfo,
   createDefaultRecall,
   SoapAddendum
-} from './clinical-records.js';
+} from '../domain/clinical-records.js';
+import { DB, DATA_DIR, getDb } from '../db/connection.js';
+import { nextDocumentNumber } from '../db/counters.js';
+import { newId, nowIso } from '../db/ids.js';
 
 export interface PatientRecord {
   id: string;
   chartId: string;
   name: string;
+  phone?: string;
   age: number;
   gender: 'Male' | 'Female' | 'Other';
   weightKg: number;
@@ -77,31 +80,26 @@ export interface DentalDatabase {
   patients: PatientRecord[];
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const DB_FILE = path.join(DATA_DIR, 'patients-db.json');
+const LEGACY_JSON_FILE = path.join(DATA_DIR, 'patients-db.json');
+const ACTIVE_PATIENT_KEY = 'activePatientId';
 
-// Helper to create a fresh default tooth set with custom modifications
 function createPatientTeeth(modifications?: Array<{ id: number; status: ToothInfo['status']; notes?: string }>): ToothInfo[] {
   const teeth: ToothInfo[] = JSON.parse(JSON.stringify(DEFAULT_TEETH));
-  if (modifications) {
-    modifications.forEach(mod => {
-      const tooth = teeth.find(t => t.id === mod.id);
-      if (tooth) {
-        tooth.status = mod.status;
-        if (mod.notes) tooth.notes = mod.notes;
-      }
-    });
-  }
+  modifications?.forEach(mod => {
+    const tooth = teeth.find(t => t.id === mod.id);
+    if (tooth) {
+      tooth.status = mod.status;
+      if (mod.notes) tooth.notes = mod.notes;
+    }
+  });
   return teeth;
 }
 
 type ClinicalDefaultFields = 'medications' | 'perioCharts' | 'treatmentPlan' | 'consents' | 'images' | 'labCases' | 'recall' | 'isPregnantOrNursing' | 'prophylaxisRequired' | 'prophylaxisReason';
 type PatientSeed = Omit<PatientRecord, ClinicalDefaultFields> & Partial<Pick<PatientRecord, ClinicalDefaultFields>>;
 
-// Backfills the newer clinical-record fields (medications, perio charting,
-// treatment plan, consents, images, lab cases, recall) so seed data, freshly
-// created patients, and older patients-db.json files on disk all end up with
-// a consistent shape without repeating this boilerplate at every call site.
+// Backfills fields added after a record was first written, so older records
+// (legacy JSON files, imports) always load with a consistent shape.
 function withClinicalDefaults(patient: PatientSeed): PatientRecord {
   return {
     ...patient,
@@ -118,183 +116,253 @@ function withClinicalDefaults(patient: PatientSeed): PatientRecord {
   };
 }
 
-// Initial default seed database (linked to distinct patients, never hardcoded in logic)
-const RAW_SEED_PATIENTS: PatientSeed[] = [
+// Demo patients for a fresh install: Tunisian personas, French clinical text.
+function buildSeedPatients(): PatientRecord[] {
+  const now = nowIso();
+  const seeds: PatientSeed[] = [
     {
       id: 'pt_1',
-      chartId: 'PT-2026-084',
-      name: 'Marcus Vance',
+      chartId: 'PT-2026-0084',
+      name: 'Mohamed Ben Salah',
+      phone: '+216 98 123 456',
       age: 48,
       gender: 'Male',
-      weightKg: 72,
+      weightKg: 78,
       asaStatus: 'ASA II',
       cardiacRisk: false,
-      medicalAlerts: 'Controlled hypertension (Lisinopril 10mg); No known drug allergies',
-      allergies: 'No known drug allergies (NKDA)',
-      chiefComplaint: 'Severe throbbing ache in lower right molar on cold and biting for 3 days',
+      medicalAlerts: 'Hypertension artérielle contrôlée (amlodipine 5 mg/j).',
+      allergies: 'Aucune allergie médicamenteuse connue',
+      chiefComplaint: 'Douleur pulsatile de la 46 au froid et à la mastication depuis 3 jours',
       deliveredCarpules: 1.0,
       selectedDrugId: 'arti_100k',
       teeth: createPatientTeeth([
-        { id: 30, status: 'caries', notes: 'Deep distal-occlusal caries extending to inner third of dentin. Lingering cold response >20s.' },
-        { id: 19, status: 'restoration', notes: 'Existing MOD composite restoration, intact margins.' },
-        { id: 3, status: 'crown', notes: 'Zirconia full contour crown placed 2022.' }
+        { id: 30, status: 'caries', notes: 'Carie disto-occlusale profonde atteignant le tiers interne de la dentine. Réponse au froid persistante > 20 s.' },
+        { id: 19, status: 'restoration', notes: 'Composite MOD existant, joints intacts.' },
+        { id: 3, status: 'crown', notes: 'Couronne zircone monolithique posée en 2022.' }
       ]),
+      medications: [
+        { id: 'med_seed_1', name: 'Amlodipine 5 mg', dosage: '5 mg', frequency: '1 fois/jour', prescribedFor: 'Hypertension', active: true, addedAt: now }
+      ],
       anesthesiaLog: [
         {
-          id: 'anes_1',
-          timestamp: new Date().toISOString(),
+          id: 'anes_seed_1',
+          timestamp: now,
           drugId: 'arti_100k',
-          drugName: 'Articaine 4% with 1:100k Epinephrine',
+          drugName: 'Articaïne 4% adrénalinée 1/100 000',
           carpules: 1.0,
           mg: 68,
           epiMg: 0.017,
-          site: 'Buccal infiltration adjacent to #30'
+          site: 'Infiltration vestibulaire en regard de la 46'
         }
       ],
       soapNotes: [
         {
-          id: 'soap_1',
-          timestamp: new Date().toISOString(),
-          procedure: 'Emergency Endodontic Triage & Evaluation',
+          id: 'soap_seed_1',
+          timestamp: now,
+          procedure: 'Consultation d\'urgence endodontique',
           toothId: 30,
-          anesthesiaUsed: '1.0 carpule Septocaine 4% 1:100k buccal infiltration',
-          content: 'S: Patient reports constant throbbing pain exacerbated by cold liquids and mastication on right side.\nO: Tooth #30 cold test lingers 25s, percussion (+), palpation (-). Deep distal radiolucency approaching pulp.\nA: Symptomatic irreversible pulpitis with symptomatic apical periodontitis #30.\nP: Pulpal anesthesia obtained with Articaine 4% 1:100k. Caries excavation initiated under rubber dam isolation.',
-          cdtCodes: ['D0140 - Limited Oral Evaluation', 'D0220 - Intraoral Periapical Radiograph'],
-          author: 'Attending Doctor'
+          anesthesiaUsed: '1 carpule d\'articaïne 4% 1/100 000 en infiltration vestibulaire',
+          content: 'S : Douleur pulsatile constante, exacerbée par le froid et la mastication côté droit.\nO : 46 — test au froid persistant 25 s, percussion (+), palpation (-). Radioclarté distale profonde proche de la pulpe.\nA : Pulpite irréversible symptomatique avec parodontite apicale symptomatique sur 46.\nP : Anesthésie obtenue à l\'articaïne. Curetage carieux initié sous digue.',
+          cdtCodes: [],
+          author: 'Dr. Praticien',
+          locked: true,
+          addenda: []
         }
       ],
       consultHistory: [],
       createdAt: '2026-08-10T09:00:00.000Z',
-      updatedAt: new Date().toISOString()
+      updatedAt: now
     },
     {
       id: 'pt_2',
-      chartId: 'PT-2026-091',
-      name: 'Eleanor Davis',
+      chartId: 'PT-2026-0091',
+      name: 'Fatma Trabelsi',
+      phone: '+216 22 456 789',
       age: 67,
       gender: 'Female',
-      weightKg: 58,
+      weightKg: 60,
       asaStatus: 'ASA III',
       cardiacRisk: true,
-      medicalAlerts: 'History of Myocardial Infarction (Stent 14 mos ago); Daily baby aspirin (81mg); High sensitivity to vasoconstrictors',
-      allergies: 'Penicillin (Hives & Urticaria)',
-      chiefComplaint: 'Fractured palatal cusp of upper left premolar while chewing almonds',
+      medicalAlerts: 'Infarctus du myocarde avec stent il y a 14 mois ; sensibilité aux vasoconstricteurs.',
+      allergies: 'Pénicilline (urticaire)',
+      chiefComplaint: 'Fracture de la cuspide palatine de la 24 en mâchant des amandes',
       deliveredCarpules: 0.0,
       selectedDrugId: 'mepi_plain',
       teeth: createPatientTeeth([
-        { id: 12, status: 'caries', notes: 'Fractured lingual cusp, recurrent subgingival caries at mesial margin.' },
-        { id: 14, status: 'implant', notes: 'Straumann bone level implant placed 2021.' },
-        { id: 18, status: 'missing', notes: 'Extracted due to severe periodontitis.' },
-        { id: 31, status: 'missing', notes: 'Extracted 2018.' }
+        { id: 12, status: 'caries', notes: 'Cuspide palatine fracturée, carie secondaire sous-gingivale en mésial.' },
+        { id: 14, status: 'implant', notes: 'Implant bone level posé en 2021.' },
+        { id: 18, status: 'missing', notes: 'Extraite pour parodontite sévère.' },
+        { id: 31, status: 'missing', notes: 'Extraite en 2018.' }
       ]),
+      medications: [
+        { id: 'med_seed_2', name: 'Aspirine 100 mg', dosage: '100 mg', frequency: '1 fois/jour', prescribedFor: 'Prévention secondaire (stent)', active: true, addedAt: now },
+        { id: 'med_seed_3', name: 'Bisoprolol 5 mg', dosage: '5 mg', frequency: '1 fois/jour', prescribedFor: 'Cardiopathie ischémique', active: true, addedAt: now }
+      ],
       anesthesiaLog: [],
       soapNotes: [],
       consultHistory: [],
       createdAt: '2026-08-22T14:30:00.000Z',
-      updatedAt: new Date().toISOString()
+      updatedAt: now
     },
     {
       id: 'pt_3',
-      chartId: 'PT-2026-105',
-      name: 'Lucas Chen',
+      chartId: 'PT-2026-0105',
+      name: 'Youssef Gharbi',
+      phone: '+216 55 987 654',
       age: 24,
       gender: 'Male',
-      weightKg: 81,
+      weightKg: 80,
       asaStatus: 'ASA I',
       cardiacRisk: false,
-      medicalAlerts: 'Healthy collegiate athlete; No systemic conditions',
-      allergies: 'NKDA',
-      chiefComplaint: 'Wisdom teeth pressure and lower left retromolar swelling and redness',
+      medicalAlerts: 'Étudiant sportif, aucun antécédent médical.',
+      allergies: 'Aucune',
+      chiefComplaint: 'Gêne et gonflement rétro-molaire inférieur gauche (dent de sagesse)',
       deliveredCarpules: 0.0,
       selectedDrugId: 'lido_100k',
       teeth: createPatientTeeth([
-        { id: 17, status: 'caries', notes: 'Partial soft tissue impaction with active pericoronitis.' },
-        { id: 32, status: 'caries', notes: 'Mesioangular impaction wedged into distal of #31.' },
-        { id: 1, status: 'sound', notes: 'Erupted, hygiene compromise.' },
-        { id: 16, status: 'sound', notes: 'Erupted, hygiene compromise.' }
+        { id: 17, status: 'caries', notes: 'Inclusion muqueuse partielle avec péricoronarite active.' },
+        { id: 32, status: 'caries', notes: 'Inclusion mésio-angulaire contre la face distale de la 47.' },
+        { id: 1, notes: 'Érupté, hygiène difficile.', status: 'sound' },
+        { id: 16, notes: 'Érupté, hygiène difficile.', status: 'sound' }
       ]),
       anesthesiaLog: [],
       soapNotes: [],
       consultHistory: [],
       createdAt: '2026-09-01T11:15:00.000Z',
-      updatedAt: new Date().toISOString()
+      updatedAt: now
     }
-];
+  ];
+  return seeds.map(withClinicalDefaults);
+}
 
-const SEED_DATABASE: DentalDatabase = {
-  activePatientId: 'pt_1',
-  patients: RAW_SEED_PATIENTS.map(withClinicalDefaults)
-};
+interface PatientRow { data: string }
 
-// Database Management Class
-class PatientDatabaseManager {
-  private db: DentalDatabase;
+export class PatientRepository {
+  // Write-through cache: every mutation updates the in-memory record and then
+  // persists only that patient's row (not the whole database as the old JSON
+  // file store did).
+  private patients = new Map<string, PatientRecord>();
+  private activePatientId = '';
 
-  constructor() {
-    this.db = this.init();
+  constructor(private db: DB, options: { legacyJsonFile?: string | null } = {}) {
+    const legacyFile = options.legacyJsonFile === undefined ? LEGACY_JSON_FILE : options.legacyJsonFile;
+    this.load();
+    if (this.patients.size === 0) {
+      const migrated = legacyFile ? this.migrateLegacyJson(legacyFile) : false;
+      if (!migrated) this.seed();
+    }
+    this.ensureActivePatient();
   }
 
-  private init(): DentalDatabase {
+  private load(): void {
+    const rows = this.db.prepare('SELECT data FROM patients ORDER BY created_at, rowid').all() as PatientRow[];
+    for (const row of rows) {
+      const patient = withClinicalDefaults(JSON.parse(row.data));
+      this.patients.set(patient.id, patient);
+    }
+    const active = this.db.prepare('SELECT value FROM app_state WHERE key = ?').get(ACTIVE_PATIENT_KEY) as { value: string } | undefined;
+    this.activePatientId = active?.value || '';
+  }
+
+  private migrateLegacyJson(file: string): boolean {
+    if (!fs.existsSync(file)) return false;
     try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-
-      if (fs.existsSync(DB_FILE)) {
-        const raw = fs.readFileSync(DB_FILE, 'utf-8');
-        const parsed = JSON.parse(raw);
-        if (parsed.patients && Array.isArray(parsed.patients) && parsed.patients.length > 0) {
-          // Backfill newer clinical-record fields for databases saved before
-          // they existed, so loading an older patients-db.json never crashes.
-          parsed.patients = parsed.patients.map((p: PatientSeed) => withClinicalDefaults(p));
-          return parsed;
-        }
-      }
+      const parsed = JSON.parse(fs.readFileSync(file, 'utf-8')) as Partial<DentalDatabase>;
+      if (!Array.isArray(parsed.patients) || parsed.patients.length === 0) return false;
+      this.db.transaction(() => {
+        for (const raw of parsed.patients!) this.save(withClinicalDefaults(raw as PatientSeed));
+        if (parsed.activePatientId) this.setActiveId(parsed.activePatientId);
+      })();
+      // Keep the original as a backup instead of deleting patient data.
+      fs.renameSync(file, `${file}.migrated`);
+      console.log(`[Patients] Migrated ${parsed.patients.length} patients from ${path.basename(file)} into SQLite.`);
+      return true;
     } catch (err) {
-      console.warn('[Patient DB] Failed to read existing database file, seeding defaults:', err);
-    }
-
-    // Save initial seed database
-    this.persist(SEED_DATABASE);
-    return JSON.parse(JSON.stringify(SEED_DATABASE));
-  }
-
-  private persist(data: DentalDatabase): void {
-    try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-      // Write to a temp file and rename atomically so a crash mid-write
-      // can never leave patients-db.json truncated or corrupted.
-      const tmpFile = `${DB_FILE}.tmp-${process.pid}`;
-      fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2), 'utf-8');
-      fs.renameSync(tmpFile, DB_FILE);
-    } catch (err) {
-      console.error('[Patient DB] Failed to persist database file:', err);
+      console.warn('[Patients] Could not migrate legacy JSON database, seeding demo data instead:', err);
+      return false;
     }
   }
+
+  private seed(): void {
+    this.db.transaction(() => {
+      for (const patient of buildSeedPatients()) this.save(patient);
+      this.setActiveId('pt_1');
+    })();
+  }
+
+  private ensureActivePatient(): void {
+    if (!this.patients.has(this.activePatientId)) {
+      const first = this.patients.values().next().value as PatientRecord | undefined;
+      if (first) this.setActiveId(first.id);
+    }
+  }
+
+  private setActiveId(id: string): void {
+    this.activePatientId = id;
+    this.db.prepare(`
+      INSERT INTO app_state (key, value) VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `).run(ACTIVE_PATIENT_KEY, id);
+  }
+
+  private save(patient: PatientRecord): void {
+    this.patients.set(patient.id, patient);
+    this.db.prepare(`
+      INSERT INTO patients (id, chart_id, name, phone, data, created_at, updated_at)
+      VALUES (@id, @chartId, @name, @phone, @data, @createdAt, @updatedAt)
+      ON CONFLICT(id) DO UPDATE SET
+        chart_id = excluded.chart_id, name = excluded.name, phone = excluded.phone,
+        data = excluded.data, updated_at = excluded.updated_at
+    `).run({
+      id: patient.id,
+      chartId: patient.chartId,
+      name: patient.name,
+      phone: patient.phone ?? null,
+      data: JSON.stringify(patient),
+      createdAt: patient.createdAt,
+      updatedAt: patient.updatedAt
+    });
+  }
+
+  private touch(patient: PatientRecord): void {
+    patient.updatedAt = nowIso();
+    this.save(patient);
+  }
+
+  private nextChartId(): string {
+    let chartId: string;
+    do {
+      chartId = nextDocumentNumber(this.db, 'PT');
+    } while ([...this.patients.values()].some(p => p.chartId === chartId));
+    return chartId;
+  }
+
+  // --- Patients ------------------------------------------------------------
 
   public getAllPatients(): PatientRecord[] {
-    return this.db.patients;
+    return [...this.patients.values()];
   }
 
   public getActivePatient(): PatientRecord {
-    const found = this.db.patients.find(p => p.id === this.db.activePatientId);
-    if (found) return found;
-    // Fallback to first
-    this.db.activePatientId = this.db.patients[0]?.id || 'pt_1';
-    this.persist(this.db);
-    return this.db.patients[0];
+    this.ensureActivePatient();
+    return this.patients.get(this.activePatientId)!;
   }
 
   public getPatientById(id: string): PatientRecord | undefined {
-    return this.db.patients.find(p => p.id === id || p.chartId.toLowerCase() === id.toLowerCase());
+    return this.patients.get(id) ?? this.getAllPatients().find(p => p.chartId.toLowerCase() === id.toLowerCase());
+  }
+
+  /** Throws a 'not found' error; use in routes that take an explicit patient id. */
+  public getPatientOrThrow(id: string): PatientRecord {
+    const patient = this.getPatientById(id);
+    if (!patient) throw new Error(`Patient '${id}' not found`);
+    return patient;
   }
 
   public getPatientByNameOrQuery(query: string): PatientRecord | undefined {
     const q = query.toLowerCase().trim();
-    return this.db.patients.find(p => 
-      p.name.toLowerCase().includes(q) || 
+    return this.getAllPatients().find(p =>
+      p.name.toLowerCase().includes(q) ||
       p.chartId.toLowerCase().includes(q) ||
       p.id.toLowerCase() === q
     );
@@ -302,113 +370,93 @@ class PatientDatabaseManager {
 
   public setActivePatient(id: string): PatientRecord {
     const patient = this.getPatientById(id);
-    if (!patient) {
-      throw new Error(`Patient with ID or Chart '${id}' not found`);
-    }
-    this.db.activePatientId = patient.id;
-    this.persist(this.db);
+    if (!patient) throw new Error(`Patient with ID or Chart '${id}' not found`);
+    this.setActiveId(patient.id);
     return patient;
   }
 
   public createPatient(data: Partial<PatientRecord>): PatientRecord {
-    const newId = `pt_${Date.now()}`;
-    const nextChartNum = this.db.patients.length + 85;
-    const chartId = data.chartId || `PT-2026-${String(nextChartNum).padStart(3, '0')}`;
-    
-    const newPatient: PatientRecord = {
-      id: newId,
-      chartId,
-      name: data.name || 'New Patient',
+    const now = nowIso();
+    const newPatient: PatientRecord = withClinicalDefaults({
+      id: newId('pt'),
+      chartId: data.chartId || this.nextChartId(),
+      name: data.name || 'Nouveau patient',
+      phone: data.phone,
       age: Number(data.age) || 35,
       gender: data.gender || 'Other',
       weightKg: Number(data.weightKg) || 70,
       asaStatus: data.asaStatus || 'ASA I',
       cardiacRisk: !!data.cardiacRisk,
-      medicalAlerts: data.medicalAlerts || 'None recorded',
-      allergies: data.allergies || 'NKDA',
-      chiefComplaint: data.chiefComplaint || 'Routine evaluation and consultation',
+      medicalAlerts: data.medicalAlerts || 'Aucune',
+      allergies: data.allergies || 'Aucune allergie connue',
+      chiefComplaint: data.chiefComplaint || 'Consultation',
       deliveredCarpules: 0,
       selectedDrugId: data.selectedDrugId || 'lido_100k',
       isPregnantOrNursing: !!data.isPregnantOrNursing,
       prophylaxisRequired: !!data.prophylaxisRequired,
       prophylaxisReason: data.prophylaxisReason,
       teeth: createPatientTeeth(),
-      medications: [],
-      perioCharts: [],
-      treatmentPlan: [],
-      consents: [],
-      images: [],
-      labCases: [],
-      recall: createDefaultRecall(),
       anesthesiaLog: [],
       soapNotes: [],
       consultHistory: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    this.db.patients.push(newPatient);
-    this.db.activePatientId = newPatient.id;
-    this.persist(this.db);
+      createdAt: now,
+      updatedAt: now
+    });
+    this.db.transaction(() => {
+      this.save(newPatient);
+      this.setActiveId(newPatient.id);
+    })();
     return newPatient;
   }
 
   public updatePatient(id: string, updates: Partial<PatientRecord>): PatientRecord {
-    const index = this.db.patients.findIndex(p => p.id === id);
-    if (index === -1) {
-      throw new Error(`Patient '${id}' not found`);
-    }
-
-    const current = this.db.patients[index];
-    const updated: PatientRecord = {
-      ...current,
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
-
-    this.db.patients[index] = updated;
-    this.persist(this.db);
+    const current = this.patients.get(id);
+    if (!current) throw new Error(`Patient '${id}' not found`);
+    const { id: _ignoredId, createdAt: _ignoredCreated, ...allowed } = updates;
+    const updated: PatientRecord = { ...current, ...allowed, id: current.id, createdAt: current.createdAt, updatedAt: nowIso() };
+    this.save(updated);
     return updated;
   }
 
   public deletePatient(id: string): boolean {
-    if (this.db.patients.length <= 1) {
+    if (!this.patients.has(id)) return false;
+    if (this.patients.size <= 1) {
       throw new Error('Cannot delete the only remaining patient record in the database.');
     }
-    const filtered = this.db.patients.filter(p => p.id !== id);
-    if (filtered.length === this.db.patients.length) return false;
-
-    this.db.patients = filtered;
-    if (this.db.activePatientId === id) {
-      this.db.activePatientId = this.db.patients[0].id;
+    try {
+      this.db.prepare('DELETE FROM patients WHERE id = ?').run(id);
+    } catch (err: any) {
+      if (String(err?.code).startsWith('SQLITE_CONSTRAINT')) {
+        throw new Error('Ce patient a des devis, paiements ou ordonnances enregistrés : son dossier ne peut pas être supprimé.');
+      }
+      throw err;
     }
-    this.persist(this.db);
+    this.patients.delete(id);
+    if (this.activePatientId === id) this.ensureActivePatient();
     return true;
   }
+
+  // --- Odontogram ------------------------------------------------------------
 
   public updateToothForActivePatient(toothId: number, updates: Partial<ToothInfo>): ToothInfo {
     const patient = this.getActivePatient();
     const tooth = patient.teeth.find(t => t.id === Number(toothId));
-    if (!tooth) {
-      throw new Error(`Tooth #${toothId} not found for patient ${patient.name}`);
-    }
-
+    if (!tooth) throw new Error(`Tooth #${toothId} not found for patient ${patient.name}`);
     if (updates.status !== undefined) tooth.status = updates.status;
     if (updates.notes !== undefined) tooth.notes = updates.notes;
     if (updates.surfaces !== undefined) tooth.surfaces = updates.surfaces;
-
-    patient.updatedAt = new Date().toISOString();
-    this.persist(this.db);
+    this.touch(patient);
     return tooth;
   }
 
   public resetOdontogramForActivePatient(): ToothInfo[] {
     const patient = this.getActivePatient();
     patient.teeth = createPatientTeeth();
-    patient.updatedAt = new Date().toISOString();
-    this.persist(this.db);
+    this.touch(patient);
     return patient.teeth;
   }
+
+  // --- Anesthesia & SOAP ------------------------------------------------------
 
   public logAnesthesiaForActivePatient(logEntry: {
     drugId: string;
@@ -420,17 +468,11 @@ class PatientDatabaseManager {
     notes?: string;
   }) {
     const patient = this.getActivePatient();
-    const id = `anes_${Date.now()}`;
-    const entry = {
-      id,
-      timestamp: new Date().toISOString(),
-      ...logEntry
-    };
+    const entry = { id: newId('anes'), timestamp: nowIso(), ...logEntry };
     patient.anesthesiaLog.push(entry);
     patient.deliveredCarpules = Math.round((patient.deliveredCarpules + logEntry.carpules) * 10) / 10;
     patient.selectedDrugId = logEntry.drugId;
-    patient.updatedAt = new Date().toISOString();
-    this.persist(this.db);
+    this.touch(patient);
     return { patient, entry };
   }
 
@@ -444,10 +486,9 @@ class PatientDatabaseManager {
     author?: string;
   }) {
     const patient = this.getActivePatient();
-    const id = `soap_${Date.now()}`;
     const newNote = {
-      id,
-      timestamp: new Date().toISOString(),
+      id: newId('soap'),
+      timestamp: nowIso(),
       procedure: note.procedure,
       toothId: note.toothId,
       anesthesiaUsed: note.anesthesiaUsed,
@@ -455,33 +496,28 @@ class PatientDatabaseManager {
       content: note.content,
       cdtCodes: note.cdtCodes || [],
       author: note.author || 'Attending Doctor',
-      // Signed SOAP notes are a medicolegal record and must not be silently
-      // edited — corrections go in as addenda, not content mutations.
+      // Signed SOAP notes are a medicolegal record: corrections go in as addenda.
       locked: true,
-      addenda: []
+      addenda: [] as SoapAddendum[]
     };
     patient.soapNotes.unshift(newNote);
-    patient.updatedAt = new Date().toISOString();
-    this.persist(this.db);
+    this.touch(patient);
     return newNote;
   }
 
   public addSoapAddendum(noteId: string, addendum: { content: string; author?: string }): SoapAddendum {
     const patient = this.getActivePatient();
     const note = patient.soapNotes.find(n => n.id === noteId);
-    if (!note) {
-      throw new Error(`SOAP note '${noteId}' not found`);
-    }
+    if (!note) throw new Error(`SOAP note '${noteId}' not found`);
     const entry: SoapAddendum = {
-      id: `addend_${Date.now()}`,
+      id: newId('addend'),
       content: addendum.content,
       author: addendum.author || 'Attending Doctor',
-      timestamp: new Date().toISOString()
+      timestamp: nowIso()
     };
     if (!note.addenda) note.addenda = [];
     note.addenda.push(entry);
-    patient.updatedAt = new Date().toISOString();
-    this.persist(this.db);
+    this.touch(patient);
     return entry;
   }
 
@@ -494,17 +530,16 @@ class PatientDatabaseManager {
   public addMedicationForActivePatient(data: { name: string; dosage: string; frequency: string; prescribedFor?: string }): Medication {
     const patient = this.getActivePatient();
     const med: Medication = {
-      id: `med_${Date.now()}`,
+      id: newId('med'),
       name: data.name,
       dosage: data.dosage,
       frequency: data.frequency,
       prescribedFor: data.prescribedFor,
       active: true,
-      addedAt: new Date().toISOString()
+      addedAt: nowIso()
     };
     patient.medications.push(med);
-    patient.updatedAt = new Date().toISOString();
-    this.persist(this.db);
+    this.touch(patient);
     return med;
   }
 
@@ -512,9 +547,8 @@ class PatientDatabaseManager {
     const patient = this.getActivePatient();
     const med = patient.medications.find(m => m.id === medId);
     if (!med) throw new Error(`Medication '${medId}' not found`);
-    Object.assign(med, updates);
-    patient.updatedAt = new Date().toISOString();
-    this.persist(this.db);
+    Object.assign(med, updates, { id: med.id });
+    this.touch(patient);
     return med;
   }
 
@@ -522,8 +556,7 @@ class PatientDatabaseManager {
     const patient = this.getActivePatient();
     const before = patient.medications.length;
     patient.medications = patient.medications.filter(m => m.id !== medId);
-    patient.updatedAt = new Date().toISOString();
-    this.persist(this.db);
+    this.touch(patient);
     return patient.medications.length < before;
   }
 
@@ -540,15 +573,9 @@ class PatientDatabaseManager {
 
   public savePerioChartForActivePatient(teeth: PerioChartSnapshot['teeth'], notes?: string): PerioChartSnapshot {
     const patient = this.getActivePatient();
-    const snapshot: PerioChartSnapshot = {
-      id: `perio_${Date.now()}`,
-      date: new Date().toISOString(),
-      teeth,
-      notes
-    };
+    const snapshot: PerioChartSnapshot = { id: newId('perio'), date: nowIso(), teeth, notes };
     patient.perioCharts.push(snapshot);
-    patient.updatedAt = new Date().toISOString();
-    this.persist(this.db);
+    this.touch(patient);
     return snapshot;
   }
 
@@ -567,9 +594,9 @@ class PatientDatabaseManager {
     notes?: string;
   }): TreatmentPlanItem {
     const patient = this.getActivePatient();
-    const now = new Date().toISOString();
+    const now = nowIso();
     const item: TreatmentPlanItem = {
-      id: `tx_${Date.now()}`,
+      id: newId('tx'),
       toothId: data.toothId,
       procedure: data.procedure,
       cdtCode: data.cdtCode,
@@ -581,8 +608,7 @@ class PatientDatabaseManager {
       updatedAt: now
     };
     patient.treatmentPlan.push(item);
-    patient.updatedAt = now;
-    this.persist(this.db);
+    this.touch(patient);
     return item;
   }
 
@@ -590,9 +616,8 @@ class PatientDatabaseManager {
     const patient = this.getActivePatient();
     const item = patient.treatmentPlan.find(t => t.id === itemId);
     if (!item) throw new Error(`Treatment plan item '${itemId}' not found`);
-    Object.assign(item, updates, { updatedAt: new Date().toISOString() });
-    patient.updatedAt = new Date().toISOString();
-    this.persist(this.db);
+    Object.assign(item, updates, { id: item.id, updatedAt: nowIso() });
+    this.touch(patient);
     return item;
   }
 
@@ -600,8 +625,7 @@ class PatientDatabaseManager {
     const patient = this.getActivePatient();
     const before = patient.treatmentPlan.length;
     patient.treatmentPlan = patient.treatmentPlan.filter(t => t.id !== itemId);
-    patient.updatedAt = new Date().toISOString();
-    this.persist(this.db);
+    this.touch(patient);
     return patient.treatmentPlan.length < before;
   }
 
@@ -614,15 +638,14 @@ class PatientDatabaseManager {
   public addConsentForActivePatient(data: { procedure: string; consentText: string; signatureDataUrl?: string }): ConsentRecord {
     const patient = this.getActivePatient();
     const record: ConsentRecord = {
-      id: `consent_${Date.now()}`,
+      id: newId('consent'),
       procedure: data.procedure,
       consentText: data.consentText,
       signatureDataUrl: data.signatureDataUrl,
-      signedAt: new Date().toISOString()
+      signedAt: nowIso()
     };
     patient.consents.push(record);
-    patient.updatedAt = new Date().toISOString();
-    this.persist(this.db);
+    this.touch(patient);
     return record;
   }
 
@@ -642,24 +665,14 @@ class PatientDatabaseManager {
     modelUsed?: string;
   }): ClinicalImageRecord {
     const patient = this.getActivePatient();
-    const record: ClinicalImageRecord = {
-      id: data.id,
-      filename: data.filename,
-      mimeType: data.mimeType,
-      toothId: data.toothId,
-      query: data.query,
-      analysis: data.analysis,
-      modelUsed: data.modelUsed,
-      uploadedAt: new Date().toISOString()
-    };
+    const record: ClinicalImageRecord = { ...data, uploadedAt: nowIso() };
     patient.images.push(record);
-    patient.updatedAt = new Date().toISOString();
-    this.persist(this.db);
+    this.touch(patient);
     return record;
   }
 
   public findImageRecord(imageId: string): { patient: PatientRecord; image: ClinicalImageRecord } | null {
-    for (const patient of this.db.patients) {
+    for (const patient of this.patients.values()) {
       const image = patient.images.find(i => i.id === imageId);
       if (image) return { patient, image };
     }
@@ -684,25 +697,10 @@ class PatientDatabaseManager {
     notes?: string;
   }): LabCase {
     const patient = this.getActivePatient();
-    const now = new Date().toISOString();
-    const labCase: LabCase = {
-      id: `lab_${Date.now()}`,
-      toothId: data.toothId,
-      caseType: data.caseType,
-      material: data.material,
-      shade: data.shade,
-      marginDesign: data.marginDesign,
-      occlusalNotes: data.occlusalNotes,
-      labName: data.labName,
-      dueDate: data.dueDate,
-      status: 'planned',
-      notes: data.notes,
-      createdAt: now,
-      updatedAt: now
-    };
+    const now = nowIso();
+    const labCase: LabCase = { id: newId('lab'), ...data, status: 'planned', createdAt: now, updatedAt: now };
     patient.labCases.push(labCase);
-    patient.updatedAt = now;
-    this.persist(this.db);
+    this.touch(patient);
     return labCase;
   }
 
@@ -710,9 +708,8 @@ class PatientDatabaseManager {
     const patient = this.getActivePatient();
     const labCase = patient.labCases.find(c => c.id === caseId);
     if (!labCase) throw new Error(`Lab case '${caseId}' not found`);
-    Object.assign(labCase, updates, { updatedAt: new Date().toISOString() });
-    patient.updatedAt = new Date().toISOString();
-    this.persist(this.db);
+    Object.assign(labCase, updates, { id: labCase.id, updatedAt: nowIso() });
+    this.touch(patient);
     return labCase;
   }
 
@@ -720,8 +717,7 @@ class PatientDatabaseManager {
     const patient = this.getActivePatient();
     const before = patient.labCases.length;
     patient.labCases = patient.labCases.filter(c => c.id !== caseId);
-    patient.updatedAt = new Date().toISOString();
-    this.persist(this.db);
+    this.touch(patient);
     return patient.labCases.length < before;
   }
 
@@ -734,23 +730,45 @@ class PatientDatabaseManager {
   public setRecallForActivePatient(updates: Partial<RecallInfo>): RecallInfo {
     const patient = this.getActivePatient();
     patient.recall = { ...patient.recall, ...updates };
-    patient.updatedAt = new Date().toISOString();
-    this.persist(this.db);
+    this.touch(patient);
     return patient.recall;
   }
 
+  // --- Export / import ------------------------------------------------------
+
   public getDatabaseRaw(): DentalDatabase {
-    return this.db;
+    return { activePatientId: this.activePatientId, patients: this.getAllPatients() };
   }
 
+  /**
+   * Upserts every patient in a JSON export. Patients missing from the file are
+   * kept, not deleted: they may own quotes, payments or prescriptions.
+   */
   public importDatabase(raw: DentalDatabase): void {
     if (!raw.patients || !Array.isArray(raw.patients) || raw.patients.length === 0) {
       throw new Error('Invalid database format. Must contain a patients array.');
     }
-    raw.patients = raw.patients.map((p: PatientSeed) => withClinicalDefaults(p));
-    this.db = raw;
-    this.persist(this.db);
+    this.db.transaction(() => {
+      for (const p of raw.patients) this.save(withClinicalDefaults(p as PatientSeed));
+      if (raw.activePatientId && this.patients.has(raw.activePatientId)) this.setActiveId(raw.activePatientId);
+    })();
+    this.ensureActivePatient();
   }
 }
 
-export const patientDb = new PatientDatabaseManager();
+let instance: PatientRepository | null = null;
+
+export function getPatientRepository(): PatientRepository {
+  if (!instance) instance = new PatientRepository(getDb());
+  return instance;
+}
+
+// Created on first use rather than at import time, so modules (and tests) can
+// import this file without opening data/molaris.db as a side effect.
+export const patientDb: PatientRepository = new Proxy({} as PatientRepository, {
+  get(_target, prop) {
+    const repo = getPatientRepository();
+    const value = (repo as any)[prop];
+    return typeof value === 'function' ? value.bind(repo) : value;
+  }
+});

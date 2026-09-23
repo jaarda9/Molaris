@@ -1,5 +1,5 @@
-import { patientDb, PatientRecord } from './patient-db.js';
-import { checkDrugInteractions } from './clinical-safety.js';
+import { patientDb, PatientRecord } from '../repositories/patients.js';
+import { checkDrugInteractions } from '../domain/clinical-safety.js';
 
 export interface ActionResult {
   executed: boolean;

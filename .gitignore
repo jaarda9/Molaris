@@ -8,9 +8,10 @@ Mark-LII-main/
 .env.local
 .env.*.local
 
-# Local runtime data — contains patient records, never commit real data
-data/patients-db.json
-clinical-memory.json
+# Local runtime data: patient records, database, backups, uploaded images.
+# Never commit real patient data.
+data/
+clinical-memory.json*
 
 *.log
 npm-debug.log*
