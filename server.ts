@@ -17,6 +17,7 @@ import { executeMolarisAction } from './src/molaris-actions.js';
 import { AUTH_ENABLED, requireAuth, checkPassword } from './src/auth.js';
 import { checkDrugInteractions, checkAllergyConflict, suggestProphylaxisReview, SafetyAlert } from './src/clinical-safety.js';
 import { createDefaultPerioTeeth } from './src/clinical-records.js';
+import { redactContents } from './src/ai-privacy.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -134,6 +135,9 @@ interface GenerateResilientOptions {
 
 async function callGeminiWithResilience(options: GenerateResilientOptions): Promise<{ text: string; modelUsed: string }> {
   const ai = getGemini();
+  // Single choke point: no patient name or chart ID may leave the clinic, whatever
+  // path it took into the prompt (templates, chat history, action summaries).
+  options = { ...options, contents: redactContents(options.contents, patientDb.getAllPatients()) };
   const models = options.preferredModel
     ? [options.preferredModel, ...MODEL_CANDIDATES.filter(m => m !== options.preferredModel)]
     : MODEL_CANDIDATES;
@@ -609,7 +613,7 @@ app.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     contextPrompt += `- Preferred Composite System: ${memory.preferences.compositeSystem}\n`;
     contextPrompt += `- Preferred Rotary Endodontic System: ${memory.preferences.rotarySystem}\n`;
     contextPrompt += `- Preferred Implant System: ${memory.preferences.implantSystem}\n`;
-    contextPrompt += `- ACTIVE PATIENT: ${activePatient.name} | Chart: ${activePatient.chartId} | Age: ${activePatient.age}${activePatient.gender ? ` (${activePatient.gender})` : ''} | Weight: ${activePatient.weightKg}kg | ASA Status: ${activePatient.asaStatus} | Cardiac Risk: ${activePatient.cardiacRisk ? 'YES (Strict 0.04mg Epi Max)' : 'NO'}\n`;
+    contextPrompt += `- ACTIVE PATIENT (anonymized) | Age: ${activePatient.age}${activePatient.gender ? ` (${activePatient.gender})` : ''} | Weight: ${activePatient.weightKg}kg | ASA Status: ${activePatient.asaStatus} | Cardiac Risk: ${activePatient.cardiacRisk ? 'YES (Strict 0.04mg Epi Max)' : 'NO'}\n`;
     contextPrompt += `- Chief Complaint: "${activePatient.chiefComplaint}"\n`;
     contextPrompt += `- Medical Alerts: ${activePatient.medicalAlerts}\n`;
     contextPrompt += `- Allergies: ${activePatient.allergies}\n`;
@@ -715,7 +719,7 @@ Analyze this dental clinical radiograph or intraoral image thoroughly.
 
 CLINICAL QUERY: ${clinicalQuery}
 ${toothNumber ? `FOCUS AREA: Tooth #${toothNumber}` : ''}
-PATIENT: ${activePatient.name} (${activePatient.chartId}) | ASA: ${activePatient.asaStatus} | Chief Complaint: "${activePatient.chiefComplaint}" | Medical Alerts: ${activePatient.medicalAlerts}
+PATIENT (anonymized): ${activePatient.age}y ${activePatient.gender} | ASA: ${activePatient.asaStatus} | Chief Complaint: "${activePatient.chiefComplaint}" | Medical Alerts: ${activePatient.medicalAlerts}
 
 Please provide a structured clinical assessment:
 1. **Image Type & Quality**: (Bitewing, Periapical, Panoramic, Intraoral photo; angulation, contrast, crown/apex coverage).
@@ -831,10 +835,10 @@ DENT CONCERNÉE : ${tooth ? `Dent Universelle #${tooth.id} (Notation FDI ${tooth
 DÉTAILS CLINIQUES : ${details || 'Acte réalisé avec succès sans complication'}
 ANESTHÉSIE LOCALE : ${anesthesiaUsed || `${activePatient.deliveredCarpules} carpules administrées`}
 MATÉRIAUX UTILISÉS : ${materialsUsed || 'Digue dentaire, mordançage sélectif, composite'}
-PATIENT : ${activePatient.name} | Dossier: ${activePatient.chartId} | Statut ASA: ${activePatient.asaStatus} | Poids: ${activePatient.weightKg}kg | Alertes: ${activePatient.medicalAlerts}
+PATIENT (anonymisé) : ${activePatient.age} ans | Statut ASA: ${activePatient.asaStatus} | Poids: ${activePatient.weightKg}kg | Alertes: ${activePatient.medicalAlerts}
 
 Rédigez STRICTEMENT en français professionnel selon la structure suivante :
-- **Date & Identifiant du Patient**
+- **Date** (n'inventez aucun nom ni identifiant : l'identité du patient est ajoutée par le logiciel)
 - **S (Subjectif)** : Motif de consultation, anamnèse médicale vérifiée, évaluation de la douleur (EVA 0-10), recueil du consentement éclairé du patient.
 - **O (Objectif)** : Examen clinique visuel, tests de vitalité pulpaire (froid, test électrique, percussion axiale/latérale, palpation vestibulaire, sondage parodontal), constatations radiologiques pré-opératoires.
 - **A (Analyse & Diagnostic)** : Diagnostic pulpaire et péri-apical formel et argumenté.
@@ -857,10 +861,10 @@ TOOTH: ${tooth ? `Universal #${tooth.id} (FDI ${tooth.fdi}) - ${tooth.name}` : '
 CLINICAL DETAILS: ${details || 'Procedure completed successfully without complications'}
 LOCAL ANESTHESIA: ${anesthesiaUsed || `${activePatient.deliveredCarpules} carpules administered via infiltration/block`}
 MATERIALS: ${materialsUsed || 'Rubber dam isolation, selective etch, composite'}
-PATIENT: ${activePatient.name} | Chart: ${activePatient.chartId} | ASA: ${activePatient.asaStatus} | Weight: ${activePatient.weightKg}kg | Alerts: ${activePatient.medicalAlerts}
+PATIENT (anonymized): ${activePatient.age}y | ASA: ${activePatient.asaStatus} | Weight: ${activePatient.weightKg}kg | Alerts: ${activePatient.medicalAlerts}
 
 Format strictly as:
-- **Date & Patient ID**
+- **Date** (do not invent any name or ID: patient identity is attached by the software)
 - **S (Subjective)**: Chief complaint, medical history reviewed, pain score, informed consent obtained.
 - **O (Objective)**: Clinical examination, vitality tests (cold, EPT, percussion, palpation, periodontal probing depths), pre-op radiograph findings.
 - **A (Assessment)**: Definite diagnosis (ICD-10 if applicable, pulpal & periapical status).

@@ -1197,9 +1197,9 @@ function initVisionUploader() {
         if (data.error) {
           outputArea.innerHTML = `<div class="p-4 bg-rose-50 text-rose-700 rounded-xl">⚠️ Diagnostic analysis error: ${data.error}</div>`;
         } else {
-          outputArea.innerHTML = `<div class="markdown-content">${formatMarkdown(data.analysis)}</div>`;
-          statusChip.classList.remove('hidden');
-          copyBtn.classList.remove('hidden');
+          outputArea.innerHTML = `<div class="markdown-content">${formatMarkdown(data.analysis || '')}</div>`;
+          statusChip?.classList.remove('hidden');
+          copyBtn?.classList.remove('hidden');
           playClinicalBeep(880, 'sine', 0.2);
         }
       } catch (err) {

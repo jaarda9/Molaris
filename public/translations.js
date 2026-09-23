@@ -1101,8 +1101,6 @@ window.applyMolarisLanguage = function(lang) {
   }
 
   // 7. Vision Tab
-  const vTitle = document.querySelector('#view-vision h2');
-  if (vTitle) vTitle.textContent = t('vision.title');
   const vSub = document.querySelector('#view-vision p');
   if (vSub) vSub.textContent = t('vision.subtitle');
   const dropP = document.querySelector('#drop-zone p');
@@ -1113,8 +1111,6 @@ window.applyMolarisLanguage = function(lang) {
   if (runVisionSpan) runVisionSpan.textContent = t('vision.analyzeBtn');
   const vQuery = document.getElementById('vision-query-input');
   if (vQuery) vQuery.placeholder = t('vision.questionPlaceholder');
-  const vResultTitle = document.querySelector('#view-vision h3');
-  if (vResultTitle) vResultTitle.textContent = t('vision.resultTitle');
 
   // 8. Clinical Playbooks Tab
   const pTitle = document.querySelector('#view-protocols h2');
