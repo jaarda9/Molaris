@@ -235,5 +235,13 @@ export const MIGRATIONS: Array<{ name: string; sql: string }> = [
         SELECT RAISE(ABORT, 'a payment is cancelled once, with a reason, and cannot be restored');
       END;
     `
+  },
+  {
+    name: 'agenda: arrival time for the waiting room',
+    sql: `
+      -- Set when an appointment moves to 'arrived' (updated_at changes on any edit,
+      -- so it cannot tell how long a patient has been waiting).
+      ALTER TABLE appointments ADD COLUMN arrived_at TEXT;
+    `
   }
 ];
