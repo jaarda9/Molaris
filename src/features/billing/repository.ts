@@ -208,6 +208,8 @@ export interface Quote {
   notes: string | null;
   items: QuoteItem[];
   totalMillimes: number;
+  /** For the printed devis: "mille dinars". */
+  totalInWords: string;
   /** Sum of non-cancelled payments linked to this quote. */
   paidMillimes: number;
   remainingMillimes: number;
@@ -337,6 +339,7 @@ export class QuoteRepository {
         notes: row.notes,
         items: lines,
         totalMillimes: total,
+        totalInWords: amountInWordsFr(total),
         paidMillimes: row.paid_millimes,
         remainingMillimes: total - row.paid_millimes,
         createdAt: row.created_at,
@@ -414,7 +417,7 @@ export class QuoteRepository {
     if (!current) throw notFound('Quote');
     if (current.status === status) return current;
     if (!QUOTE_TRANSITIONS[current.status].includes(status)) {
-      throw new HttpError(409, `A ${current.status} quote cannot become ${status}`);
+      throw new HttpError(409, `Cannot change a quote from ${current.status} to ${status}`);
     }
     if ((status === 'sent' || status === 'accepted') && current.items.length === 0) {
       throw new HttpError(409, 'An empty quote cannot be sent or accepted');
