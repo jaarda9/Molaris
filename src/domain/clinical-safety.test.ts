@@ -69,3 +69,43 @@ test('addMonthsToDate: clamps day-of-month for shorter target months', () => {
   const result = addMonthsToDate('2026-01-31T10:00:00.000Z', 1);
   assert.equal(result.slice(0, 10), '2026-02-28');
 });
+
+// --- French-language input (Tunisian market) --------------------------------
+
+test('FR: accented drug names match (Warfarine + Ibuprofène)', () => {
+  const alerts = checkDrugInteractions([{ name: 'Warfarine 5 mg', active: true }], ['Ibuprofène 400 mg']);
+  assert.ok(alerts.some(a => a.severity === 'critical'));
+});
+
+test('FR: common brands match (Sintrom + Profenid, Kardégic + Voltarène)', () => {
+  assert.ok(checkDrugInteractions([{ name: 'Sintrom 4 mg', active: true }], ['Profenid 100 mg']).some(a => a.severity === 'critical'));
+  assert.ok(checkDrugInteractions([{ name: 'Kardégic 75 mg', active: true }], ['Voltarène 50 mg']).some(a => a.severity === 'critical'));
+});
+
+test('FR: "acide alendronique" is recognized as an antiresorptive (MRONJ)', () => {
+  const alerts = checkDrugInteractions([{ name: 'Acide alendronique 70 mg', active: true }]);
+  assert.ok(alerts.some(a => /MRONJ/.test(a.message)));
+});
+
+test('FR: penicillin allergy written in French blocks amoxicillin', () => {
+  const alert = checkAllergyConflict('Pénicilline (urticaire)', 'Amoxicilline 1 g');
+  assert.ok(alert);
+  assert.equal(alert!.severity, 'critical');
+});
+
+test('FR: beta-lactam allergy blocks Augmentin', () => {
+  assert.ok(checkAllergyConflict('Allergie aux bêta-lactamines', 'Augmentin 1 g'));
+});
+
+test('FR: non-penicillin antibiotic is not flagged for a penicillin allergy', () => {
+  assert.equal(checkAllergyConflict('Pénicilline', 'Clindamycine 300 mg'), null);
+});
+
+test('FR: prosthetic valve history in French triggers a prophylaxis review', () => {
+  assert.ok(suggestProphylaxisReview('Prothèse valvulaire mitrale mécanique depuis 2019').length > 0);
+});
+
+test('FR: adrenaline-containing anesthetic + MAOI is flagged', () => {
+  const alerts = checkDrugInteractions([{ name: 'Phénelzine', active: true }], ['Articaïne 4% adrénalinée 1/100 000']);
+  assert.ok(alerts.some(a => a.severity === 'warning'));
+});

@@ -10,29 +10,49 @@ interface MedicationLike {
   active: boolean;
 }
 
+// All terms are lowercase and accent-free; input text is normalized the same way
+// (see normalize), so French spellings match: "Ibuprofène" -> "ibuprofene" ⊃ "ibuprofen".
+// Stems ("alendron", "zoledron", "cillin") also catch French forms such as
+// "acide alendronique". Brand names cover the Tunisian/French market.
 const ANTICOAGULANTS = [
-  'warfarin', 'coumadin', 'apixaban', 'eliquis', 'rivaroxaban', 'xarelto',
-  'dabigatran', 'pradaxa', 'edoxaban', 'savaysa', 'clopidogrel', 'plavix', 'aspirin'
+  'warfarin', 'coumadin', 'acenocoumarol', 'sintrom', 'fluindione', 'previscan',
+  'apixaban', 'eliquis', 'rivaroxaban', 'xarelto', 'dabigatran', 'pradaxa', 'edoxaban', 'savaysa', 'lixiana',
+  'heparin', 'enoxaparin', 'lovenox', 'tinzaparin', 'innohep',
+  'clopidogrel', 'plavix', 'ticagrelor', 'brilique', 'brilinta', 'prasugrel', 'efient',
+  'aspirin', 'acetylsalicyl', 'aspegic', 'kardegic'
 ];
-const NSAIDS = ['ibuprofen', 'advil', 'motrin', 'naproxen', 'aleve', 'diclofenac', 'ketorolac', 'toradol'];
+const NSAIDS = [
+  'ibuprofen', 'brufen', 'advil', 'nurofen', 'motrin', 'naproxen', 'aleve', 'apranax',
+  'diclofenac', 'voltaren', 'ketoprofen', 'profenid', 'ketorolac', 'toradol',
+  'piroxicam', 'feldene', 'meloxicam', 'mobic', 'celecoxib', 'celebrex', 'nimesulide', 'flurbiprofen', 'mefenam', 'ponstyl'
+];
 const BISPHOSPHONATES = [
-  'alendronate', 'fosamax', 'zoledronic', 'zometa', 'reclast',
-  'risedronate', 'actonel', 'ibandronate', 'boniva', 'denosumab', 'prolia', 'xgeva'
+  'alendron', 'fosamax', 'zoledron', 'zometa', 'aclasta', 'reclast',
+  'risedron', 'actonel', 'ibandron', 'bonviva', 'boniva', 'pamidron', 'aredia',
+  'denosumab', 'prolia', 'xgeva'
 ];
-const MAOIS = ['phenelzine', 'nardil', 'tranylcypromine', 'parnate', 'isocarboxazid', 'marplan', 'selegiline', 'emsam'];
-const VASOCONSTRICTOR_TERMS = ['epinephrine', 'epi ', 'levonordefrin', 'adrenaline'];
-const PENICILLIN_CLASS = ['penicillin', 'amoxicillin', 'amoxil', 'ampicillin', 'augmentin'];
+const MAOIS = ['phenelzine', 'nardil', 'tranylcypromine', 'parnate', 'isocarboxazid', 'marplan', 'iproniazid', 'marsilid', 'selegiline', 'emsam'];
+const VASOCONSTRICTOR_TERMS = ['epinephrin', 'epi ', 'levonordefrin', 'adrenalin'];
+const PENICILLIN_CLASS = ['cillin', 'amoxil', 'augmentin', 'clamoxyl', 'hiconcil'];
+const BETA_LACTAM_ALLERGY_TERMS = [...PENICILLIN_CLASS, 'lactam'];
 
 const PROPHYLAXIS_KEYWORDS = [
   'prosthetic heart valve', 'artificial heart valve', 'mechanical valve',
   'history of infective endocarditis', 'prior endocarditis', 'previous endocarditis',
   'unrepaired congenital heart disease', 'congenital heart disease',
-  'cardiac transplant', 'heart transplant'
+  'cardiac transplant', 'heart transplant',
+  'prothese valvulaire', 'valve cardiaque', 'valve mecanique', 'valve prothetique',
+  'endocardite', 'cardiopathie congenitale', 'transplantation cardiaque', 'greffe cardiaque'
 ];
 
+/** Lowercases and strips diacritics: "Pénicilline" -> "penicilline". */
+function normalize(text: string): string {
+  return (text || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+}
+
 function containsAny(haystack: string, needles: string[]): boolean {
-  const lower = haystack.toLowerCase();
-  return needles.some(n => lower.includes(n));
+  const normalized = normalize(haystack);
+  return needles.some(n => normalized.includes(n));
 }
 
 /**
@@ -87,9 +107,7 @@ export function checkDrugInteractions(
  * common real-world prescribing error in dental practice.
  */
 export function checkAllergyConflict(allergies: string, drugName: string, language: 'en' | 'fr' = 'en'): SafetyAlert | null {
-  const allergyText = (allergies || '').toLowerCase();
-  const drug = (drugName || '').toLowerCase();
-  if (PENICILLIN_CLASS.some(p => drug.includes(p)) && allergyText.includes('penicillin')) {
+  if (containsAny(drugName, PENICILLIN_CLASS) && containsAny(allergies, BETA_LACTAM_ALLERGY_TERMS)) {
     return {
       severity: 'critical',
       message: language === 'fr'
@@ -106,7 +124,7 @@ export function checkAllergyConflict(allergies: string, drugName: string, langua
  * determination — prophylaxis decisions require professional judgment.
  */
 export function suggestProphylaxisReview(medicalAlerts: string): string[] {
-  const text = (medicalAlerts || '').toLowerCase();
+  const text = normalize(medicalAlerts);
   return PROPHYLAXIS_KEYWORDS.filter(k => text.includes(k));
 }
 
