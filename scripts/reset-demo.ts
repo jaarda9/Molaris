@@ -1,4 +1,4 @@
-// Resets data/molaris.db to fresh demo data for client demos.
+// Resets data/molaris.db (or MOLARIS_DB_FILE) to fresh demo data for client demos.
 // The current database is moved to data/backups/ first, never deleted.
 // Stop the server before running (Windows keeps the database file locked).
 //
@@ -11,19 +11,20 @@ import { openDatabase, DATA_DIR, DEFAULT_DB_FILE, DB } from '../src/db/connectio
 import { PatientRepository } from '../src/repositories/patients.js';
 
 async function main(): Promise<void> {
+  const target = process.env.MOLARIS_DB_FILE || DEFAULT_DB_FILE;
   const backupDir = path.join(DATA_DIR, 'backups');
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 
-  if (fs.existsSync(DEFAULT_DB_FILE)) {
+  if (fs.existsSync(target)) {
     fs.mkdirSync(backupDir, { recursive: true });
     for (const suffix of ['', '-wal', '-shm']) {
-      const file = DEFAULT_DB_FILE + suffix;
+      const file = target + suffix;
       if (fs.existsSync(file)) fs.renameSync(file, path.join(backupDir, `molaris-${stamp}.db${suffix}`));
     }
     console.log(`Previous database backed up to data/backups/molaris-${stamp}.db`);
   }
 
-  const db = openDatabase(DEFAULT_DB_FILE);
+  const db = openDatabase(target);
   new PatientRepository(db, { legacyJsonFile: null });
 
   const featuresDir = path.join(process.cwd(), 'src', 'features');
@@ -38,7 +39,7 @@ async function main(): Promise<void> {
   }
 
   db.close();
-  console.log('Demo database ready: data/molaris.db');
+  console.log(`Demo database ready: ${target}`);
 }
 
 main().catch(err => {
