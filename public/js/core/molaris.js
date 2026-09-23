@@ -177,6 +177,10 @@ Molaris.patients = {
   active() {
     return window.systemState ? systemState.activePatient : null;
   },
+  // Makes a patient the active chart (header, odontogram, meds…); emits 'patient-changed'.
+  select(patientId) {
+    return window.selectPatient(patientId);
+  },
   // Fills a <select> with all patients ("Name — Chart"), preselecting selectedId.
   async fillSelect(selectEl, selectedId, { allowEmpty = false } = {}) {
     const patients = await Molaris.patients.list();

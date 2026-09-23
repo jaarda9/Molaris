@@ -83,7 +83,7 @@ data/                      molaris.db, backups/, images/ — git-ignored, NEVER 
 - Use the toolkit in `public/js/core/molaris.js`, not other features' globals:
   `Molaris.api.get/post/put/del`, `Molaris.events.on('view-shown' | 'patient-changed' |
   'language-changed')`, `Molaris.i18n.register/t`, `Molaris.format.*`, `Molaris.ui.modal/toast`,
-  `Molaris.patients.fillSelect`, `Molaris.print.document({ title, bodyHtml, dir, lang })`.
+  `Molaris.patients.fillSelect / active / select`, `Molaris.print.document({ title, bodyHtml, dir, lang })`.
 - **Escape everything** inserted with innerHTML: `escapeHtml(value)` (`js/core/utils.js`).
 - Every visible string goes through i18n (`public/i18n/<name>.js`, both `en` and `fr`).
   Arabic is for printed patient documents (`dir: 'rtl'`), not the UI.
