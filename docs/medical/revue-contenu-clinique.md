@@ -25,7 +25,7 @@ source. Tout ce qui dépend du marché tunisien est marqué **⚠️ À VÉRIFIE
 | 4 | Faire répondre l'IA **en français**, avec les **DCI** et la terminologie française (paracétamol, adrénaline), et rappeler qu'elle est une **aide à la décision** | system-prompt | Haute |
 | 5 | Supprimer le ton « elite / board-certified / authoritative / decisive » et le verbe « calculate exact maximum dosages » ; exiger d'afficher le calcul et de renvoyer au RCP | system-prompt | Haute |
 | 6 | Revoir la liste d'**anesthésiques** : concentrations d'adrénaline et volumes de cartouche du marché tunisien, marques américaines (Septocaine, Carbocaine, Marcaine) → DCI + marque locale saisie par le cabinet ; bupivacaïne à retirer si non disponible | dental-data | Haute |
-| 7 | Ajouter la **denture temporaire** (FDI 51–85) : la CNAM et le bulletin de soins l'utilisent ; enfants 4–18 ans mieux remboursés | dental-data | Haute |
+| 7 | Ajouter la **denture temporaire** (FDI 51–85) : le bulletin de soins CNAM la comporte ; la liste des actes CNAM a des codes propres aux enfants de moins de 14 ans | dental-data | Haute |
 | 8 | Traduire les noms de dents, surfaces et **protocoles rapides** en français ; adapter les produits cités (Augmentin 875 mg, oxymétazoline, Alveogyl, X-Tip) | dental-data | Moyenne |
 | 9 | Compléter les listes d'interactions : AINS et anticoagulants manquants (DCI), **antidépresseurs tricycliques et bêtabloquants non sélectifs** avec l'adrénaline ; revoir l'alerte IMAO | clinical-safety | Moyenne |
 | 10 | Ajouter des alertes de terrain fréquentes : **radiothérapie tête et cou**, antiangiogéniques (ostéonécrose), grossesse, AVK → contrôle de l'INR | clinical-safety | Moyenne |
@@ -86,7 +86,7 @@ Principes à inscrire dans la nouvelle consigne (texte indicatif, en français) 
 | Constat | Recommandation |
 |---|---|
 | Identifiant principal = numérotation **universelle américaine 1–32** ; FDI en champ secondaire | En Tunisie la numérotation d'usage est la **FDI** (le bulletin de soins CNAM est imprimé en FDI). Faire de la FDI l'identifiant affiché partout ; garder l'universel seulement en interne si nécessaire. |
-| **Pas de dents temporaires** | Le bulletin de soins CNAM comporte la denture temporaire **51–55, 61–65, 71–75, 81–85**. La CNAM rembourse mieux les enfants de 4 à 18 ans (voir `nomenclature-cnam.md`). Ajouter un schéma temporaire et mixte. |
+| **Pas de dents temporaires** | Le bulletin de soins CNAM comporte la denture temporaire **51–55, 61–65, 71–75, 81–85**. La liste des actes CNAM distingue certains soins sur dent permanente d'un enfant de moins de 14 ans (voir `nomenclature-cnam.md`). Ajouter un schéma temporaire et mixte. |
 | Noms en anglais (« Maxillary Right 1st Molar ») | Noms français : « 16 — première molaire maxillaire droite » ; libellés arabes pour les documents patients (ex. « الضرس الأول العلوي الأيمن »). |
 | Surfaces `mesial, distal, occlusal, buccal, lingual` | Français : **mésiale, distale, occlusale (incisale pour les dents antérieures), vestibulaire, linguale / palatine** (palatine au maxillaire). |
 | Statuts (`rct`, `veneer`…) | Libellés français : traitement endodontique, facette, etc. (i18n). |
