@@ -174,5 +174,37 @@ export const MIGRATIONS: Array<{ name: string; sql: string }> = [
       );
       CREATE INDEX idx_prescription_items_rx ON prescription_items(prescription_id);
     `
+  },
+  {
+    name: 'prescriptions: safety override, patient snapshot, renewals, immutability',
+    sql: `
+      -- Arabic patient instructions proposed when the drug is added to a prescription.
+      ALTER TABLE drugs ADD COLUMN default_instructions_ar TEXT;
+
+      -- Patient identity as printed on the ordonnance (a reprint must match the original).
+      ALTER TABLE prescriptions ADD COLUMN patient_name TEXT;
+      ALTER TABLE prescriptions ADD COLUMN patient_age  INTEGER;
+      -- "Renouveler": the prescription this one was copied from.
+      ALTER TABLE prescriptions ADD COLUMN renewed_from_id TEXT REFERENCES prescriptions(id);
+      -- 1 = issued despite at least one critical safety alert, explicitly confirmed by the dentist.
+      ALTER TABLE prescriptions ADD COLUMN critical_alerts_overridden INTEGER NOT NULL DEFAULT 0;
+      -- JSON array of every safety alert shown when the prescription was issued.
+      ALTER TABLE prescriptions ADD COLUMN safety_alerts TEXT;
+
+      -- Snapshot of the drug as printed (the catalog entry may change later).
+      ALTER TABLE prescription_items ADD COLUMN brand    TEXT;
+      ALTER TABLE prescription_items ADD COLUMN form     TEXT;
+      ALTER TABLE prescription_items ADD COLUMN strength TEXT;
+
+      -- Medicolegal documents are immutable once issued: corrections are new prescriptions.
+      CREATE TRIGGER prescriptions_no_update BEFORE UPDATE ON prescriptions
+      BEGIN SELECT RAISE(ABORT, 'prescriptions are immutable'); END;
+      CREATE TRIGGER prescriptions_no_delete BEFORE DELETE ON prescriptions
+      BEGIN SELECT RAISE(ABORT, 'prescriptions are immutable'); END;
+      CREATE TRIGGER prescription_items_no_update BEFORE UPDATE ON prescription_items
+      BEGIN SELECT RAISE(ABORT, 'prescriptions are immutable'); END;
+      CREATE TRIGGER prescription_items_no_delete BEFORE DELETE ON prescription_items
+      BEGIN SELECT RAISE(ABORT, 'prescriptions are immutable'); END;
+    `
   }
 ];
