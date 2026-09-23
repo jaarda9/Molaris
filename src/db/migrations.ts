@@ -243,5 +243,14 @@ export const MIGRATIONS: Array<{ name: string; sql: string }> = [
       -- so it cannot tell how long a patient has been waiting).
       ALTER TABLE appointments ADD COLUMN arrived_at TEXT;
     `
+  },
+  {
+    name: 'prescriptions: CNAM identity snapshot',
+    sql: `
+      -- The CNAM convention (art. 40) requires the beneficiary's unique identifier and status
+      -- on prescriptions. Snapshotted like the name and age so a reprint matches the original.
+      ALTER TABLE prescriptions ADD COLUMN patient_cnam_id      TEXT;
+      ALTER TABLE prescriptions ADD COLUMN patient_cnam_quality TEXT;
+    `
   }
 ];

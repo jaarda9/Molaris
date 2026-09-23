@@ -21,6 +21,10 @@ export interface PatientRecord {
   chartId: string;
   name: string;
   phone?: string;
+  /** CNAM unique beneficiary identifier, printed on prescriptions (CNAM dentists' convention, art. 40). */
+  cnamId?: string;
+  /** Beneficiary status on the CNAM card: the insured person or a dependant. */
+  cnamQuality?: 'assure' | 'conjoint' | 'enfant' | 'ascendant';
   age: number;
   gender: 'Male' | 'Female' | 'Other';
   weightKg: number;
@@ -125,6 +129,8 @@ function buildSeedPatients(): PatientRecord[] {
       chartId: 'PT-2026-0084',
       name: 'Mohamed Ben Salah',
       phone: '+216 98 123 456',
+      cnamId: 'DEMO-0000084',
+      cnamQuality: 'assure',
       age: 48,
       gender: 'Male',
       weightKg: 78,
@@ -178,6 +184,8 @@ function buildSeedPatients(): PatientRecord[] {
       chartId: 'PT-2026-0091',
       name: 'Fatma Trabelsi',
       phone: '+216 22 456 789',
+      cnamId: 'DEMO-0000091',
+      cnamQuality: 'conjoint',
       age: 67,
       gender: 'Female',
       weightKg: 60,
@@ -382,6 +390,8 @@ export class PatientRepository {
       chartId: data.chartId || this.nextChartId(),
       name: data.name || 'Nouveau patient',
       phone: data.phone,
+      cnamId: data.cnamId,
+      cnamQuality: data.cnamQuality,
       age: Number(data.age) || 35,
       gender: data.gender || 'Other',
       weightKg: Number(data.weightKg) || 70,

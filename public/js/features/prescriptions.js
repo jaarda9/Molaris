@@ -633,6 +633,14 @@
   }
 
   const ltr = (value) => `<bdi dir="ltr">${esc(value)}</bdi>`;
+
+  // CNAM convention art. 40: the beneficiary's unique identifier and status go on the ordonnance.
+  const CNAM_QUALITY_FR = { assure: 'Assuré social', conjoint: 'Conjoint', enfant: 'Enfant', ascendant: 'Ascendant' };
+  const cnamLineFr = (rx) => rx.patientCnamId
+    ? `<div class="rx-cnam"><strong>Identifiant CNAM :</strong> ${esc(rx.patientCnamId)}${CNAM_QUALITY_FR[rx.patientCnamQuality] ? ` &nbsp;·&nbsp; <strong>Qualité :</strong> ${CNAM_QUALITY_FR[rx.patientCnamQuality]}` : ''}</div>`
+    : '';
+  // Official Arabic wording is not verified, so the Arabic block shows the acronym and number only.
+  const cnamLineAr = (rx) => rx.patientCnamId ? `<div class="rx-cnam"><strong>CNAM:</strong> ${ltr(rx.patientCnamId)}</div>` : '';
   const drugTitle = (i) => `<strong>${esc(i.drugLabel)}</strong>${i.brand ? ` (${esc(i.brand)})` : ''}${[i.form, i.strength].some(Boolean) ? ` — ${esc([i.form, i.strength].filter(Boolean).join(' '))}` : ''}`;
 
   function frenchBlock(rx, { withArabicInstructions, withSignature }) {
@@ -646,6 +654,7 @@
     return `
       <div class="rx-meta"><span><strong>${FR.number} :</strong> ${esc(rx.number)}</span><span><strong>${FR.date} :</strong> ${esc(Molaris.format.date(rx.issuedAt))}</span></div>
       <div class="rx-patient"><strong>${FR.patient} :</strong> ${esc(rx.patientName || '')}${rx.patientAge ? ` &nbsp;·&nbsp; <strong>${FR.age} :</strong> ${esc(rx.patientAge)} ${FR.years}` : ''}</div>
+      ${cnamLineFr(rx)}
       <ol class="rx-lines">${lines}</ol>
       ${rx.notes ? `<p class="muted">${FR.notes} : ${esc(rx.notes)}</p>` : ''}
       ${withSignature ? `<div class="signature">${FR.signature}</div>` : ''}`;
@@ -665,6 +674,7 @@
       <div dir="rtl" lang="ar" class="ar-block">
         <div class="rx-meta"><span><strong>${AR.number}:</strong> ${ltr(rx.number)}</span><span><strong>${AR.date}:</strong> ${ltr(Molaris.format.date(rx.issuedAt))}</span></div>
         <div class="rx-patient"><strong>${AR.patient}:</strong> ${ltr(rx.patientName || '')}${rx.patientAge ? ` &nbsp;·&nbsp; <strong>${AR.age}:</strong> ${esc(rx.patientAge)} ${AR.years}` : ''}</div>
+        ${cnamLineAr(rx)}
         <ol class="rx-lines">${lines}</ol>
         ${rx.notes ? `<p class="muted">${AR.notes}: ${ltr(rx.notes)}</p>` : ''}
         <div class="signature">${AR.signature}</div>
@@ -674,6 +684,7 @@
   const PRINT_STYLE = `<style>
     .rx-meta { display: flex; justify-content: space-between; margin-bottom: 6px; }
     .rx-patient { margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; }
+    .rx-cnam { margin: -8px 0 14px; font-size: 10.5pt; color: #334155; }
     .rx-lines { padding-inline-start: 22px; margin: 0; }
     .rx-lines li { margin-bottom: 12px; line-height: 1.45; }
     .ar, .ar-block { font-family: 'Traditional Arabic', 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 13pt; }

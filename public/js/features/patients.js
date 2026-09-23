@@ -279,6 +279,8 @@ function openEditPatientModal(patient) {
   document.getElementById('form-patient-name').value = patient.name;
   document.getElementById('form-patient-chart').value = patient.chartId;
   document.getElementById('form-patient-phone').value = patient.phone || '';
+  document.getElementById('form-patient-cnam-id').value = patient.cnamId || '';
+  document.getElementById('form-patient-cnam-quality').value = patient.cnamQuality || '';
   document.getElementById('form-patient-age').value = patient.age || 35;
   document.getElementById('form-patient-gender').value = patient.gender || 'Male';
   document.getElementById('form-patient-weight').value = patient.weightKg || 70;
@@ -345,7 +347,10 @@ function initPatientManager() {
       const payload = {
         name: document.getElementById('form-patient-name').value.trim(),
         chartId: document.getElementById('form-patient-chart').value.trim() || undefined,
-        phone: document.getElementById('form-patient-phone').value.trim() || undefined,
+        // Empty strings (not undefined) so clearing a field on edit actually clears it.
+        phone: document.getElementById('form-patient-phone').value.trim(),
+        cnamId: document.getElementById('form-patient-cnam-id').value.trim(),
+        cnamQuality: document.getElementById('form-patient-cnam-quality').value,
         age: Number(document.getElementById('form-patient-age').value) || 35,
         gender: document.getElementById('form-patient-gender').value,
         weightKg: Number(document.getElementById('form-patient-weight').value) || 70,

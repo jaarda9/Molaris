@@ -172,6 +172,8 @@ export interface Prescription {
   patientId: string;
   patientName: string | null;
   patientAge: number | null;
+  patientCnamId: string | null;
+  patientCnamQuality: string | null;
   issuedAt: string;
   language: PrescriptionLanguage;
   notes: string | null;
@@ -186,6 +188,8 @@ export interface NewPrescription {
   patientId: string;
   patientName: string;
   patientAge: number | null;
+  patientCnamId?: string | null;
+  patientCnamQuality?: string | null;
   language: PrescriptionLanguage;
   notes?: string | null;
   renewedFromId?: string | null;
@@ -200,6 +204,8 @@ interface PrescriptionRow {
   patient_id: string;
   patient_name: string | null;
   patient_age: number | null;
+  patient_cnam_id: string | null;
+  patient_cnam_quality: string | null;
   issued_at: string;
   language: PrescriptionLanguage;
   notes: string | null;
@@ -260,11 +266,13 @@ export class PrescriptionRepository {
       const now = issuedAt.toISOString();
       const number = nextDocumentNumber(this.db, 'ORD', issuedAt);
       this.db.prepare(`
-        INSERT INTO prescriptions (id, number, patient_id, patient_name, patient_age, issued_at, language, notes,
-                                   renewed_from_id, critical_alerts_overridden, safety_alerts, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO prescriptions (id, number, patient_id, patient_name, patient_age, patient_cnam_id, patient_cnam_quality,
+                                   issued_at, language, notes, renewed_from_id, critical_alerts_overridden,
+                                   safety_alerts, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
-        id, number, input.patientId, input.patientName, input.patientAge, now, input.language,
+        id, number, input.patientId, input.patientName, input.patientAge,
+        emptyToNull(input.patientCnamId), emptyToNull(input.patientCnamQuality), now, input.language,
         emptyToNull(input.notes), input.renewedFromId ?? null, input.criticalAlertsOverridden ? 1 : 0,
         JSON.stringify(input.safetyAlerts), nowIso()
       );
@@ -305,6 +313,8 @@ export class PrescriptionRepository {
       patientId: row.patient_id,
       patientName: row.patient_name,
       patientAge: row.patient_age,
+      patientCnamId: row.patient_cnam_id,
+      patientCnamQuality: row.patient_cnam_quality,
       issuedAt: row.issued_at,
       language: row.language,
       notes: row.notes,

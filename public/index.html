@@ -1049,54 +1049,55 @@
 
     <!-- VIEW 7: DOCTOR PREFERENCES & CLINICAL MEMORY -->
     <section id="view-preferences" class="hidden space-y-6">
+      <div id="clinic-identity-root"></div>
       <div class="max-w-3xl mx-auto bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
         <div class="border-b border-slate-200 dark:border-slate-800 pb-4">
-          <h2 class="text-lg font-bold text-slate-900 dark:text-white" data-i18n="prefs.title">Doctor Profile &amp; Clinical Practice Memory</h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="prefs.subtitle">Customize M.O.L.A.R.I.S to adapt to your preferred restorative systems, endodontic files, implant brands, and operatory workflows.</p>
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white" data-i18n="prefs.aiCardTitle">Clinical preferences for the AI advisor</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="prefs.aiCardSubtitle">Used only to tailor the advisor’s answers to your materials and habits.</p>
         </div>
 
         <form id="preferences-form" class="space-y-4 text-xs">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Doctor Name &amp; Title:</label>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="prefs.doctorName">Doctor Name &amp; Title</label>
               <input type="text" id="pref-doctor-name" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Clinic Name:</label>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="prefs.clinicName">Clinic Name</label>
               <input type="text" id="pref-clinic-name" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Preferred Bonding System:</label>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="prefs.bonding">Preferred Bonding System</label>
               <input type="text" id="pref-bonding-system" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Preferred Composite System:</label>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="prefs.composite">Preferred Composite System</label>
               <input type="text" id="pref-composite-system" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Preferred Rotary Endodontics:</label>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="prefs.rotary">Preferred Rotary Endodontics</label>
               <input type="text" id="pref-rotary-system" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Preferred Implant System:</label>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="prefs.implant">Preferred Implant System</label>
               <input type="text" id="pref-implant-system" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
           </div>
 
           <div>
-            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Practice Clinical Philosophy &amp; Special Rules:</label>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="prefs.notes">Practice Clinical Philosophy &amp; Special Rules</label>
             <textarea id="pref-notes" rows="3" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white"></textarea>
           </div>
 
           <div class="pt-2 flex justify-end">
-            <button type="submit" class="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl text-xs shadow-sm transition cursor-pointer">
-              Save Practice Preferences
+            <button type="submit" class="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl text-xs shadow-sm transition cursor-pointer" data-i18n="prefs.save">
+              Save preferences
             </button>
           </div>
         </form>
@@ -1329,6 +1330,23 @@
           <div>
             <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="patients.phoneLabel">Phone (WhatsApp)</label>
             <input type="tel" id="form-patient-phone" placeholder="+216 98 123 456" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="patients.cnamIdLabel">CNAM identifier</label>
+              <input type="text" id="form-patient-cnam-id" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="patients.cnamQualityLabel">CNAM status</label>
+              <select id="form-patient-cnam-quality" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+                <option value="" data-i18n="patients.cnamQuality.none">Not covered / unknown</option>
+                <option value="assure" data-i18n="patients.cnamQuality.assure">Insured person</option>
+                <option value="conjoint" data-i18n="patients.cnamQuality.conjoint">Spouse</option>
+                <option value="enfant" data-i18n="patients.cnamQuality.enfant">Child</option>
+                <option value="ascendant" data-i18n="patients.cnamQuality.ascendant">Parent (ascendant)</option>
+              </select>
+            </div>
           </div>
 
           <div class="grid grid-cols-3 gap-3">
@@ -1630,6 +1648,7 @@
   <script src="/i18n/core.js"></script>
   <script src="/js/core/molaris.js"></script>
   <script src="/js/core/utils.js"></script>
+  <script src="/i18n/settings.js"></script>
   <script src="/i18n/agenda.js"></script>
   <script src="/i18n/billing.js"></script>
   <script src="/i18n/prescriptions.js"></script>
@@ -1658,6 +1677,7 @@
   <script src="/js/features/agenda.js"></script>
   <script src="/js/features/billing.js"></script>
   <script src="/js/features/prescriptions.js"></script>
+  <script src="/js/features/clinic-settings.js"></script>
   <script src="/js/main.js"></script>
 </body>
 </html>

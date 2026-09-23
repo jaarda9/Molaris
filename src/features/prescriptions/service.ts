@@ -9,7 +9,7 @@ import {
 } from './repository.js';
 import { checkPrescriptionSafety, type PrescriptionSafetyAlert } from './safety.js';
 
-export type PrescribingPatient = Pick<PatientRecord, 'id' | 'name' | 'age' | 'allergies' | 'medications'>;
+export type PrescribingPatient = Pick<PatientRecord, 'id' | 'name' | 'age' | 'allergies' | 'medications' | 'cnamId' | 'cnamQuality'>;
 
 export interface IssueRequest {
   language?: PrescriptionLanguage;
@@ -55,6 +55,8 @@ export function issuePrescription(db: DB, patient: PrescribingPatient, request: 
     patientId: patient.id,
     patientName: patient.name,
     patientAge: Number.isFinite(patient.age) ? patient.age : null,
+    patientCnamId: patient.cnamId ?? null,
+    patientCnamQuality: patient.cnamQuality ?? null,
     language: request.language ?? 'fr',
     notes: request.notes,
     renewedFromId: request.renewedFromId ?? null,

@@ -1140,14 +1140,6 @@ window.applyMolarisLanguage = function(lang) {
   const saveModalBtn = document.querySelector('#patient-form button[type="submit"]');
   if (saveModalBtn) saveModalBtn.textContent = t('patients.savePatient');
 
-  // 13. Practice Preferences Tab
-  const prefTitle = document.querySelector('#view-preferences h2');
-  if (prefTitle) prefTitle.textContent = t('prefs.title');
-  const prefSub = document.querySelector('#view-preferences p');
-  if (prefSub) prefSub.textContent = t('prefs.subtitle');
-  const prefSaveBtn = document.querySelector('#preferences-form button[type="submit"]');
-  if (prefSaveBtn) prefSaveBtn.textContent = t('prefs.saveBtn');
-
   // Trigger dynamic component updates
   if (typeof window.renderOdontogram === 'function' && window.systemState && Array.isArray(window.systemState.teethData) && window.systemState.teethData.length > 0) {
     window.renderOdontogram();

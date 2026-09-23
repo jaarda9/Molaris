@@ -9,6 +9,7 @@ import path from 'path';
 import { pathToFileURL } from 'url';
 import { openDatabase, DATA_DIR, DEFAULT_DB_FILE, DB } from '../src/db/connection.js';
 import { PatientRepository } from '../src/repositories/patients.js';
+import { setClinicIdentity } from '../src/db/settings.js';
 
 async function main(): Promise<void> {
   const target = process.env.MOLARIS_DB_FILE || DEFAULT_DB_FILE;
@@ -26,6 +27,19 @@ async function main(): Promise<void> {
 
   const db = openDatabase(target);
   new PatientRepository(db, { legacyJsonFile: null });
+  // Obviously fictitious letterhead so printed demo documents look complete.
+  setClinicIdentity(db, {
+    clinicName: 'Cabinet Dentaire Démo',
+    doctorName: 'Dr. Praticien Démo',
+    specialty: 'Médecin Dentiste',
+    address: '10, avenue de la Démo',
+    city: 'Tunis',
+    phone: '+216 71 000 000',
+    email: 'contact@cabinet-demo.tn',
+    orderNumber: 'DEMO-0000',
+    fiscalId: 'DEMO/0000000',
+    cnamCode: 'DEMO-CNAM-00'
+  });
 
   const featuresDir = path.join(process.cwd(), 'src', 'features');
   for (const feature of fs.readdirSync(featuresDir)) {

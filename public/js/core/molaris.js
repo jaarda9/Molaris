@@ -222,6 +222,7 @@ Molaris.print = {
           ${line('', clinic.email)}
           ${line('N° Ordre :', clinic.orderNumber)}
           ${line('MF :', clinic.fiscalId)}
+          ${line('Code CNAM :', clinic.cnamCode)}
         </div>
       </header>`;
 
