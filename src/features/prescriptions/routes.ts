@@ -42,7 +42,7 @@ const uiLanguage = z.enum(['en', 'fr']).optional();
 
 const checkSchema = z.object({
   patientId: z.string().min(1),
-  items: z.array(itemSchema.partial({ dosage: true })).max(30),
+  items: z.array(itemSchema.pick({ drugLabel: true, brand: true, strength: true })).max(30),
   uiLanguage
 });
 
