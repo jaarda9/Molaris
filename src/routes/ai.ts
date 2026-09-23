@@ -5,7 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { patientDb } from '../repositories/patients.js';
 import { loadMemory } from '../repositories/preferences.js';
-import { callGeminiWithResilience } from '../ai/gemini.js';
+import { callGeminiWithResilience, aiErrorMessage, AiUnavailableError } from '../ai/gemini.js';
 import { MOLARIS_SYSTEM_PROMPT } from '../ai/system-prompt.js';
 import { executeMolarisAction } from '../ai/voice-actions.js';
 import { computePatientSafetyAlerts } from '../domain/patient-safety.js';
@@ -13,6 +13,11 @@ import { DATA_DIR } from '../db/connection.js';
 import { languageOf } from './http.js';
 
 export const aiRouter = Router();
+
+// 503 with a readable, translated message when the AI is out of quota or overloaded.
+function sendAiError(res: Response, err: unknown, req: Request): void {
+  res.status(err instanceof AiUnavailableError ? 503 : 500).json({ error: aiErrorMessage(err, languageOf(req.body?.language)) });
+}
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -129,7 +134,7 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     console.error('Gemini chat error:', err);
-    res.status(500).json({ error: err.message || 'Failed to obtain clinical response from M.O.L.A.R.I.S' });
+    sendAiError(res, err, req);
   }
 });
 
@@ -209,7 +214,7 @@ State the limits of reading a single image.
     res.json({ analysis: result.text, modelUsed: result.modelUsed, image: imageRecord, timestamp: new Date().toISOString() });
   } catch (err: any) {
     console.error('Vision analysis error:', err);
-    res.status(500).json({ error: err.message || 'Radiographic analysis failed' });
+    sendAiError(res, err, req);
   }
 });
 
@@ -332,6 +337,6 @@ Do not invent any finding, measurement or value that is not given above: write "
     });
   } catch (err: any) {
     console.error('SOAP generator error:', err);
-    res.status(500).json({ error: err.message || 'Failed to generate SOAP note' });
+    sendAiError(res, err, req);
   }
 });

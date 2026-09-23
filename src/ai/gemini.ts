@@ -37,7 +37,7 @@ export async function callGeminiWithResilience(options: GenerateResilientOptions
     ? [options.preferredModel, ...MODEL_CANDIDATES.filter(m => m !== options.preferredModel)]
     : MODEL_CANDIDATES;
 
-  let lastError: any = null;
+  let allQuota = true;
 
   for (const model of models) {
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -45,19 +45,50 @@ export async function callGeminiWithResilience(options: GenerateResilientOptions
         const response = await ai.models.generateContent({ model, contents: options.contents, config: options.config });
         return { text: response.text || '', modelUsed: model };
       } catch (err: any) {
-        lastError = err;
         const msg = err?.message || String(err);
-        const isTransient = ['503', 'UNAVAILABLE', 'high demand', '429', 'ResourceExhausted', 'overloaded'].some(s => msg.includes(s));
-        console.warn(`[AI] Model ${model} (attempt ${attempt + 1}/2) failed: ${msg.slice(0, 160)}`);
-        if (isTransient && attempt === 0) {
+        const kind = classifyAiError(msg);
+        console.warn(`[AI] Model ${model} (attempt ${attempt + 1}/2) failed (${kind}): ${msg.slice(0, 160)}`);
+        if (kind === 'other') throw err;
+        if (kind === 'overloaded') allQuota = false;
+        // An exhausted daily quota won't recover in 600 ms: go straight to the next model.
+        if (kind === 'overloaded' && attempt === 0) {
           await new Promise(r => setTimeout(r, 600));
           continue;
         }
-        if (isTransient) break;
-        throw err;
+        break;
       }
     }
   }
 
-  throw lastError || new Error('All clinical models are temporarily experiencing high demand. Please retry in a few moments.');
+  throw new AiUnavailableError(allQuota ? 'quota' : 'unavailable');
+}
+
+type AiErrorKind = 'quota' | 'overloaded' | 'other';
+
+function classifyAiError(message: string): AiErrorKind {
+  if (/RESOURCE_EXHAUSTED|exceeded your current quota|\b429\b|ResourceExhausted/i.test(message)) return 'quota';
+  if (/\b503\b|UNAVAILABLE|high demand|overloaded/i.test(message)) return 'overloaded';
+  return 'other';
+}
+
+/** Every model failed for capacity reasons: 'quota' = daily API quota used up, 'unavailable' = overloaded. */
+export class AiUnavailableError extends Error {
+  constructor(public reason: 'quota' | 'unavailable') {
+    super(reason === 'quota' ? 'AI quota exhausted' : 'AI temporarily unavailable');
+  }
+}
+
+/** The message shown to the dentist when an AI call fails. */
+export function aiErrorMessage(err: unknown, language: 'en' | 'fr'): string {
+  if (err instanceof AiUnavailableError) {
+    if (err.reason === 'quota') {
+      return language === 'fr'
+        ? "Quota de l'assistant IA épuisé pour aujourd'hui : la clé Gemini actuelle est une clé gratuite limitée. Réessayez demain ou activez la facturation sur la clé. Le reste de Molaris fonctionne normalement."
+        : 'The AI assistant quota is used up for today: the current Gemini key is a limited free key. Try again tomorrow or enable billing on the key. The rest of Molaris works normally.';
+    }
+    return language === 'fr'
+      ? "L'assistant IA est momentanément surchargé. Réessayez dans quelques instants."
+      : 'The AI assistant is temporarily overloaded. Please try again in a moment.';
+  }
+  return (err as Error)?.message || (language === 'fr' ? "Erreur de l'assistant IA" : 'AI assistant error');
 }
