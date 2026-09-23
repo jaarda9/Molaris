@@ -1,10 +1,26 @@
 export interface Identifiable {
   name: string;
   chartId: string;
+  phone?: string;
+  cnamId?: string;
 }
 
 export const REDACTED_PATIENT = '[PATIENT]';
 export const REDACTED_CHART = '[CHART-ID]';
+export const REDACTED_PHONE = '[PHONE]';
+export const REDACTED_CNAM = '[CNAM-ID]';
+
+/**
+ * Matches a known phone number however it is typed: with or without the
+ * Tunisian prefix (+216 / 00216 / 216) and with any spaces, dots or dashes
+ * between digits ("+216 98 123 456", "98.123.456", "0021698123456").
+ */
+function phonePattern(phone: string): RegExp | null {
+  const digits = phone.replace(/\D/g, '').replace(/^(00)?216(?=\d{8}$)/, '');
+  if (digits.length < 6) return null;
+  const body = digits.split('').join('[\\s.-]?');
+  return new RegExp(`(?<!\\d)(?:(?:\\+|00)?216[\\s.-]?)?${body}(?!\\d)`, 'g');
+}
 
 const MIN_NAME_PART_LENGTH = 3;
 
@@ -19,7 +35,7 @@ function wholeWordPattern(term: string): RegExp {
 }
 
 /**
- * Replaces every known patient's full name, name parts, and chart ID in `text`
+ * Replaces every known patient's phone, CNAM id, full name, name parts, and chart ID in `text`
  * before it is sent to an external AI provider. Full names are replaced before
  * individual parts so "Eleanor Davis" becomes one placeholder, not two.
  */
@@ -41,6 +57,13 @@ export function redactIdentifiers(text: string, people: Identifiable[]): string 
   }
 
   const byLengthDesc = (a: string, b: string) => b.length - a.length;
+
+  // Numbers first, so a name part can never break up a phone or id.
+  for (const p of people) {
+    const pattern = p.phone ? phonePattern(p.phone) : null;
+    if (pattern) out = out.replace(pattern, REDACTED_PHONE);
+    if (p.cnamId && p.cnamId.trim()) out = out.replace(wholeWordPattern(p.cnamId.trim()), REDACTED_CNAM);
+  }
 
   for (const id of [...chartIds].sort(byLengthDesc)) {
     out = out.replace(wholeWordPattern(id), REDACTED_CHART);

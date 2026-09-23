@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { redactIdentifiers, redactContents, REDACTED_PATIENT, REDACTED_CHART } from './ai-privacy.js';
+import { redactIdentifiers, redactContents, REDACTED_PATIENT, REDACTED_CHART, REDACTED_PHONE, REDACTED_CNAM } from './ai-privacy.js';
 
 const people = [
   { name: 'Eleanor Davis', chartId: 'PT-2026-091' },
@@ -39,4 +39,22 @@ test('redactContents leaves image parts untouched and redacts text parts', () =>
   assert.equal(out[0].parts[0].text, `PATIENT: ${REDACTED_PATIENT}`);
   assert.deepEqual(out[0].parts[1], image);
   assert.equal(contents[0].parts[0].text, 'PATIENT: Eleanor Davis', 'input must not be mutated');
+});
+
+test('redacts a known phone however it is written', () => {
+  const people = [{ name: 'Amira Jlassi', chartId: 'PT-2026-0200', phone: '+216 98 123 456' }];
+  for (const written of ['+216 98 123 456', '98123456', '0021698123456', '98.123.456', '216-98-123-456']) {
+    assert.equal(redactIdentifiers(`appeler le ${written} demain`, people), `appeler le ${REDACTED_PHONE} demain`, written);
+  }
+});
+
+test('redacts a known CNAM identifier', () => {
+  const people = [{ name: 'Amira Jlassi', chartId: 'PT-2026-0200', cnamId: '1234567-89' }];
+  assert.equal(redactIdentifiers('CNAM 1234567-89, dent 46', people), `CNAM ${REDACTED_CNAM}, dent 46`);
+});
+
+test('leaves clinical numbers alone', () => {
+  const people = [{ name: 'Amira Jlassi', chartId: 'PT-2026-0200', phone: '98 123 456', cnamId: '1234567-89' }];
+  const clinical = 'Ibuprofène 400 mg, dent 46, 1,5 carpule, le 23/09/2026, INR 2.5, 981234567 comprimés';
+  assert.equal(redactIdentifiers(clinical, people), clinical);
 });
