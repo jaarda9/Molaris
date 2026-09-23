@@ -5,7 +5,6 @@ import rateLimit from 'express-rate-limit';
 import http from 'http';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
 import multer from 'multer';
 import { GoogleGenAI } from '@google/genai';
 import { MOLARIS_SYSTEM_PROMPT } from './src/molaris-protocol.js';
@@ -236,7 +235,7 @@ app.get('/api/status', (req: Request, res: Response) => {
   res.json({
     status: 'online',
     systemName: 'M.O.L.A.R.I.S',
-    version: '4.3.0-JARVIS-AUTONOMOUS',
+    version: '0.5.0',
     role: 'Senior Dental Advisor & Chairside Autonomous Copilot',
     hasApiKey: hasKey,
     doctorName: memory.preferences.doctorName,
@@ -589,7 +588,7 @@ app.post('/api/anesthesia/log', (req: Request, res: Response) => {
   }
 });
 
-// Senior Dental Advisor & Autonomous JARVIS Action Engine
+// Senior Dental Advisor chat + voice-command action engine
 app.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
   try {
     const { message, toothId, conversationHistory = [], language = 'en' } = req.body;
@@ -626,7 +625,7 @@ app.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     }
 
     if (actionResult.executed) {
-      contextPrompt += `\n[M.O.L.A.R.I.S JARVIS ACTION JUST EXECUTED IN DATABASE]: ${actionResult.summary}\n`;
+      contextPrompt += `\n[ACTION JUST EXECUTED IN THE PATIENT RECORD]: ${actionResult.summary}\n`;
     }
 
     const safetyAlerts = computeActivePatientSafetyAlerts(activePatient, [], language === 'fr' ? 'fr' : 'en');
@@ -917,39 +916,6 @@ Format strictly as:
     console.error('SOAP generator error:', err);
     res.status(500).json({ error: err.message || 'Failed to generate SOAP note' });
   }
-});
-
-// System & Hardware Telemetry Hub
-app.get('/api/system/telemetry', (req: Request, res: Response) => {
-  const mem = process.memoryUsage();
-  const uptimeSec = Math.floor(process.uptime());
-  const patients = patientDb.getAllPatients();
-  const activePatient = patientDb.getActivePatient();
-
-  res.json({
-    status: 'online',
-    uptimeSeconds: uptimeSec,
-    uptimeHuman: `${Math.floor(uptimeSec / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m ${uptimeSec % 60}s`,
-    processMemory: {
-      heapUsedMb: Math.round(mem.heapUsed / 1024 / 1024 * 10) / 10,
-      heapTotalMb: Math.round(mem.heapTotal / 1024 / 1024 * 10) / 10,
-      rssMb: Math.round(mem.rss / 1024 / 1024 * 10) / 10
-    },
-    systemMemory: {
-      totalRamMb: Math.round(os.totalmem() / 1024 / 1024),
-      freeRamMb: Math.round(os.freemem() / 1024 / 1024)
-    },
-    platform: `${os.platform()} (${os.arch()})`,
-    nodeVersion: process.version,
-    database: {
-      file: 'data/patients-db.json',
-      patientCount: patients.length,
-      activePatientId: activePatient.id,
-      activePatientName: activePatient.name,
-      activePatientChartId: activePatient.chartId
-    },
-    models: MODEL_CANDIDATES
-  });
 });
 
 // Fallback to SPA index.html

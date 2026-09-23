@@ -1,6 +1,5 @@
 import { patientDb, PatientRecord } from './patient-db.js';
 import { checkDrugInteractions } from './clinical-safety.js';
-import os from 'os';
 
 export interface ActionResult {
   executed: boolean;
@@ -255,28 +254,6 @@ export function executeMolarisAction(commandText: string, language: string = 'en
       actionType: 'AUDIO_UNMUTE',
       summary: isFr ? 'Synthèse vocale et alertes sonores réactivées.' : 'Operatory voice synthesizer and audio restored.',
       data: { muted: false }
-    };
-  }
-
-  // 8. System Telemetry / Hardware Check (English & French)
-  // e.g. "system telemetry", "hardware check", "system diagnostics", "status check", "télémétrie système", "état du système"
-  if (lower.includes('telemetry') || lower.includes('diagnostics') || lower.includes('hardware check') || lower.includes('system status') || lower.includes('télémétrie') || lower.includes('état du système') || lower.includes('diagnostic matériel')) {
-    const mem = process.memoryUsage();
-    const uptimeSec = Math.floor(process.uptime());
-    const totalMemMb = Math.round(os.totalmem() / 1024 / 1024);
-    const freeMemMb = Math.round(os.freemem() / 1024 / 1024);
-    const heapUsedMb = Math.round(mem.heapUsed / 1024 / 1024);
-    const patientCount = patientDb.getAllPatients().length;
-
-    const summary = isFr
-      ? `**Télémétrie M.O.L.A.R.I.S JARVIS** : Uptime : ${Math.floor(uptimeSec / 60)}m ${uptimeSec % 60}s | Tas mémoire Node : ${heapUsedMb} Mo | RAM Système : ${freeMemMb} Mo libres sur ${totalMemMb} Mo | Base Patients : ${patientCount} dossiers actifs | Plateforme : ${os.platform()}-${os.arch()}.`
-      : `**M.O.L.A.R.I.S JARVIS Telemetry**: Node Uptime: ${Math.floor(uptimeSec / 60)}m ${uptimeSec % 60}s | Memory Heap: ${heapUsedMb} MB / System RAM: ${freeMemMb} MB free of ${totalMemMb} MB | Database Patients: ${patientCount} active records | Architecture: ${os.platform()}-${os.arch()}.`;
-
-    return {
-      executed: true,
-      actionType: 'SYSTEM_TELEMETRY',
-      summary,
-      data: { heapUsedMb, freeMemMb, totalMemMb, uptimeSec, patientCount, targetView: 'system' }
     };
   }
 

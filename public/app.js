@@ -75,7 +75,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   initSOAPGenerator();
   initPreferencesForm();
   initPatientManager();
-  initJarvisHudAndTelemetry();
   initTreatmentPlanManager();
   initMedicationManager();
   initPerioChartManager();
@@ -222,7 +221,6 @@ function initNavigation() {
     { id: 'nav-tab-vision', view: 'view-vision' },
     { id: 'nav-tab-protocols', view: 'view-protocols' },
     { id: 'nav-tab-soap', view: 'view-soap' },
-    { id: 'nav-tab-system', view: 'view-system' },
     { id: 'nav-tab-preferences', view: 'view-preferences' },
     { id: 'nav-tab-treatment', view: 'view-treatment' },
     { id: 'nav-tab-medications', view: 'view-medications' },
@@ -251,9 +249,6 @@ function initNavigation() {
       if (targetView) targetView.classList.remove('hidden');
       systemState.activeTab = t.view;
 
-      if (t.view === 'view-system') {
-        fetchTelemetry();
-      }
       if (t.view === 'view-treatment') fetchTreatmentPlan();
       if (t.view === 'view-medications') fetchMedications();
       if (t.view === 'view-perio') { fetchPerioLatest(); fetchPerioHistory(); }
@@ -510,7 +505,7 @@ if (chatForm) {
         renderSafetyAlertsInto('chat-safety-alerts', data.safetyAlerts);
         renderSafetyAlertsInto('safety-alerts-sidebar', data.safetyAlerts, { parentCardId: 'safety-alerts-card' });
 
-        // Execute autonomous client actions triggered by M.O.L.A.R.I.S JARVIS action engine
+        // Execute autonomous client actions triggered by the voice-command action engine
         if (data.action && data.action.executed) {
           handleMolarisAutonomousAction(data.action);
         }
@@ -1439,7 +1434,7 @@ function updateSidebarPreferences(prefs) {
 }
 
 // -----------------------------------------------------------------------------
-// Autonomous JARVIS Action Dispatcher (M.O.L.A.R.I.S Action Engine)
+// Voice-Command Action Dispatcher
 // -----------------------------------------------------------------------------
 function handleMolarisAutonomousAction(action) {
   if (!action || !action.executed) return;
@@ -1526,13 +1521,6 @@ function handleMolarisAutonomousAction(action) {
       const voiceIconOffU = document.getElementById('voice-icon-off');
       if (voiceIconOnU) voiceIconOnU.classList.remove('hidden');
       if (voiceIconOffU) voiceIconOffU.classList.add('hidden');
-      break;
-
-    case 'SYSTEM_TELEMETRY':
-    case 'TELEMETRY':
-      const sysTab = document.getElementById('nav-tab-system');
-      if (sysTab) sysTab.click();
-      fetchTelemetry();
       break;
 
     default:
@@ -1959,149 +1947,6 @@ function initPatientManager() {
       reader.readAsText(file);
     });
   }
-}
-
-// -----------------------------------------------------------------------------
-// Mark LII Telemetry & Real-Time Audio Reactive Waveform HUD
-// -----------------------------------------------------------------------------
-let telemetryPollInterval = null;
-
-function initJarvisHudAndTelemetry() {
-  initJarvisWaveformCanvas();
-
-  // Chairside autonomous macro buttons
-  document.querySelectorAll('.macro-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const cmd = btn.dataset.cmd;
-      if (!cmd) return;
-      document.getElementById('nav-tab-advisor')?.click();
-      chatInput.value = cmd;
-      chatForm.dispatchEvent(new Event('submit'));
-    });
-  });
-
-  // Test action button
-  const testActionBtn = document.getElementById('btn-test-action');
-  if (testActionBtn) {
-    testActionBtn.addEventListener('click', () => {
-      // Iron Man Mark LII 4-tone powerup sequence
-      playClinicalBeep(523.25, 'sine', 0.1);
-      setTimeout(() => playClinicalBeep(659.25, 'sine', 0.1), 100);
-      setTimeout(() => playClinicalBeep(783.99, 'sine', 0.1), 200);
-      setTimeout(() => playClinicalBeep(1046.50, 'sine', 0.25), 300);
-
-      // Trigger 5-second test timer
-      if (typeof window.startChairsideTimer === 'function') {
-        window.startChairsideTimer(5);
-      }
-    });
-  }
-
-  // Periodic telemetry polling
-  fetchTelemetry();
-  telemetryPollInterval = setInterval(fetchTelemetry, 5000);
-}
-
-async function fetchTelemetry() {
-  try {
-    const res = await fetch('/api/system/telemetry');
-    const data = await res.json();
-
-    const heapEl = document.getElementById('telemetry-heap');
-    const rssEl = document.getElementById('telemetry-rss');
-    const freeRamEl = document.getElementById('telemetry-freeram');
-    const totalRamEl = document.getElementById('telemetry-totalram');
-    const uptimeEl = document.getElementById('telemetry-uptime');
-    const platformEl = document.getElementById('telemetry-platform');
-    const patientsEl = document.getElementById('telemetry-patients');
-    const chartEl = document.getElementById('telemetry-active-chart');
-
-    if (heapEl) heapEl.textContent = `${data.heapUsedMb} MB`;
-    if (rssEl) rssEl.textContent = `${data.rssMb}`;
-    if (freeRamEl) freeRamEl.textContent = `${data.systemFreeRamMb} MB Free`;
-    if (totalRamEl) totalRamEl.textContent = `${data.systemTotalRamMb}`;
-    if (uptimeEl) uptimeEl.textContent = data.uptimeFormatted || '0h 0m 0s';
-    if (platformEl) platformEl.textContent = `${data.platform} (${data.arch})`;
-    if (patientsEl) patientsEl.textContent = `${data.patientCount} Patients`;
-    if (chartEl) chartEl.textContent = data.activePatientChart || 'None';
-  } catch (err) {
-    console.warn('Telemetry fetch error:', err);
-  }
-}
-
-function initJarvisWaveformCanvas() {
-  const canvas = document.getElementById('jarvis-waveform-canvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  let phase = 0;
-
-  function draw() {
-    requestAnimationFrame(draw);
-
-    const width = canvas.width;
-    const height = canvas.height;
-    const centerY = height / 2;
-
-    ctx.clearRect(0, 0, width, height);
-
-    // Grid lines for Mark LII HUD look
-    ctx.strokeStyle = 'rgba(6, 182, 212, 0.1)';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < width; x += 40) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
-      ctx.stroke();
-    }
-    for (let y = 0; y < height; y += 20) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
-    }
-
-    // Dynamic amplitude based on speaking or microphone activity
-    const isSpeaking = window.speechSynthesis && window.speechSynthesis.speaking;
-    const isActive = isSpeaking || isListening;
-    const amplitude = isActive ? 28 : 10;
-    const frequency = isActive ? 0.04 : 0.015;
-    const speed = isActive ? 0.12 : 0.04;
-
-    phase += speed;
-
-    // Glowing main wave
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = '#06b6d4';
-    ctx.strokeStyle = '#22d3ee';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-
-    for (let x = 0; x < width; x++) {
-      const taper = Math.sin((x / width) * Math.PI); // Pin edges to zero
-      const y = centerY + Math.sin(x * frequency + phase) * amplitude * taper + Math.sin(x * frequency * 2.5 - phase * 1.5) * (amplitude * 0.4) * taper;
-      if (x === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-
-    // Harmonic companion wave
-    ctx.shadowBlur = 6;
-    ctx.shadowColor = '#0d9488';
-    ctx.strokeStyle = 'rgba(20, 184, 166, 0.7)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-
-    for (let x = 0; x < width; x++) {
-      const taper = Math.sin((x / width) * Math.PI);
-      const y = centerY + Math.sin(x * frequency * 1.8 - phase) * (amplitude * 0.7) * taper;
-      if (x === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-  }
-
-  draw();
 }
 
 // -----------------------------------------------------------------------------

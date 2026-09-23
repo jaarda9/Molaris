@@ -30,7 +30,6 @@ window.MOLARIS_TRANSLATIONS = {
     "nav.vision": "X-Ray & Vision Diagnostics",
     "nav.protocols": "Chairside Protocols",
     "nav.soap": "SOAP Note & CDT",
-    "nav.system": "JARVIS HUD & Telemetry",
     "nav.preferences": "Doctor Profile & Memory",
     "nav.treatment": "Treatment Plan",
     "nav.medications": "Medications",
@@ -231,37 +230,6 @@ window.MOLARIS_TRANSLATIONS = {
     "patients.cancel": "Cancel",
     "patients.savePatient": "Save Patient Record",
 
-    // JARVIS HUD & Telemetry
-    "hud.title": "M.O.L.A.R.I.S // MARK LII",
-    "hud.subtitle": "AUTONOMOUS OPERATORY ENGINE",
-    "hud.desc": "Tactical chairside intelligence, real-time voice telemetry, and hardware copilot",
-    "hud.testAudio": "Test Audio & Chime",
-    "hud.oscilloscope": "LIVE AUDIO REACTIVE OSCILLOSCOPE",
-    "hud.micStatusReady": "Microphone & Synthesizer Ready",
-    "hud.telemetryTitle": "OPERATORY COPILOT TELEMETRY",
-    "hud.heap": "NODE PROCESS HEAP",
-    "hud.rss": "Resident Set:",
-    "hud.ram": "SYSTEM MEMORY (RAM)",
-    "hud.totalRam": "Total:",
-    "hud.uptime": "OPERATORY COPILOT UPTIME",
-    "hud.platform": "Operating System:",
-    "hud.records": "LOCAL DATABASE RECORDS",
-    "hud.activeChart": "Active Chart:",
-    "hud.macrosTitle": "Autonomous Voice & Chat Commands (M.O.L.A.R.I.S Operatory Engine)",
-    "hud.macrosDesc": "Just like the original Mark LII JARVIS system, speak or type natural instructions to control chairside timers, switch charts, or log procedures instantly:",
-    "hud.macro1Title": "Switch Patient",
-    "hud.macro1Desc": "\"Switch patient to Eleanor Davis\"",
-    "hud.macro2Title": "Chart Tooth Pathology",
-    "hud.macro2Desc": "\"Mark tooth 19 as active caries with note deep occlusal decay\"",
-    "hud.macro3Title": "Start Cure Timer",
-    "hud.macro3Desc": "\"Start 20 second light cure timer\"",
-    "hud.macro4Title": "Start Etch Timer",
-    "hud.macro4Desc": "\"Start 15 second acid etch timer\"",
-    "hud.macro5Title": "Log Local Anesthesia",
-    "hud.macro5Desc": "\"Log 1 carpule Septocaine for IANB\"",
-    "hud.macro6Title": "Telemetry Diagnostics",
-    "hud.macro6Desc": "\"System telemetry diagnostic status\"",
-
     // Doctor Profile & Preferences
     "prefs.title": "Doctor Profile & Clinical Practice Memory",
     "prefs.subtitle": "Customize M.O.L.A.R.I.S to adapt to your preferred restorative systems, endodontic files, implant brands, and operatory workflows.",
@@ -412,7 +380,6 @@ window.MOLARIS_TRANSLATIONS = {
     "nav.vision": "Radio & Diagnostic Visuel",
     "nav.protocols": "Protocoles au Fauteuil",
     "nav.soap": "Compte-Rendu SOAP & CDT",
-    "nav.system": "HUD JARVIS & Télémétrie",
     "nav.preferences": "Profil Praticien & Mémoire",
     "nav.treatment": "Plan de Traitement",
     "nav.medications": "Médicaments",
@@ -612,37 +579,6 @@ window.MOLARIS_TRANSLATIONS = {
     "patients.allergies": "Allergies Connues",
     "patients.cancel": "Annuler",
     "patients.savePatient": "Enregistrer le Dossier Patient",
-
-    // JARVIS HUD & Telemetry
-    "hud.title": "M.O.L.A.R.I.S // MARK LII",
-    "hud.subtitle": "MOTEUR OPÉRATOIRE AUTONOME",
-    "hud.desc": "Intelligence tactique au fauteuil, télémétrie vocale temps réel et copilote matériel",
-    "hud.testAudio": "Tester Audio & Carillon",
-    "hud.oscilloscope": "OSCILLOSCOPE RÉACTIF AUDIO EN DIRECT",
-    "hud.micStatusReady": "Microphone & Synthétiseur Prêts",
-    "hud.telemetryTitle": "TÉLÉMÉTRIE DU COPILOTE AU FAUTEUIL",
-    "hud.heap": "HEAP PROCESSUS NODE",
-    "hud.rss": "Mémoire Résidente :",
-    "hud.ram": "MÉMOIRE SYSTÈME (RAM)",
-    "hud.totalRam": "Total :",
-    "hud.uptime": "DURÉE DE FONCTIONNEMENT (UPTIME)",
-    "hud.platform": "Système d'Exploitation :",
-    "hud.records": "DOSSIERS EN BASE LOCALE",
-    "hud.activeChart": "Dossier Actif :",
-    "hud.macrosTitle": "Commandes Vocales & Textuelles Autonomes (Moteur M.O.L.A.R.I.S)",
-    "hud.macrosDesc": "À l'instar du système JARVIS Mark LII, énoncez ou tapez vos instructions en langage naturel pour piloter les minuteurs ou noter les actes instantanément :",
-    "hud.macro1Title": "Changer de Patient",
-    "hud.macro1Desc": "\"Changer de patient pour Eleanor Davis\"",
-    "hud.macro2Title": "Noter Pathologie Dentaire",
-    "hud.macro2Desc": "\"Marquer dent 19 comme carie active\"",
-    "hud.macro3Title": "Minuteur Polymérisation",
-    "hud.macro3Desc": "\"Lancer minuteur 20 secondes polymérisation\"",
-    "hud.macro4Title": "Minuteur Mordançage",
-    "hud.macro4Desc": "\"Lancer minuteur 15 secondes mordançage\"",
-    "hud.macro5Title": "Enregistrer Anesthésie",
-    "hud.macro5Desc": "\"Injecter 1 carpule de septocaïne\"",
-    "hud.macro6Title": "Diagnostic Télémétrie",
-    "hud.macro6Desc": "\"Télémétrie diagnostic système\"",
 
     // Doctor Profile & Preferences
     "prefs.title": "Profil du Praticien & Mémoire du Cabinet",
@@ -936,7 +872,6 @@ window.applyMolarisLanguage = function(lang) {
     { id: 'nav-tab-vision', key: 'nav.vision' },
     { id: 'nav-tab-protocols', key: 'nav.protocols' },
     { id: 'nav-tab-soap', key: 'nav.soap' },
-    { id: 'nav-tab-system', key: 'nav.system' },
     { id: 'nav-tab-preferences', key: 'nav.preferences' }
   ];
   navMap.forEach(({ id, key }) => {
@@ -1163,61 +1098,6 @@ window.applyMolarisLanguage = function(lang) {
   if (btnExportDb) btnExportDb.textContent = t('patients.exportDb');
   const btnImportDb = document.getElementById('btn-import-db');
   if (btnImportDb) btnImportDb.textContent = t('patients.importDb');
-
-  // 11. JARVIS HUD View
-  const hudBadge = document.querySelector('#view-system span.border-cyan-700, #view-system .border-cyan-700');
-  if (hudBadge) hudBadge.textContent = t('hud.subtitle');
-  const hudDesc = document.querySelector('#view-system p.text-slate-400');
-  if (hudDesc) hudDesc.textContent = t('hud.desc');
-  const hudAudioBtn = document.querySelector('#btn-test-action span');
-  if (hudAudioBtn) hudAudioBtn.textContent = t('hud.testAudio');
-  const oscLabel = document.querySelector('#view-system .animate-pulse + span, #view-system span.font-mono.tracking-wider');
-  if (oscLabel) oscLabel.textContent = t('hud.oscilloscope');
-  const oscStatus = document.getElementById('hud-audio-status');
-  if (oscStatus) oscStatus.textContent = t('hud.micStatusReady');
-
-  // Telemetry metric cards
-  const heapLabel = document.querySelector('#telemetry-heap')?.previousElementSibling;
-  if (heapLabel) heapLabel.textContent = t('hud.heap');
-  const ramLabel = document.querySelector('#telemetry-freeram')?.previousElementSibling;
-  if (ramLabel) ramLabel.textContent = t('hud.ram');
-  const uptimeLabel = document.querySelector('#telemetry-uptime')?.previousElementSibling;
-  if (uptimeLabel) uptimeLabel.textContent = t('hud.uptime');
-  const recordsLabel = document.querySelector('#telemetry-patients')?.previousElementSibling;
-  if (recordsLabel) recordsLabel.textContent = t('hud.records');
-
-  // Macro buttons
-  const macroHeadTitle = document.querySelector('#view-system h3');
-  if (macroHeadTitle) macroHeadTitle.textContent = t('hud.macrosTitle');
-  const macroHeadSub = document.querySelector('#view-system h3 + p');
-  if (macroHeadSub) macroHeadSub.textContent = t('hud.macrosDesc');
-
-  const macroButtons = document.querySelectorAll('#view-system .macro-btn');
-  if (macroButtons.length >= 6) {
-    macroButtons[0].dataset.cmd = isFr ? 'Changer de patient pour Eleanor Davis' : 'Switch patient to Eleanor Davis';
-    macroButtons[0].querySelector('span.font-semibold').textContent = t('hud.macro1Title');
-    macroButtons[0].querySelector('p').textContent = t('hud.macro1Desc');
-
-    macroButtons[1].dataset.cmd = isFr ? 'Marquer dent 19 comme carie active' : 'Mark tooth 19 as active caries with note deep occlusal decay';
-    macroButtons[1].querySelector('span.font-semibold').textContent = t('hud.macro2Title');
-    macroButtons[1].querySelector('p').textContent = t('hud.macro2Desc');
-
-    macroButtons[2].dataset.cmd = isFr ? 'Lancer minuteur 20 secondes polymérisation' : 'Start 20 second light cure timer';
-    macroButtons[2].querySelector('span.font-semibold').textContent = t('hud.macro3Title');
-    macroButtons[2].querySelector('p').textContent = t('hud.macro3Desc');
-
-    macroButtons[3].dataset.cmd = isFr ? 'Lancer minuteur 15 secondes mordançage' : 'Start 15 second acid etch timer';
-    macroButtons[3].querySelector('span.font-semibold').textContent = t('hud.macro4Title');
-    macroButtons[3].querySelector('p').textContent = t('hud.macro4Desc');
-
-    macroButtons[4].dataset.cmd = isFr ? 'Injecter 1 carpule de septocaïne' : 'Log 1 carpule Septocaine for IANB';
-    macroButtons[4].querySelector('span.font-semibold').textContent = t('hud.macro5Title');
-    macroButtons[4].querySelector('p').textContent = t('hud.macro5Desc');
-
-    macroButtons[5].dataset.cmd = isFr ? 'Télémétrie diagnostic système' : 'System telemetry diagnostic status';
-    macroButtons[5].querySelector('span.font-semibold').textContent = t('hud.macro6Title');
-    macroButtons[5].querySelector('p').textContent = t('hud.macro6Desc');
-  }
 
   // 12. Patient Modal Localization
   const modalLabels = document.querySelectorAll('#patient-form label');
