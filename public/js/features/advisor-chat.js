@@ -36,8 +36,7 @@ if (chatForm) {
       removeMessage(typingId);
 
       if (data.error) {
-        const isFr = systemState.language === 'fr';
-        appendMessage('molaris', `${isFr ? '⚠️ Alerte Conseiller Clinique :' : '⚠️ Clinical Advisor Alert:'} ${data.error}`);
+        appendMessage('molaris', `${molarisT('chat.alertPrefix')} ${data.error}`);
       } else {
         appendMessage('molaris', data.reply, data.action);
         systemState.chatHistory.push({ role: 'user', content: query });
@@ -53,7 +52,7 @@ if (chatForm) {
       }
     } catch (err) {
       removeMessage(typingId);
-      appendMessage('molaris', `⚠️ Communication failure with clinical engine. ${err.message}`);
+      appendMessage('molaris', `${molarisT('chat.commFailure')} ${err.message}`);
     }
   });
 }
@@ -68,7 +67,7 @@ function appendMessage(sender, text, action = null) {
     msgDiv.innerHTML = `
       <div class="flex-1 flex justify-end">
         <div class="bg-teal-600 text-white rounded-2xl rounded-tr-sm p-3.5 text-sm max-w-[80%] shadow-sm leading-relaxed">
-          <div class="text-[10px] font-semibold text-teal-200 uppercase tracking-wider mb-1">Attending Doctor</div>
+          <div class="text-[10px] font-semibold text-teal-200 uppercase tracking-wider mb-1">${escapeHtml(molarisT('chat.doctorLabel'))}</div>
           <div>${escapeHtml(text)}</div>
         </div>
       </div>
@@ -80,7 +79,7 @@ function appendMessage(sender, text, action = null) {
     const actionBadge = (action && action.executed) ? `
       <div class="mb-2 p-2.5 rounded-xl bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 font-mono text-xs flex items-center space-x-2">
         <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-        <span class="font-bold">⚡ AUTONOMOUS ACTION [${escapeHtml(action.actionType)}]:</span>
+        <span class="font-bold">${escapeHtml(molarisT('chat.actionExecuted'))} [${escapeHtml(action.actionType)}]:</span>
         <span class="text-cyan-100">${escapeHtml(action.summary)}</span>
       </div>
     ` : '';
@@ -91,8 +90,8 @@ function appendMessage(sender, text, action = null) {
       </div>
       <div class="bg-slate-100 dark:bg-slate-800 rounded-2xl rounded-tl-sm p-4 text-sm max-w-[85%] border border-slate-200 dark:border-slate-700 space-y-2 leading-relaxed text-slate-800 dark:text-slate-100">
         <div class="flex items-center justify-between text-xs border-b border-slate-200 dark:border-slate-700 pb-1.5">
-          <span class="font-bold text-teal-700 dark:text-teal-400">M.O.L.A.R.I.S SENIOR ADVISOR</span>
-          <button onclick="navigator.clipboard.writeText(this.closest('.space-y-2').innerText)" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">Copy</button>
+          <span class="font-bold text-teal-700 dark:text-teal-400">${escapeHtml(molarisT('chat.welcomeSender'))}</span>
+          <button onclick="navigator.clipboard.writeText(this.closest('.space-y-2').innerText)" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">${escapeHtml(molarisT('chat.copy'))}</button>
         </div>
         ${actionBadge}
         <div class="markdown-content">${formatMarkdown(text)}</div>
@@ -116,7 +115,7 @@ function appendTypingIndicator() {
     </div>
     <div class="bg-slate-100 dark:bg-slate-800 rounded-2xl p-3 text-xs text-slate-500 dark:text-slate-400 flex items-center space-x-2">
       <span class="w-2 h-2 rounded-full bg-teal-500 animate-ping"></span>
-      <span>${systemState.language === 'fr' ? 'Revue des données cliniques et du dossier patient...' : 'Reviewing clinical evidence and patient history...'}</span>
+      <span>${escapeHtml(molarisT('chat.typing'))}</span>
     </div>
   `;
   chatMessages.appendChild(div);
@@ -143,12 +142,11 @@ function initQuickPrompts() {
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
       systemState.chatHistory = [];
-      const isFr = systemState.language === 'fr';
       chatMessages.innerHTML = `
         <div class="flex items-start space-x-3">
           <div class="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">M</div>
           <div class="bg-slate-100 dark:bg-slate-800 rounded-2xl p-3 text-xs text-slate-600 dark:text-slate-300">
-            ${isFr ? 'Fil de discussion effacé. M.O.L.A.R.I.S est à votre disposition pour la prochaine consultation au fauteuil.' : 'Feed cleared. M.O.L.A.R.I.S is ready for your next chairside consultation.'}
+            ${escapeHtml(molarisT('chat.cleared'))}
           </div>
         </div>
       `;

@@ -350,7 +350,7 @@
           <line x1="16" y1="17" x2="8" y2="17"></line>
           <polyline points="10 9 9 9 8 9"></polyline>
         </svg>
-        <span data-i18n="nav.soap">SOAP Note &amp; CDT</span>
+        <span data-i18n="nav.soap">SOAP Note</span>
       </button>
 
       <button id="nav-tab-preferences" class="nav-tab px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
@@ -418,10 +418,10 @@
             </div>
             <div>
               <div class="font-semibold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                <span data-i18n="chat.headerTitle">Senior Dental Advisor Direct Line</span>
+                <span data-i18n="chat.headerTitle">Senior Dental Advisor</span>
                 <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
               </div>
-              <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="chat.headerSubtitle">Attending Specialist &bull; Evidence-based ADA &amp; ESE Guidance</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="chat.headerSubtitle">Clinical decision support &bull; does not replace your clinical judgement</p>
             </div>
           </div>
           <button id="clear-chat-btn" class="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-2 py-1 rounded" data-i18n="chat.clearFeed">
@@ -437,15 +437,15 @@
               M
             </div>
             <div class="bg-slate-100 dark:bg-slate-800 rounded-2xl rounded-tl-sm p-4 text-sm max-w-[85%] border border-slate-200 dark:border-slate-700 space-y-2">
-              <div class="font-semibold text-teal-700 dark:text-teal-400 text-xs">M.O.L.A.R.I.S SENIOR ADVISOR</div>
-              <p>Good day, Doctor. I am standing by chairside. What procedure or diagnostic dilemma are we facing today?</p>
+              <div class="font-semibold text-teal-700 dark:text-teal-400 text-xs" data-i18n="chat.welcomeSender">M.O.L.A.R.I.S CLINICAL ASSISTANT</div>
+              <p data-i18n="chat.welcomeGreeting">Hello, Doctor. What procedure or diagnostic question are you working on today?</p>
               <ul class="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-300">
-                <li>Struggling with a hot lower molar with irreversible pulpitis?</li>
-                <li>Need immediate maximum carpule calculation for a cardiac patient?</li>
-                <li>Wondering whether to perform an indirect pulp cap with MTA or initiate root canal therapy?</li>
-                <li>Dealing with a separated file, deep subgingival margin, or dry socket?</li>
+                <li data-i18n="chat.welcomeLi1">Anesthesia failing on a lower molar with irreversible pulpitis?</li>
+                <li data-i18n="chat.welcomeLi2">Maximum cartridge count for a cardiac patient, with the calculation shown?</li>
+                <li data-i18n="chat.welcomeLi3">Pulp capping (MTA, tricalcium silicate) or root canal treatment?</li>
+                <li data-i18n="chat.welcomeLi4">Separated file, deep subgingival margin, or dry socket?</li>
               </ul>
-              <p class="text-xs text-slate-500 dark:text-slate-400">Ask directly, speak hands-free via the microphone, or click any prompt below.</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="chat.welcomeHint">Type your question, dictate it with the microphone, or pick a quick starter. Answers are decision support: they do not replace your clinical judgement.</p>
             </div>
           </div>
         </div>
@@ -453,11 +453,11 @@
         <!-- Selected Tooth Banner (if any) -->
         <div id="chat-tooth-context-banner" class="hidden px-4 py-2 bg-teal-50 dark:bg-teal-950/70 border-t border-teal-100 dark:border-teal-900 flex items-center justify-between text-xs text-teal-800 dark:text-teal-200">
           <div class="flex items-center space-x-2">
-            <span class="font-semibold">Contextual Focus:</span>
-            <span id="chat-target-tooth-name" class="font-mono bg-teal-100 dark:bg-teal-900 px-1.5 py-0.5 rounded">Tooth #30</span>
-            <span id="chat-target-tooth-status" class="text-slate-500 dark:text-slate-400">[Caries]</span>
+            <span class="font-semibold" data-i18n="chat.contextualFocus">Contextual Focus:</span>
+            <span id="chat-target-tooth-name" class="font-mono bg-teal-100 dark:bg-teal-900 px-1.5 py-0.5 rounded"></span>
+            <span id="chat-target-tooth-status" class="text-slate-500 dark:text-slate-400"></span>
           </div>
-          <button id="remove-tooth-context-btn" class="text-teal-600 hover:text-teal-900 dark:hover:text-teal-100 font-bold">&times; Remove</button>
+          <button id="remove-tooth-context-btn" class="text-teal-600 hover:text-teal-900 dark:hover:text-teal-100 font-bold" data-i18n="chat.removeFocus">&times; Remove</button>
         </div>
 
         <!-- Chat-context Safety Alerts (populated after /api/chat responses) -->
@@ -467,7 +467,7 @@
         <div class="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <form id="chat-form" class="flex items-center gap-2">
             <!-- Voice Dictation Button -->
-            <button type="button" id="mic-btn" class="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center justify-center" title="Hands-free Operatory Voice Dictation">
+            <button type="button" id="mic-btn" class="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center justify-center" title="Hands-free voice dictation" data-i18n-title="chat.micTooltip">
               <svg id="mic-icon" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
                 <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
@@ -477,11 +477,11 @@
             </button>
 
             <!-- Text Input -->
-            <input type="text" id="chat-input" placeholder="Ask senior advice (e.g. 'How to anesthetize hot #30?' or 'DME vs crown lengthening')..." class="flex-1 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400">
+            <input type="text" id="chat-input" placeholder="Ask a clinical question (e.g. 'Anesthetizing a hot 46?' or 'DME vs crown lengthening')..." data-i18n-placeholder="chat.inputPlaceholder" class="flex-1 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400">
 
             <!-- Send Button -->
             <button type="submit" id="send-chat-btn" class="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium text-sm transition flex items-center space-x-1.5 shadow-sm shadow-teal-600/30">
-              <span>Ask Senior</span>
+              <span data-i18n="chat.sendBtn">Ask</span>
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="22" y1="2" x2="11" y2="13"></line>
                 <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -501,34 +501,34 @@
         <!-- Quick Procedural Starters -->
         <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm space-y-3">
           <div class="flex items-center justify-between">
-            <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Chairside Quick Starters</h3>
-            <span class="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-400 font-mono">1-CLICK</span>
+            <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400" data-i18n="chat.quickStarters">Chairside Quick Starters</h3>
+            <span class="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-400 font-mono" data-i18n="chat.oneClick">1-CLICK</span>
           </div>
 
           <div class="space-y-1.5 text-xs">
             <button class="quick-prompt-btn w-full text-left p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 hover:bg-teal-50 dark:hover:bg-teal-950/40 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 transition flex items-start gap-2">
               <span class="text-rose-500 font-bold">⚡</span>
-              <span><strong>Hot Tooth:</strong> Patient still feels cold on #30 after IANB. Next step?</span>
+              <span><strong data-i18n="chat.starter1Title">Hot tooth:</strong> <span data-i18n="chat.starter1Desc"></span></span>
             </button>
 
             <button class="quick-prompt-btn w-full text-left p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 hover:bg-teal-50 dark:hover:bg-teal-950/40 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 transition flex items-start gap-2">
               <span class="text-amber-500 font-bold">🔍</span>
-              <span><strong>Pulp Exposure:</strong> Pinpoint bleeding during caries removal. MTA direct cap or RCT?</span>
+              <span><strong data-i18n="chat.starter2Title">Pulp exposure:</strong> <span data-i18n="chat.starter2Desc"></span></span>
             </button>
 
             <button class="quick-prompt-btn w-full text-left p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 hover:bg-teal-50 dark:hover:bg-teal-950/40 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 transition flex items-start gap-2">
               <span class="text-blue-500 font-bold">🦷</span>
-              <span><strong>Subgingival Box:</strong> Deep margin elevation vs surgical crown lengthening?</span>
+              <span><strong data-i18n="chat.starter3Title">Subgingival margin:</strong> <span data-i18n="chat.starter3Desc"></span></span>
             </button>
 
             <button class="quick-prompt-btn w-full text-left p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 hover:bg-teal-50 dark:hover:bg-teal-950/40 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 transition flex items-start gap-2">
               <span class="text-purple-500 font-bold">⚠️</span>
-              <span><strong>Separated File:</strong> NiTi #20 .04 broke in apical third of MB canal. Protocol?</span>
+              <span><strong data-i18n="chat.starter4Title">Separated file:</strong> <span data-i18n="chat.starter4Desc"></span></span>
             </button>
 
             <button class="quick-prompt-btn w-full text-left p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 hover:bg-teal-50 dark:hover:bg-teal-950/40 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 transition flex items-start gap-2">
               <span class="text-emerald-500 font-bold">💊</span>
-              <span><strong>Cardiac Anesthesia:</strong> Maximum Articaine vs Mepivacaine carpules?</span>
+              <span><strong data-i18n="chat.starter5Title">Cardiac patient:</strong> <span data-i18n="chat.starter5Desc"></span></span>
             </button>
           </div>
         </div>
@@ -544,28 +544,28 @@
         <!-- Current Doctor Preferences Summary -->
         <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm space-y-2 text-xs">
           <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
-            <span class="font-semibold text-slate-700 dark:text-slate-200">Doctor Profile Memory</span>
-            <span id="side-doc-name" class="font-bold text-teal-600 dark:text-teal-400">Dr. Practitioner</span>
+            <span class="font-semibold text-slate-700 dark:text-slate-200" data-i18n="chat.sidebarPrefTitle">Doctor Profile Memory</span>
+            <span id="side-doc-name" class="font-bold text-teal-600 dark:text-teal-400"></span>
           </div>
           <div class="space-y-1 text-slate-500 dark:text-slate-400">
             <div class="flex justify-between">
-              <span>Bonding System:</span>
+              <span data-i18n="chat.sidebarBonding">Bonding System:</span>
               <span id="side-pref-bonding" class="font-medium text-slate-700 dark:text-slate-300">Universal (Selective)</span>
             </div>
             <div class="flex justify-between">
-              <span>Rotary Endodontics:</span>
+              <span data-i18n="chat.sidebarRotary">Rotary Endodontics:</span>
               <span id="side-pref-rotary" class="font-medium text-slate-700 dark:text-slate-300">WaveOne Gold</span>
             </div>
             <div class="flex justify-between">
-              <span>Implant System:</span>
+              <span data-i18n="chat.sidebarImplant">Implant System:</span>
               <span id="side-pref-implant" class="font-medium text-slate-700 dark:text-slate-300">Straumann BLX</span>
             </div>
             <div class="flex justify-between">
-              <span>Notation System:</span>
-              <span id="side-pref-notation" class="font-medium text-teal-600 dark:text-teal-400 uppercase">Universal (#1-32)</span>
+              <span data-i18n="chat.sidebarNotation">Notation System:</span>
+              <span id="side-pref-notation" class="font-medium text-teal-600 dark:text-teal-400 uppercase">FDI</span>
             </div>
           </div>
-          <button id="open-preferences-btn" class="w-full mt-2 py-1.5 text-center text-teal-600 dark:text-teal-400 hover:underline font-medium">
+          <button id="open-preferences-btn" class="w-full mt-2 py-1.5 text-center text-teal-600 dark:text-teal-400 hover:underline font-medium" data-i18n="chat.sidebarEditPrefs">
             Edit Clinical Preferences &rarr;
           </button>
         </div>
@@ -574,14 +574,14 @@
         <div class="bg-gradient-to-br from-teal-500 to-emerald-700 text-white rounded-2xl p-4 shadow-md space-y-2">
           <div class="flex items-center space-x-2">
             <svg class="w-5 h-5 text-teal-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
             </svg>
-            <h4 class="font-bold text-sm">Emergency Chairside Triage</h4>
+            <h4 class="font-bold text-sm" data-i18n="chat.triageTitle">Emergency Chairside Triage</h4>
           </div>
-          <p class="text-xs text-teal-100">
+          <p class="text-xs text-teal-100" data-i18n="chat.triageDesc">
             Rapid protocols for dry socket, sinus perforation, sodium hypochlorite accidents, and local anesthetic systemic toxicity (LAST).
           </p>
-          <button id="jump-to-protocols-btn" class="mt-1 px-3 py-1.5 rounded-lg bg-white text-teal-800 font-bold text-xs hover:bg-teal-50 transition">
+          <button id="jump-to-protocols-btn" class="mt-1 px-3 py-1.5 rounded-lg bg-white text-teal-800 font-bold text-xs hover:bg-teal-50 transition" data-i18n="chat.triageBtn">
             View Clinical Playbooks
           </button>
         </div>
@@ -879,7 +879,7 @@
           <div>
             <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <span data-i18n="vision.title">Radiograph &amp; Intraoral Vision Analysis</span>
-              <span class="text-[10px] font-mono bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 px-2 py-0.5 rounded font-bold">Gemini Multimodal</span>
+              <span class="text-[10px] font-mono bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 px-2 py-0.5 rounded font-bold" data-i18n="vision.badge">Gemini Multimodal</span>
             </h2>
             <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="vision.subtitle">Upload periapical x-rays, bitewings, panoramic radiographs, or intraoral camera photographs for senior second-opinion diagnostic review.</p>
           </div>
@@ -895,38 +895,38 @@
                   <line x1="12" y1="3" x2="12" y2="15"></line>
                 </svg>
               </div>
-              <div class="text-xs font-semibold text-slate-700 dark:text-slate-300">Click or drag &amp; drop dental radiograph</div>
-              <div class="text-[11px] text-slate-400">JPEG, PNG, DICOM-exported formats up to 20MB</div>
+              <div class="text-xs font-semibold text-slate-700 dark:text-slate-300" data-i18n="vision.dropPrompt">Click or drag &amp; drop dental radiograph</div>
+              <div class="text-[11px] text-slate-400" data-i18n="vision.dropSub">JPEG, PNG, DICOM-exported formats up to 20MB</div>
             </div>
           </div>
 
           <!-- Image Preview -->
           <div id="preview-container" class="hidden space-y-2">
             <div class="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 max-h-64 bg-black flex items-center justify-center">
-              <img id="image-preview" src="" alt="Dental Radiograph" class="object-contain max-h-64 w-full">
+              <img id="image-preview" src="" alt="" class="object-contain max-h-64 w-full">
               <button id="remove-image-btn" class="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80">&times;</button>
             </div>
           </div>
 
           <!-- Sample Radiographs Quick Select -->
           <div class="space-y-1.5">
-            <span class="text-xs font-semibold text-slate-600 dark:text-slate-400">Or test with clinical sample cases:</span>
+            <span class="text-xs font-semibold text-slate-600 dark:text-slate-400" data-i18n="vision.samplesTitle">Or test with clinical sample cases:</span>
             <div class="grid grid-cols-2 gap-2">
               <button class="sample-case-btn text-left p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-teal-50 dark:hover:bg-teal-950/50 text-xs text-slate-700 dark:text-slate-300 transition" data-case="periapical">
-                <div class="font-semibold text-teal-700 dark:text-teal-300">Case A: Periapical #30</div>
-                <div class="text-[10px] text-slate-400">PA radiolucency &amp; deep caries</div>
+                <div class="font-semibold text-teal-700 dark:text-teal-300" data-i18n="vision.sampleA">Case A: Periapical 46</div>
+                <div class="text-[10px] text-slate-400" data-i18n="vision.sampleADesc">PA radiolucency &amp; deep caries</div>
               </button>
               <button class="sample-case-btn text-left p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-teal-50 dark:hover:bg-teal-950/50 text-xs text-slate-700 dark:text-slate-300 transition" data-case="bitewing">
-                <div class="font-semibold text-teal-700 dark:text-teal-300">Case B: Bitewing #14-#15</div>
-                <div class="text-[10px] text-slate-400">Interproximal lesion &amp; bone loss</div>
+                <div class="font-semibold text-teal-700 dark:text-teal-300" data-i18n="vision.sampleB">Case B: Bitewing 26-27</div>
+                <div class="text-[10px] text-slate-400" data-i18n="vision.sampleBDesc">Interproximal lesion &amp; bone loss</div>
               </button>
             </div>
           </div>
 
           <!-- Diagnostic Focus Prompt -->
           <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Specific Diagnostic Focus:</label>
-            <input type="text" id="vision-query-input" placeholder="e.g., 'Assess caries depth near pulp and periapical lesion size'" value="Perform a comprehensive clinical diagnostic evaluation of this dental image." class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="vision.questionLabel">Specific Diagnostic Focus:</label>
+            <input type="text" id="vision-query-input" placeholder="Optional: a specific question" data-i18n-placeholder="vision.questionPlaceholder" class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
           </div>
 
           <button id="run-vision-btn" class="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs rounded-xl shadow-sm transition flex items-center justify-center space-x-2">
@@ -934,7 +934,7 @@
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <span>Analyze with Senior Advisor</span>
+            <span data-i18n="vision.analyzeBtn">Analyze image</span>
           </button>
         </div>
 
@@ -943,9 +943,9 @@
           <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
             <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
               <span data-i18n="vision.resultTitle">Senior Specialist Radiographic Findings</span>
-              <span id="vision-status-chip" class="hidden text-[10px] font-mono bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 rounded">Evaluated</span>
+              <span id="vision-status-chip" class="hidden text-[10px] font-mono bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 rounded" data-i18n="vision.evaluated">Evaluated</span>
             </h3>
-            <button id="copy-vision-btn" class="text-xs text-teal-600 dark:text-teal-400 hover:underline hidden">
+            <button id="copy-vision-btn" class="text-xs text-teal-600 dark:text-teal-400 hover:underline hidden" data-i18n="vision.copyBtn">
               Copy Assessment
             </button>
           </div>
@@ -957,7 +957,7 @@
                 <circle cx="9" cy="9" r="2"></circle>
                 <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
               </svg>
-              <p>Upload a periapical x-ray, bitewing, or clinical photo to trigger senior multimodal analysis.</p>
+              <p data-i18n="vision.resultEmpty">Upload a periapical x-ray, bitewing, or clinical photo to trigger senior multimodal analysis.</p>
             </div>
           </div>
         </div>
@@ -981,7 +981,7 @@
       </div>
     </section>
 
-    <!-- VIEW 6: SOAP NOTE & CDT CODING GENERATOR -->
+    <!-- VIEW 6: SOAP PROGRESS NOTE GENERATOR -->
     <section id="view-soap" class="hidden space-y-6">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
@@ -989,35 +989,37 @@
         <div class="lg:col-span-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-4">
           <div>
             <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span data-i18n="soap.title">SOAP Progress Note &amp; CDT Generator</span>
+              <span data-i18n="soap.title">SOAP Progress Note</span>
             </h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="soap.subtitle">Generate a legally airtight clinical progress note formatted in Subjective, Objective, Assessment, Plan with official CDT codes.</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="soap.subtitle">Draft a clinical progress note (Subjective, Objective, Assessment, Plan) to review before saving.</p>
           </div>
 
           <div class="space-y-3 text-xs">
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Procedure Type:</label>
-              <input type="text" id="soap-input-proc" value="Direct Composite Restoration (Class II DO)" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="soap.procedureLabel">Procedure Type:</label>
+              <input type="text" id="soap-input-proc" data-i18n-placeholder="soap.procedurePlaceholder" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
             </div>
 
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tooth Involved:</label>
-              <input type="number" id="soap-input-tooth" value="30" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="soap.toothLabel">Tooth Involved:</label>
+              <select id="soap-input-tooth" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
+                <option value="" data-i18n="soap.toothNone">General / not specified</option>
+              </select>
             </div>
 
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Local Anesthesia Administered:</label>
-              <input type="text" id="soap-input-anesthesia" value="1.7 mL Articaine 4% 1:100k epi via IANB + 0.8 mL buccal infiltration, aspiration negative." class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="soap.anesthesiaLabel">Local Anesthesia Administered:</label>
+              <input type="text" id="soap-input-anesthesia" data-i18n-placeholder="soap.anesthesiaPlaceholder" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
             </div>
 
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Materials &amp; Isolation:</label>
-              <input type="text" id="soap-input-materials" value="Isolite rubber dam isolation, Garrison sectional matrix with blue wedge, 37% phosphoric acid selective etch 15s, Universal adhesive light cured 20s, Filtek Supreme A2 composite placed in 2mm increments, occlusion checked with 40um articulating paper." class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="soap.materialsLabel">Materials &amp; Isolation:</label>
+              <input type="text" id="soap-input-materials" data-i18n-placeholder="soap.materialsPlaceholder" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
             </div>
 
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Clinical Outcome &amp; Post-Op Instructions:</label>
-              <textarea id="soap-input-outcome" rows="3" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">Procedure completed uneventfully. Patient tolerated well. Advised soft diet until numbness subsides. Ibuprofen 600mg advised prn.</textarea>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="soap.detailsLabel">Clinical Outcome &amp; Post-Op Instructions:</label>
+              <textarea id="soap-input-outcome" rows="3" data-i18n-placeholder="soap.detailsPlaceholder" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2"></textarea>
             </div>
 
             <button id="generate-soap-btn" class="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs rounded-xl shadow-sm transition flex items-center justify-center space-x-2">
@@ -1025,7 +1027,7 @@
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                 <polyline points="14 2 14 8 20 8"></polyline>
               </svg>
-              <span>Generate Medicolegal SOAP Note</span>
+              <span data-i18n="soap.generateBtn">Generate SOAP note</span>
             </button>
           </div>
         </div>
@@ -1033,15 +1035,13 @@
         <!-- SOAP Output (7 cols) -->
         <div class="lg:col-span-7 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm flex flex-col h-[680px]">
           <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-            <h3 class="font-bold text-sm text-slate-900 dark:text-white">Generated Progress Note</h3>
-            <button id="copy-soap-btn" class="text-xs px-3 py-1 bg-slate-100 dark:bg-slate-800 text-teal-700 dark:text-teal-400 font-medium rounded-lg hover:bg-slate-200 transition">
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white" data-i18n="soap.outputTitle">Generated Progress Note</h3>
+            <button id="copy-soap-btn" class="text-xs px-3 py-1 bg-slate-100 dark:bg-slate-800 text-teal-700 dark:text-teal-400 font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition" data-i18n="soap.copyBtn">
               Copy to Clipboard
             </button>
           </div>
 
-          <div id="soap-output-area" class="flex-1 overflow-y-auto py-4 text-xs font-mono text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-            Click "Generate Medicolegal SOAP Note" to produce standard clinical documentation with CDT codes.
-          </div>
+          <div id="soap-output-area" class="flex-1 overflow-y-auto py-4 text-xs font-mono text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed"><span data-i18n="soap.outputEmpty">Fill in the procedure, then generate the note. Review it before saving it to the chart.</span></div>
         </div>
 
       </div>
@@ -1416,7 +1416,7 @@
         <form id="treatment-item-form" class="space-y-3.5 text-xs">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="treatment.tooth">Tooth #</label>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="treatment.tooth">Tooth</label>
               <select id="form-treatment-tooth" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-slate-900 dark:text-white">
                 <option value="" data-i18n="common.none">None / Full Mouth</option>
               </select>
@@ -1434,17 +1434,17 @@
 
           <div>
             <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="treatment.procedure">Procedure *</label>
-            <input type="text" id="form-treatment-procedure" required placeholder="e.g. Crown, Composite restoration, Extraction" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+            <input type="text" id="form-treatment-procedure" required placeholder="e.g. Crown, Composite restoration, Extraction" data-i18n-placeholder="treatment.procedurePlaceholder" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="treatment.cdtCode">CDT Code</label>
-              <input type="text" id="form-treatment-cdt" placeholder="e.g. D2740" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="treatment.cdtCode">Procedure code (CNAM nomenclature, optional)</label>
+              <input type="text" id="form-treatment-cdt" placeholder="Code from the official nomenclature" data-i18n-placeholder="treatment.cdtCodePlaceholder" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="treatment.cost">Estimated Cost</label>
-              <input type="number" id="form-treatment-cost" min="0" step="1" placeholder="0" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="treatment.cost">Estimated cost (DT)</label>
+              <input type="number" id="form-treatment-cost" min="0" step="0.001" placeholder="0,000" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
           </div>
 

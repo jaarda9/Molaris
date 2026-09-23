@@ -66,19 +66,20 @@ function initVisionUploader() {
   if (runVisionBtn) {
     runVisionBtn.addEventListener('click', async () => {
       if (!currentImageFile) {
-        alert("Please upload or select a dental image/radiograph first.");
+        alert(molarisT('vision.noImage'));
         return;
       }
 
       const outputArea = document.getElementById('vision-output-area');
       const statusChip = document.getElementById('vision-status-chip');
       const copyBtn = document.getElementById('copy-vision-btn');
-      const query = document.getElementById('vision-query-input')?.value || 'Clinical diagnostic analysis';
+      // Empty query: the server uses its default request in the UI language.
+      const query = document.getElementById('vision-query-input')?.value.trim() || '';
 
       outputArea.innerHTML = `
         <div class="flex items-center justify-center py-16 space-x-3 text-teal-600">
           <span class="w-3 h-3 rounded-full bg-teal-500 animate-ping"></span>
-          <span class="font-semibold text-sm">Senior diagnostic specialist analyzing radiograph with Gemini Vision...</span>
+          <span class="font-semibold text-sm">${escapeHtml(molarisT('vision.analyzing'))}</span>
         </div>
       `;
 
@@ -86,7 +87,7 @@ function initVisionUploader() {
         const formData = new FormData();
         formData.append('image', currentImageFile);
         formData.append('query', query);
-        formData.append('language', systemState.language || 'en');
+        formData.append('language', systemState.language || 'fr');
         if (systemState.selectedTooth) {
           formData.append('toothId', systemState.selectedTooth.id);
         }
@@ -98,7 +99,7 @@ function initVisionUploader() {
 
         const data = await res.json();
         if (data.error) {
-          outputArea.innerHTML = `<div class="p-4 bg-rose-50 text-rose-700 rounded-xl">⚠️ Diagnostic analysis error: ${data.error}</div>`;
+          outputArea.innerHTML = `<div class="p-4 bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 rounded-xl">${escapeHtml(molarisT('vision.error'))} ${escapeHtml(data.error)}</div>`;
         } else {
           outputArea.innerHTML = `<div class="markdown-content">${formatMarkdown(data.analysis || '')}</div>`;
           statusChip?.classList.remove('hidden');
@@ -106,7 +107,7 @@ function initVisionUploader() {
           playClinicalBeep(880, 'sine', 0.2);
         }
       } catch (err) {
-        outputArea.innerHTML = `<div class="p-4 bg-rose-50 text-rose-700 rounded-xl">⚠️ Failed to connect to vision engine: ${err.message}</div>`;
+        outputArea.innerHTML = `<div class="p-4 bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 rounded-xl">${escapeHtml(molarisT('vision.connectError'))} ${escapeHtml(err.message)}</div>`;
       }
     });
   }
@@ -117,8 +118,8 @@ function initVisionUploader() {
       const text = document.getElementById('vision-output-area')?.innerText;
       if (text) {
         navigator.clipboard.writeText(text);
-        copyVisionBtn.textContent = 'Copied!';
-        setTimeout(() => copyVisionBtn.textContent = 'Copy Assessment', 2000);
+        copyVisionBtn.textContent = molarisT('vision.copied');
+        setTimeout(() => copyVisionBtn.textContent = molarisT('vision.copyBtn'), 2000);
       }
     });
   }
@@ -139,7 +140,7 @@ function loadSampleDentalImage(caseType) {
   ctx.fillStyle = '#1c2833';
   ctx.fillRect(0, 180, 600, 220);
 
-  // Draw molar tooth outline (Tooth #30)
+  // Draw molar tooth outline (FDI 46)
   ctx.fillStyle = '#d5dbdb';
   ctx.strokeStyle = '#f4f6f7';
   ctx.lineWidth = 3;
@@ -189,7 +190,7 @@ function loadSampleDentalImage(caseType) {
     // Text watermark
     ctx.fillStyle = '#566573';
     ctx.font = '14px monospace';
-    ctx.fillText('SAMPLE DIGITAL PERIAPICAL: TOOTH #30 (CARIES & APICAL LESION)', 20, 30);
+    ctx.fillText(molarisT('vision.sampleWatermarkA'), 20, 30);
   } else {
     // Bitewing interproximal caries
     ctx.fillStyle = '#05080b';
@@ -199,7 +200,7 @@ function loadSampleDentalImage(caseType) {
 
     ctx.fillStyle = '#566573';
     ctx.font = '14px monospace';
-    ctx.fillText('SAMPLE DIGITAL BITEWING: #14-#15 INTERPROXIMAL DEMINERALIZATION', 20, 30);
+    ctx.fillText(molarisT('vision.sampleWatermarkB'), 20, 30);
   }
 
   canvas.toBlob((blob) => {

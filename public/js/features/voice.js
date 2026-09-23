@@ -12,7 +12,7 @@ function initSpeechSynthesis() {
       if (systemState.voiceEnabled) {
         iconOn.classList.remove('hidden');
         iconOff.classList.add('hidden');
-        speakAdvisorText("M.O.L.A.R.I.S voice output enabled, Doctor.");
+        speakAdvisorText(molarisT('chat.voiceEnabled'));
       } else {
         iconOn.classList.add('hidden');
         iconOff.classList.remove('hidden');
@@ -60,7 +60,7 @@ function initSpeechRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
     if (micBtn) {
-      micBtn.title = "Speech recognition not supported on this browser";
+      micBtn.title = molarisT('chat.micUnsupported');
       micBtn.classList.add('opacity-50');
     }
     return;
