@@ -84,17 +84,17 @@ export function executeMolarisAction(commandText: string, language: string = 'en
     };
   }
 
-  // 3. Update Tooth Action (English & French - Supports Universal 1-32 and FDI 11-48)
+  // 3. Update Tooth Action (English & French - FDI 11-48 first, as dictated in Tunisia;
+  //    numbers that are not FDI teeth fall back to Universal 1-32)
   // e.g. "mark tooth 19 as caries", "dent 46 a une carie profonde", "tooth 30 has deep caries"
   const toothMatch = lower.match(/(?:mark|set|update|marquer|noter)?\s*(?:tooth|dent)\s*#?\s*(\d{1,2})\s*(?:as|to|has|is|comme|a|est)?\s*(caries|decay|cavity|carie|sound|saine|restoration|filling|composite|obturation|crown|couronne|onlay|rct|root canal|endo|traitement de canal|missing|manquante|extracted|extraite|implant)/i);
   if (toothMatch) {
     const rawToothNum = parseInt(toothMatch[1], 10);
     let toothId: number | null = null;
 
-    if (rawToothNum >= 1 && rawToothNum <= 32) {
+    toothId = fdiToUniversal(rawToothNum);
+    if (!toothId && rawToothNum >= 1 && rawToothNum <= 32) {
       toothId = rawToothNum;
-    } else if (rawToothNum >= 11 && rawToothNum <= 48) {
-      toothId = fdiToUniversal(rawToothNum);
     }
 
     if (toothId && toothId >= 1 && toothId <= 32) {
@@ -112,8 +112,8 @@ export function executeMolarisAction(commandText: string, language: string = 'en
       const activePatient = patientDb.getActivePatient();
 
       const summary = isFr
-        ? `Dent **#${toothId}** (FDI ${updatedTooth.fdi} - ${updatedTooth.name}) mise à jour sur **[${mappedStatus.toUpperCase()}]** dans le dossier de ${activePatient.name}.`
-        : `Updated **Tooth #${toothId}** (${updatedTooth.name}) to **[${mappedStatus.toUpperCase()}]** in ${activePatient.name}'s chart.`;
+        ? `Dent **${updatedTooth.fdi}** (${updatedTooth.name}) mise à jour sur **[${mappedStatus.toUpperCase()}]** dans le dossier de ${activePatient.name}.`
+        : `Updated **tooth ${updatedTooth.fdi}** (FDI, ${updatedTooth.name}) to **[${mappedStatus.toUpperCase()}]** in ${activePatient.name}'s chart.`;
 
       return {
         executed: true,
@@ -126,28 +126,31 @@ export function executeMolarisAction(commandText: string, language: string = 'en
 
   // 4. Log Anesthesia Action (English & French)
   // e.g. "log 1 carpule of septocaine", "injecté 1.5 carpules articaine", "noter 1 cartouche mepivacaine"
-  const anesMatch = lower.match(/(?:log|administered|injected|gave|injecté|injecter|noter|administré)\s+([0-9.]+)\s*(?:carpule|carpules|cartridge|cartridges|cartouche|cartouches)\s*(?:of|de|d\')?\s*([a-z0-9\s%]+)?/i);
+  // Accents stripped so French dictation ("mépivacaïne", "injecté") matches.
+  const unaccented = lower.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const anesMatch = unaccented.match(/(?:log|administered|injected|gave|injecte|injecter|noter|administre)\s+([0-9.]+)\s*(?:carpule|carpules|cartridge|cartridges|cartouche|cartouches)\s*(?:of|de|d\')?\s*([a-z0-9\s%]+)?/i);
   if (anesMatch) {
     const carpules = parseFloat(anesMatch[1]) || 1.0;
     const drugHint = (anesMatch[2] || '').toLowerCase();
     let drugId = 'lido_100k';
-    let drugName = 'Lidocaine 2% with 1:100k Epinephrine';
+    // Recorded by DCI (brand names are only accepted as spoken hints).
+    let drugName = isFr ? 'Lidocaïne 2 % adrénalinée 1/100 000' : 'Lidocaine 2% with 1:100,000 epinephrine';
     let mgPerCarp = 36;
     let epiPerCarp = 0.018;
 
     if (drugHint.includes('septocaine') || drugHint.includes('articaine') || drugHint.includes('arti')) {
       drugId = 'arti_100k';
-      drugName = 'Articaine 4% with 1:100k Epinephrine (Septocaine)';
+      drugName = isFr ? 'Articaïne 4 % adrénalinée 1/100 000' : 'Articaine 4% with 1:100,000 epinephrine';
       mgPerCarp = 68;
       epiPerCarp = 0.017;
     } else if (drugHint.includes('mepivacaine') || drugHint.includes('carbocaine') || drugHint.includes('plain')) {
       drugId = 'mepi_plain';
-      drugName = 'Mepivacaine 3% Plain (Carbocaine)';
+      drugName = isFr ? 'Mépivacaïne 3 % sans vasoconstricteur' : 'Mepivacaine 3% plain';
       mgPerCarp = 54;
       epiPerCarp = 0;
     } else if (drugHint.includes('marcaine') || drugHint.includes('bupivacaine')) {
       drugId = 'bupi_200k';
-      drugName = 'Bupivacaine 0.5% with 1:200k Epinephrine (Marcaine)';
+      drugName = isFr ? 'Bupivacaïne 0,5 % adrénalinée 1/200 000' : 'Bupivacaine 0.5% with 1:200,000 epinephrine';
       mgPerCarp = 9;
       epiPerCarp = 0.009;
     }
@@ -214,7 +217,7 @@ export function executeMolarisAction(commandText: string, language: string = 'en
     return {
       executed: true,
       actionType: 'LAUNCH_APP',
-      summary: isFr ? 'Ouverture du générateur médico-légal de notes SOAP et codification CDT.' : 'Opening medicolegal SOAP progress note and CDT generator.',
+      summary: isFr ? 'Ouverture du compte-rendu SOAP.' : 'Opening the SOAP progress note.',
       data: { targetView: 'soap' }
     };
   }

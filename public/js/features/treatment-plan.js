@@ -1,6 +1,33 @@
 // -----------------------------------------------------------------------------
 // Treatment Plan Engine
 // -----------------------------------------------------------------------------
+
+// Teeth are stored by Universal id (1-32) but shown in FDI, the notation used in
+// Tunisia (and on the CNAM claim form). Also used by the SOAP screen.
+function fdiForToothId(id) {
+  const tooth = window.MOLARIS_FRENCH_TEETH && window.MOLARIS_FRENCH_TEETH[Number(id)];
+  return tooth ? tooth.fdi : id;
+}
+
+// Fills a tooth <select> (values: Universal ids) with "46 — name" labels, in FDI order.
+function fillFdiToothSelect(selectEl) {
+  if (!selectEl) return;
+  const isFr = systemState.language === 'fr';
+  const firstOption = selectEl.options.length > 0 ? selectEl.options[0].cloneNode(true) : null;
+  selectEl.innerHTML = '';
+  if (firstOption) selectEl.appendChild(firstOption);
+
+  const loaded = new Map((systemState.teethData || []).map(t => [t.id, t]));
+  Object.entries(window.MOLARIS_FRENCH_TEETH || {})
+    .map(([id, fr]) => ({ id: Number(id), fdi: fr.fdi, name: isFr ? fr.name : (loaded.get(Number(id))?.name || '') }))
+    .sort((a, b) => a.fdi - b.fdi)
+    .forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = String(t.id);
+      opt.textContent = t.name ? `${t.fdi} — ${t.name}` : String(t.fdi);
+      selectEl.appendChild(opt);
+    });
+}
 function getTreatmentPriorityLabel(priority, isFr) {
   switch (priority) {
     case 'urgent': return isFr ? 'Urgent' : 'Urgent';
@@ -40,7 +67,7 @@ function renderTreatmentPlanList() {
   const isFr = systemState.language === 'fr';
 
   if (items.length === 0) {
-    container.innerHTML = `<div class="text-center py-10 text-slate-400 text-xs">${isFr ? 'Aucun acte planifié pour l\'instant. Ajoutez le premier acte proposé.' : 'No treatment plan items yet. Add the first proposed procedure.'}</div>`;
+    container.innerHTML = `<div class="text-center py-10 text-slate-400 text-xs">${escapeHtml(molarisT('treatment.empty'))}</div>`;
     return;
   }
 
@@ -55,13 +82,13 @@ function renderTreatmentPlanList() {
     row.innerHTML = `
       <div class="flex-1 min-w-[220px] space-y-1">
         <div class="flex items-center gap-2 flex-wrap">
-          ${item.toothId ? `<span class="font-mono font-bold text-xs bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-1.5 py-0.5 rounded">#${item.toothId}</span>` : ''}
+          ${item.toothId ? `<span class="font-mono font-bold text-xs bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-1.5 py-0.5 rounded">${escapeHtml(fdiForToothId(item.toothId))}</span>` : ''}
           <span class="font-semibold text-sm text-slate-900 dark:text-white">${escapeHtml(item.procedure)}</span>
           ${item.cdtCode ? `<span class="text-[10px] font-mono text-slate-500 dark:text-slate-400">${escapeHtml(item.cdtCode)}</span>` : ''}
           <span class="px-2 py-0.5 rounded border text-[10px] font-semibold priority-${item.priority}">${getTreatmentPriorityLabel(item.priority, isFr)}</span>
         </div>
         ${item.notes ? `<p class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(item.notes)}</p>` : ''}
-        ${(item.estimatedCost !== undefined && item.estimatedCost !== null) ? `<p class="text-xs font-mono text-teal-700 dark:text-teal-400">$${Number(item.estimatedCost).toFixed(2)}</p>` : ''}
+        ${(item.estimatedCost !== undefined && item.estimatedCost !== null) ? `<p class="text-xs font-mono text-teal-700 dark:text-teal-400">${escapeHtml(Molaris.format.tnd(Math.round(Number(item.estimatedCost) * 1000)))}</p>` : ''}
       </div>
       <div class="flex items-center gap-2">
         <select class="treatment-status-select text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5">
@@ -96,19 +123,18 @@ function renderTreatmentPlanList() {
             playClinicalBeep(700, 'sine', 0.1);
           }
         } catch (err) {
-          alert('Failed to update status: ' + err.message);
+          alert(`${molarisT('treatment.errUpdate')} ${err.message}`);
         }
       });
     }
 
     row.querySelector('.btn-delete-treatment-item')?.addEventListener('click', async () => {
-      const isFr2 = systemState.language === 'fr';
-      if (!confirm(isFr2 ? 'Supprimer cet acte du plan de traitement ?' : 'Delete this treatment plan item?')) return;
+      if (!confirm(molarisT('treatment.deleteConfirm'))) return;
       try {
         await fetch(`/api/treatment-plan/${item.id}`, { method: 'DELETE' });
         await fetchTreatmentPlan();
       } catch (err) {
-        alert('Failed to delete item: ' + err.message);
+        alert(`${molarisT('treatment.errDelete')} ${err.message}`);
       }
     });
 
@@ -127,7 +153,7 @@ function initTreatmentPlanManager() {
   if (addBtn) {
     addBtn.addEventListener('click', () => {
       form.reset();
-      populateToothSelect(document.getElementById('form-treatment-tooth'));
+      fillFdiToothSelect(document.getElementById('form-treatment-tooth'));
       modal.classList.remove('hidden');
     });
   }
@@ -158,10 +184,10 @@ function initTreatmentPlanManager() {
         playClinicalBeep(880, 'sine', 0.15);
         await fetchTreatmentPlan();
       } else {
-        alert('Error: ' + (data.error || 'Unknown error'));
+        alert(`${molarisT('treatment.errSave')} ${data.error || ''}`);
       }
     } catch (err) {
-      alert('Network error saving treatment plan item: ' + err.message);
+      alert(`${molarisT('treatment.errSave')} ${err.message}`);
     }
   });
 }

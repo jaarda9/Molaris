@@ -56,9 +56,9 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     const activePatient = patientDb.getActivePatient();
     const tooth = toothId ? activePatient.teeth.find(t => t.id === Number(toothId)) : null;
 
+    // No doctor or clinic name either: the model has no use for any identity.
     let contextPrompt = `### CURRENT CLINICAL OPERATORY CONTEXT\n`;
-    contextPrompt += `- Doctor: ${memory.preferences.doctorName} (${memory.preferences.clinicName})\n`;
-    contextPrompt += `- Numbering System: ${memory.preferences.numberingSystem}\n`;
+    contextPrompt += `- Practice setting: dental office in Tunisia | Tooth numbering: FDI\n`;
     contextPrompt += `- Preferred Bonding System: ${memory.preferences.bondingSystem}\n`;
     contextPrompt += `- Preferred Composite System: ${memory.preferences.compositeSystem}\n`;
     contextPrompt += `- Preferred Rotary Endodontic System: ${memory.preferences.rotarySystem}\n`;
@@ -70,7 +70,7 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     contextPrompt += `- Local Anesthesia Delivered Today: ${activePatient.deliveredCarpules} carpules\n`;
 
     if (tooth) {
-      contextPrompt += `- Targeted Tooth: Universal #${tooth.id} (FDI ${tooth.fdi}) - ${tooth.name} [Status: ${tooth.status.toUpperCase()}]`;
+      contextPrompt += `- Targeted Tooth: ${tooth.fdi} (FDI) - ${tooth.name} [Status: ${tooth.status.toUpperCase()}]`;
       if (tooth.notes) contextPrompt += ` | Chart Notes: "${tooth.notes}"`;
       contextPrompt += `\n`;
     }
@@ -91,9 +91,12 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
       contextPrompt += `\n### DIRECTIVE DE LANGUE OBLIGATOIRE (FRANÇAIS):\n` +
         `- Vous DEVEZ répondre ENTIÈREMENT en français médical et odontologique professionnel, précis et chaleureux.\n` +
         `- Adressez-vous au praticien avec "Docteur" ou "Cher confrère".\n` +
-        `- Utilisez la terminologie dentaire francophone de référence : anesthésie tronculaire à l'épine de Spix (ou Spix), bloc de Gow-Gates, coiffage pulpaire direct/indirect au MTA ou Biodentine, digue dentaire, surélévation de marge cervicale (DME), alvéolite sèche, dépassement d'hypochlorite de sodium, pulpite aiguë irréversible, tenon fibré, etc.\n` +
+        `- Utilisez la terminologie dentaire francophone de référence : anesthésie tronculaire à l'épine de Spix (ou Spix), bloc de Gow-Gates, coiffage pulpaire direct/indirect (MTA, silicate tricalcique), digue dentaire, remontée de marge cervicale (DME), alvéolite, extrusion d'hypochlorite de sodium, pulpite irréversible, tenon fibré, etc.\n` +
+        `- Médicaments en DCI, dents en numérotation FDI (ex. « dent 46 »).\n` +
         `- Si une action a été exécutée, confirmez-la clairement en français.\n` +
         `- Signalez tout risque ou mise en garde avec ⚠️ **ALERTE CLINIQUE**.\n`;
+    } else {
+      contextPrompt += `\n### LANGUAGE DIRECTIVE: answer entirely in English (drugs by INN/generic name, FDI tooth numbering).\n`;
     }
 
     const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
@@ -138,34 +141,41 @@ aiRouter.post('/api/analyze-image', aiLimiter, upload.single('image'), async (re
       return res.status(400).json({ error: 'No image file uploaded' });
     }
 
-    const clinicalQuery = req.body.query || 'Perform a comprehensive clinical diagnostic evaluation of this dental image (periapical, bitewing, panoramic, or intraoral clinical photograph).';
-    const toothNumber = req.body.toothId;
     const language = req.body.language || 'en';
+    const clinicalQuery = req.body.query || (language === 'fr'
+      ? 'Évaluation clinique complète de cette image dentaire (rétro-alvéolaire, bitewing, panoramique ou photo intra-orale).'
+      : 'Comprehensive clinical evaluation of this dental image (periapical, bitewing, panoramic, or intraoral photograph).');
+    const toothNumber = req.body.toothId;
     const mimeType = req.file.mimetype || 'image/jpeg';
     const activePatient = patientDb.getActivePatient();
+    // toothId is the internal (Universal) id; the model is only given the FDI number.
+    const focusTooth = toothNumber ? activePatient.teeth.find(t => t.id === Number(toothNumber)) : null;
 
     let visionPrompt = `
-You are M.O.L.A.R.I.S, senior board-certified dental diagnostic specialist and chairside advisor.
-Analyze this dental clinical radiograph or intraoral image thoroughly.
+Read this dental radiograph or intraoral image as a decision-support aid for the treating dentist (Tunisia).
+Everything you report is a finding to be confirmed by the dentist, not a diagnosis.
 
 CLINICAL QUERY: ${clinicalQuery}
-${toothNumber ? `FOCUS AREA: Tooth #${toothNumber}` : ''}
+${focusTooth ? `FOCUS AREA: tooth ${focusTooth.fdi} (FDI) - ${focusTooth.name}` : ''}
 PATIENT (anonymized): ${activePatient.age}y ${activePatient.gender} | ASA: ${activePatient.asaStatus} | Chief Complaint: "${activePatient.chiefComplaint}" | Medical Alerts: ${activePatient.medicalAlerts}
 
-Please provide a structured clinical assessment:
-1. **Image Type & Quality**: (Bitewing, Periapical, Panoramic, Intraoral photo; angulation, contrast, crown/apex coverage).
-2. **Key Radiographic/Clinical Findings**:
-   - Caries evaluation (enamel, dentin involvement, pulpal proximity, recurrent caries under existing margins).
-   - Periodontal bone architecture (alveolar crest height, horizontal/vertical bone loss, furcation involvement, lamina dura integrity, PDL space widening).
+Structure the assessment as follows (FDI tooth numbers, no procedure codes):
+1. **Image type & quality**: (bitewing, periapical, panoramic, intraoral photo; angulation, contrast, crown/apex coverage).
+2. **Radiographic / clinical findings**:
+   - Caries (enamel, dentin involvement, pulpal proximity, recurrent caries under existing margins).
+   - Periodontal bone (alveolar crest height, horizontal/vertical bone loss, furcation involvement, lamina dura, PDL space widening).
    - Periapical status (normal, periapical radiolucency / apical periodontitis, condensing osteitis, hypercementosis).
    - Existing restorations or endodontic treatments (margins, overhangs, obturation density/length).
-3. **Differential Diagnoses & Risk Assessment**: (e.g. Asymptomatic Irreversible Pulpitis, Symptomatic Apical Periodontitis, Failed restoration, Subgingival margin).
-4. **Senior Treatment Recommendations & Procedural Steps**: Evidence-based recommendation for the attending doctor.
-5. **⚠️ Red Flags & Chairside Precautions**: (Anatomical risks: Mental foramen, Inferior Alveolar Canal, Maxillary Sinus floor, root fractures).
+3. **Diagnostic hypotheses to confirm**: with the clinical tests that would confirm or rule them out.
+4. **Treatment options to discuss**: options for the dentist to weigh, not a prescription.
+5. **⚠️ Red flags & chairside precautions**: (anatomical risks: mental foramen, inferior alveolar canal, maxillary sinus floor, root fractures).
+State the limits of reading a single image.
 `;
 
     if (language === 'fr') {
-      visionPrompt += `\n[DIRECTIVE DE LANGUE OBLIGATOIRE] : Rédigez l'ensemble de votre rapport diagnostique radiologique et vos recommandations thérapeutiques exclusivement en français médical/odontologique professionnel, rigoureux et bienveillant.\n`;
+      visionPrompt += `\n[DIRECTIVE DE LANGUE OBLIGATOIRE] : Rédigez l'ensemble du rapport exclusivement en français odontologique professionnel (numérotation FDI, médicaments en DCI).\n`;
+    } else {
+      visionPrompt += `\n[LANGUAGE DIRECTIVE]: write the whole report in English.\n`;
     }
 
     const result = await callGeminiWithResilience({
@@ -238,20 +248,21 @@ aiRouter.post('/api/generate-soap', aiLimiter, async (req: Request, res: Respons
     let soapPrompt = '';
     if (language === 'fr') {
       soapPrompt = `
-Générez un compte-rendu d'évolution clinique dentaire formel au format SOAP (médico-légalement rigoureux et conforme aux recommandations professionnelles) et assignez les codes d'actes correspondants.
+Rédigez un projet de compte-rendu clinique dentaire au format SOAP, rigoureux sur le plan médico-légal, que le praticien relira et validera.
 
 ACTE RÉALISÉ : ${procedure || 'Soin conservateur / Traitement endodontique / Chirurgie'}
-DENT CONCERNÉE : ${tooth ? `Dent Universelle #${tooth.id} (Notation FDI ${tooth.fdi}) - ${tooth.name}` : 'Général / Non spécifié'}
+DENT CONCERNÉE : ${tooth ? `Dent ${tooth.fdi} (FDI) - ${tooth.name}` : 'Général / Non spécifié'}
 DÉTAILS CLINIQUES : ${details || 'Acte réalisé avec succès sans complication'}
 ANESTHÉSIE LOCALE : ${anesthesiaUsed || `${activePatient.deliveredCarpules} carpules administrées`}
 MATÉRIAUX UTILISÉS : ${materialsUsed || 'Digue dentaire, mordançage sélectif, composite'}
 PATIENT (anonymisé) : ${activePatient.age} ans | Statut ASA: ${activePatient.asaStatus} | Poids: ${activePatient.weightKg}kg | Alertes: ${activePatient.medicalAlerts}
 
-Rédigez STRICTEMENT en français professionnel selon la structure suivante :
+Rédigez STRICTEMENT en français professionnel (dents en numérotation FDI, médicaments en DCI) selon la structure suivante.
+N'inventez aucune constatation, mesure ou valeur qui ne figure pas ci-dessus : écrivez « [à compléter] » à la place.
 - **Date** (n'inventez aucun nom ni identifiant : l'identité du patient est ajoutée par le logiciel)
 - **S (Subjectif)** : Motif de consultation, anamnèse médicale vérifiée, évaluation de la douleur (EVA 0-10), recueil du consentement éclairé du patient.
 - **O (Objectif)** : Examen clinique visuel, tests de vitalité pulpaire (froid, test électrique, percussion axiale/latérale, palpation vestibulaire, sondage parodontal), constatations radiologiques pré-opératoires.
-- **A (Analyse & Diagnostic)** : Diagnostic pulpaire et péri-apical formel et argumenté.
+- **A (Analyse)** : Diagnostic pulpaire et péri-apical retenu par le praticien, argumenté.
 - **P (Plan de traitement & Déroulement de l'Acte)** :
   - Anesthésie locale (molécule, %, vasoconstricteur, volume/carpules, technique, test d'aspiration négatif).
   - Champ opératoire (pose de la digue dentaire, étanchéité).
@@ -260,33 +271,34 @@ Rédigez STRICTEMENT en français professionnel selon la structure suivante :
   - Contrôle occlusal statique et dynamique.
   - Consignes post-opératoires et protocole antalgique non opioïde.
   - Prochain rendez-vous / suivi programmé.
-- **Codes Actes / CDT** : Codification standard des actes réalisés avec libellé clair.
+- **Actes réalisés** : liste des actes effectués en toutes lettres (libellé français, dent FDI, faces). N'indiquez AUCUN code d'acte (ni CDT, ni nomenclature CNAM) : la cotation est faite par le praticien dans la nomenclature officielle.
 `;
     } else {
       soapPrompt = `
-Generate a formal, medicolegally bulletproof, board-standard dental SOAP clinical progress note and assign the exact CDT procedural codes.
+Draft a dental SOAP clinical progress note, medicolegally rigorous, for the dentist to review and sign off.
 
 PROCEDURE: ${procedure || 'Operative Restoration / Endodontic / Surgical treatment'}
-TOOTH: ${tooth ? `Universal #${tooth.id} (FDI ${tooth.fdi}) - ${tooth.name}` : 'General / Not specified'}
+TOOTH: ${tooth ? `${tooth.fdi} (FDI) - ${tooth.name}` : 'General / Not specified'}
 CLINICAL DETAILS: ${details || 'Procedure completed successfully without complications'}
 LOCAL ANESTHESIA: ${anesthesiaUsed || `${activePatient.deliveredCarpules} carpules administered via infiltration/block`}
 MATERIALS: ${materialsUsed || 'Rubber dam isolation, selective etch, composite'}
 PATIENT (anonymized): ${activePatient.age}y | ASA: ${activePatient.asaStatus} | Weight: ${activePatient.weightKg}kg | Alerts: ${activePatient.medicalAlerts}
 
-Format strictly as:
+Write in English (FDI tooth numbers, drugs by INN/generic name), formatted strictly as below.
+Do not invent any finding, measurement or value that is not given above: write "[to be completed]" instead.
 - **Date** (do not invent any name or ID: patient identity is attached by the software)
 - **S (Subjective)**: Chief complaint, medical history reviewed, pain score, informed consent obtained.
 - **O (Objective)**: Clinical examination, vitality tests (cold, EPT, percussion, palpation, periodontal probing depths), pre-op radiograph findings.
-- **A (Assessment)**: Definite diagnosis (ICD-10 if applicable, pulpal & periapical status).
+- **A (Assessment)**: Pulpal & periapical diagnosis retained by the dentist, with its rationale.
 - **P (Plan & Procedure Performed)**:
-  - Exact local anesthesia (drug, %, epinephrine ratio, volume/carpules, injection technique, aspiration negative).
+  - Local anesthesia (drug, %, epinephrine ratio, volume/cartridges, injection technique, aspiration negative).
   - Isolation technique (rubber dam clamp, seal).
   - Preparation/procedure breakdown.
   - Materials placed (bonding agent, matrix system, shade, cure times).
   - Occlusion check & post-op bite verification.
   - Post-operative instructions & pain management protocol.
   - Next appointment / recall interval.
-- **CDT Procedure Codes**: List all applicable ADA CDT codes (e.g. D0140, D0220, D2392, D3330, etc.) with description and tooth surface.
+- **Procedures performed**: list each procedure in plain words (FDI tooth, surfaces). Do NOT give any procedure code (neither CDT nor CNAM nomenclature): coding is done by the dentist from the official nomenclature.
 `;
     }
 
@@ -296,17 +308,19 @@ Format strictly as:
       config: { systemInstruction: MOLARIS_SYSTEM_PROMPT, temperature: 0.2 }
     });
 
-    const noteText = result.text || 'Clinical SOAP note generated.';
-    const cdtCodes = Array.from(new Set(noteText.match(/D\d{4}[^\n]*/gi) || [])).slice(0, 5);
+    const isFr = language === 'fr';
+    const noteText = result.text || (isFr ? 'Compte-rendu SOAP généré.' : 'Clinical SOAP note generated.');
 
     const savedNote = patientDb.addSoapNoteForActivePatient({
-      procedure: procedure || 'Dental Treatment',
+      procedure: procedure || (isFr ? 'Soin dentaire' : 'Dental treatment'),
       toothId: tooth ? tooth.id : undefined,
-      anesthesiaUsed: anesthesiaUsed || 'Standard local anesthesia',
+      anesthesiaUsed: anesthesiaUsed || (isFr ? 'Anesthésie locale' : 'Local anesthesia'),
       materialsUsed,
       content: noteText,
-      cdtCodes,
-      author: memory.preferences.doctorName || 'Attending Doctor'
+      // Procedure codes come from the official CNAM nomenclature, never from the AI;
+      // the field stays for notes saved before this change.
+      cdtCodes: [],
+      author: memory.preferences.doctorName || (isFr ? 'Praticien traitant' : 'Treating dentist')
     });
 
     res.json({

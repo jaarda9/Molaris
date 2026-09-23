@@ -14,7 +14,7 @@ function getTranslatedToothStatus(status, isFr) {
 // M.O.L.A.R.I.S — Senior Dental Advisor & Chairside Assistant Engine
 
 let systemState = window.systemState = {
-  language: localStorage.getItem('molaris_lang') || 'en',
+  language: localStorage.getItem('molaris_lang') || 'fr',
   activeTab: 'advisor',
   voiceEnabled: true,
   numberingSystem: 'universal', // 'universal' | 'fdi'
