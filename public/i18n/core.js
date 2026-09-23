@@ -229,6 +229,9 @@ window.MOLARIS_TRANSLATIONS = {
     "patients.allergies": "Known Allergies",
     "patients.cancel": "Cancel",
     "patients.savePatient": "Save Patient Record",
+    "patients.chartIdLabel": "Chart ID",
+    "patients.chartIdPlaceholder": "Automatic (PT-2026-0001)",
+    "patients.phoneLabel": "Phone (WhatsApp)",
 
     // Doctor Profile & Preferences
     "prefs.title": "Doctor Profile & Clinical Practice Memory",
@@ -579,6 +582,9 @@ window.MOLARIS_TRANSLATIONS = {
     "patients.allergies": "Allergies Connues",
     "patients.cancel": "Annuler",
     "patients.savePatient": "Enregistrer le Dossier Patient",
+    "patients.chartIdLabel": "N° de dossier",
+    "patients.chartIdPlaceholder": "Automatique (PT-2026-0001)",
+    "patients.phoneLabel": "Téléphone (WhatsApp)",
 
     // Doctor Profile & Preferences
     "prefs.title": "Profil du Praticien & Mémoire du Cabinet",

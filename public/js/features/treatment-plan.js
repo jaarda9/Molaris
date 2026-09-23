@@ -1,0 +1,167 @@
+// -----------------------------------------------------------------------------
+// Treatment Plan Engine
+// -----------------------------------------------------------------------------
+function getTreatmentPriorityLabel(priority, isFr) {
+  switch (priority) {
+    case 'urgent': return isFr ? 'Urgent' : 'Urgent';
+    case 'high': return isFr ? 'Élevée' : 'High';
+    case 'routine': return isFr ? 'Routine' : 'Routine';
+    case 'elective': return isFr ? 'Optionnel' : 'Elective';
+    default: return priority;
+  }
+}
+
+function getTreatmentStatusLabel(status, isFr) {
+  switch (status) {
+    case 'proposed': return isFr ? 'Proposé' : 'Proposed';
+    case 'accepted': return isFr ? 'Accepté' : 'Accepted';
+    case 'in_progress': return isFr ? 'En Cours' : 'In Progress';
+    case 'completed': return isFr ? 'Terminé' : 'Completed';
+    case 'declined': return isFr ? 'Refusé' : 'Declined';
+    default: return status;
+  }
+}
+
+async function fetchTreatmentPlan() {
+  try {
+    const res = await fetch('/api/treatment-plan');
+    const data = await res.json();
+    systemState.treatmentPlan = data.items || [];
+    renderTreatmentPlanList();
+  } catch (err) {
+    console.error('Failed to fetch treatment plan:', err);
+  }
+}
+
+function renderTreatmentPlanList() {
+  const container = document.getElementById('treatment-plan-list');
+  if (!container) return;
+  const items = systemState.treatmentPlan || [];
+  const isFr = systemState.language === 'fr';
+
+  if (items.length === 0) {
+    container.innerHTML = `<div class="text-center py-10 text-slate-400 text-xs">${isFr ? 'Aucun acte planifié pour l\'instant. Ajoutez le premier acte proposé.' : 'No treatment plan items yet. Add the first proposed procedure.'}</div>`;
+    return;
+  }
+
+  const priorityOrder = { urgent: 0, high: 1, routine: 2, elective: 3 };
+  const sorted = [...items].sort((a, b) => (priorityOrder[a.priority] ?? 9) - (priorityOrder[b.priority] ?? 9));
+
+  container.innerHTML = '';
+  sorted.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3';
+
+    row.innerHTML = `
+      <div class="flex-1 min-w-[220px] space-y-1">
+        <div class="flex items-center gap-2 flex-wrap">
+          ${item.toothId ? `<span class="font-mono font-bold text-xs bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-1.5 py-0.5 rounded">#${item.toothId}</span>` : ''}
+          <span class="font-semibold text-sm text-slate-900 dark:text-white">${escapeHtml(item.procedure)}</span>
+          ${item.cdtCode ? `<span class="text-[10px] font-mono text-slate-500 dark:text-slate-400">${escapeHtml(item.cdtCode)}</span>` : ''}
+          <span class="px-2 py-0.5 rounded border text-[10px] font-semibold priority-${item.priority}">${getTreatmentPriorityLabel(item.priority, isFr)}</span>
+        </div>
+        ${item.notes ? `<p class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(item.notes)}</p>` : ''}
+        ${(item.estimatedCost !== undefined && item.estimatedCost !== null) ? `<p class="text-xs font-mono text-teal-700 dark:text-teal-400">$${Number(item.estimatedCost).toFixed(2)}</p>` : ''}
+      </div>
+      <div class="flex items-center gap-2">
+        <select class="treatment-status-select text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5">
+          <option value="proposed">${getTreatmentStatusLabel('proposed', isFr)}</option>
+          <option value="accepted">${getTreatmentStatusLabel('accepted', isFr)}</option>
+          <option value="in_progress">${getTreatmentStatusLabel('in_progress', isFr)}</option>
+          <option value="completed">${getTreatmentStatusLabel('completed', isFr)}</option>
+          <option value="declined">${getTreatmentStatusLabel('declined', isFr)}</option>
+        </select>
+        <button class="btn-delete-treatment-item p-2 rounded-lg bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400" title="${isFr ? 'Supprimer' : 'Delete'}">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+      </div>
+    `;
+
+    const statusSelect = row.querySelector('.treatment-status-select');
+    if (statusSelect) {
+      statusSelect.value = item.status;
+      statusSelect.addEventListener('change', async (e) => {
+        try {
+          const res = await fetch(`/api/treatment-plan/${item.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: e.target.value })
+          });
+          const resData = await res.json();
+          if (resData.success) {
+            item.status = resData.item.status;
+            playClinicalBeep(700, 'sine', 0.1);
+          }
+        } catch (err) {
+          alert('Failed to update status: ' + err.message);
+        }
+      });
+    }
+
+    row.querySelector('.btn-delete-treatment-item')?.addEventListener('click', async () => {
+      const isFr2 = systemState.language === 'fr';
+      if (!confirm(isFr2 ? 'Supprimer cet acte du plan de traitement ?' : 'Delete this treatment plan item?')) return;
+      try {
+        await fetch(`/api/treatment-plan/${item.id}`, { method: 'DELETE' });
+        await fetchTreatmentPlan();
+      } catch (err) {
+        alert('Failed to delete item: ' + err.message);
+      }
+    });
+
+    container.appendChild(row);
+  });
+}
+
+function initTreatmentPlanManager() {
+  const addBtn = document.getElementById('btn-add-treatment-item');
+  const modal = document.getElementById('modal-treatment-item');
+  const closeBtn = document.getElementById('btn-close-modal-treatment');
+  const cancelBtn = document.getElementById('btn-cancel-modal-treatment');
+  const form = document.getElementById('treatment-item-form');
+  if (!modal || !form) return;
+
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      form.reset();
+      populateToothSelect(document.getElementById('form-treatment-tooth'));
+      modal.classList.remove('hidden');
+    });
+  }
+  if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+  if (cancelBtn) cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const toothVal = document.getElementById('form-treatment-tooth').value;
+    const costVal = document.getElementById('form-treatment-cost').value;
+    const payload = {
+      toothId: toothVal ? Number(toothVal) : undefined,
+      procedure: document.getElementById('form-treatment-procedure').value.trim(),
+      cdtCode: document.getElementById('form-treatment-cdt').value.trim() || undefined,
+      priority: document.getElementById('form-treatment-priority').value,
+      estimatedCost: costVal !== '' ? Number(costVal) : undefined,
+      notes: document.getElementById('form-treatment-notes').value.trim() || undefined
+    };
+    try {
+      const res = await fetch('/api/treatment-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        modal.classList.add('hidden');
+        playClinicalBeep(880, 'sine', 0.15);
+        await fetchTreatmentPlan();
+      } else {
+        alert('Error: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Network error saving treatment plan item: ' + err.message);
+    }
+  });
+}
