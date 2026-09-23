@@ -206,5 +206,34 @@ export const MIGRATIONS: Array<{ name: string; sql: string }> = [
       CREATE TRIGGER prescription_items_no_delete BEFORE DELETE ON prescription_items
       BEGIN SELECT RAISE(ABORT, 'prescriptions are immutable'); END;
     `
+  },
+  {
+    name: 'billing: payment cancellation, immutable payments',
+    sql: `
+      -- A mistaken payment is cancelled with a reason, never deleted or edited.
+      ALTER TABLE payments ADD COLUMN cancelled_at  TEXT;
+      ALTER TABLE payments ADD COLUMN cancel_reason TEXT;
+      CREATE INDEX idx_payments_paid_at ON payments(paid_at);
+
+      CREATE TRIGGER payments_no_delete BEFORE DELETE ON payments
+      BEGIN
+        SELECT RAISE(ABORT, 'payments are never deleted: cancel them with a reason');
+      END;
+
+      CREATE TRIGGER payments_immutable
+      BEFORE UPDATE OF receipt_number, patient_id, quote_id, amount_millimes, method, reference, paid_at, created_at ON payments
+      BEGIN
+        SELECT RAISE(ABORT, 'payments are immutable: cancel and record a new one');
+      END;
+
+      CREATE TRIGGER payments_cancel_once
+      BEFORE UPDATE OF cancelled_at, cancel_reason ON payments
+      WHEN OLD.cancelled_at IS NOT NULL
+        OR NEW.cancelled_at IS NULL
+        OR trim(coalesce(NEW.cancel_reason, '')) = ''
+      BEGIN
+        SELECT RAISE(ABORT, 'a payment is cancelled once, with a reason, and cannot be restored');
+      END;
+    `
   }
 ];
