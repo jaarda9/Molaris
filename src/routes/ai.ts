@@ -12,6 +12,8 @@ import { ASSISTANT_TOOLS, detokenize, runAssistantTools, tokenizePatients, toolI
 import { computePatientSafetyAlerts } from '../domain/patient-safety.js';
 import { dosesLoggedOn } from '../domain/anesthesia-calc.js';
 import { DATA_DIR, getDb } from '../db/connection.js';
+import { newId } from '../db/ids.js';
+import { detectImageType } from '../domain/image-type.js';
 import { HttpError, languageOf, parse, route } from './http.js';
 import { z } from 'zod';
 import { toothId as toothIdSchema } from './clinical-validation.js';
@@ -234,13 +236,17 @@ aiRouter.post('/api/analyze-image', aiLimiter, upload.single('image'), async (re
     if (!req.file) {
       return res.status(400).json({ error: 'No image file uploaded' });
     }
+    // Checked before the AI call: an unreadable file would only waste quota.
+    const mimeType = detectImageType(req.file.buffer);
+    if (!mimeType) {
+      return res.status(400).json({ error: 'Format non pris en charge : envoyez une image JPEG, PNG ou WebP (exportez d’abord les radios DICOM dans l’un de ces formats).' });
+    }
 
     const language = req.body.language || 'en';
     const clinicalQuery = req.body.query || (language === 'fr'
       ? 'Évaluation clinique complète de cette image dentaire (rétro-alvéolaire, bitewing, panoramique ou photo intra-orale).'
       : 'Comprehensive clinical evaluation of this dental image (periapical, bitewing, panoramic, or intraoral photograph).');
     const toothNumber = req.body.toothId;
-    const mimeType = req.file.mimetype || 'image/jpeg';
     const activePatient = patientDb.getActivePatient();
     // toothId is the internal (Universal) id; the model is only given the FDI number.
     const focusTooth = toothNumber ? findPatientTooth(activePatient, Number(toothNumber)) : null;
@@ -248,6 +254,9 @@ aiRouter.post('/api/analyze-image', aiLimiter, upload.single('image'), async (re
     let visionPrompt = `
 Read this dental radiograph or intraoral image as a decision-support aid for the treating dentist (Tunisia).
 Everything you report is a finding to be confirmed by the dentist, not a diagnosis.
+FIRST check the image: if it is not a dental radiograph or intraoral photograph, or it is too blurred, dark,
+cropped or low-resolution to read, say so in two sentences, say what image is needed, and STOP.
+Never describe teeth, bone or lesions you cannot actually see.
 
 CLINICAL QUERY: ${clinicalQuery}
 ${focusTooth ? `FOCUS AREA: tooth ${focusTooth.fdi} (FDI) - ${focusTooth.name}` : ''}
@@ -267,7 +276,7 @@ State the limits of reading a single image.
 `;
 
     if (language === 'fr') {
-      visionPrompt += `\n[DIRECTIVE DE LANGUE OBLIGATOIRE] : Rédigez l'ensemble du rapport exclusivement en français odontologique professionnel (numérotation FDI, médicaments en DCI).\n`;
+      visionPrompt += `\n[DIRECTIVE DE LANGUE OBLIGATOIRE] : Rédigez l'ensemble du rapport exclusivement en français odontologique professionnel (numérotation FDI, médicaments en DCI), intitulés des sections compris.\n`;
     } else {
       visionPrompt += `\n[LANGUAGE DIRECTIVE]: write the whole report in English.\n`;
     }
@@ -285,7 +294,7 @@ State the limits of reading a single image.
     });
 
     // Keep the image and its AI read on the patient's chart for later review.
-    const imageId = `img_${Date.now()}`;
+    const imageId = newId('img');
     const ext = mimeTypeToExtension(mimeType);
     fs.mkdirSync(IMAGES_DIR, { recursive: true });
     fs.writeFileSync(path.join(IMAGES_DIR, `${imageId}.${ext}`), req.file.buffer);

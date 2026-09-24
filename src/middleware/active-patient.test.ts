@@ -25,3 +25,24 @@ test('without the header, the clinic-wide active patient is used', () => {
 test('a chart deleted elsewhere is refused so the page reloads', () => {
   assert.equal(run('/api/odontogram', 'pt_gone').status, 409);
 });
+
+test('a multipart upload (X-ray) keeps the page patient through multer', async () => {
+  const { default: express } = await import('express');
+  const { default: multer } = await import('multer');
+  const app = express();
+  app.use(scopeToPagePatient(() => true));
+  app.post('/api/upload', multer({ storage: multer.memoryStorage() }).single('image'), async (_req, res) => {
+    await new Promise(resolve => setTimeout(resolve, 5));
+    res.json({ scoped: scopedPatientId() ?? null });
+  });
+  const server = app.listen(0);
+  try {
+    const port = (server.address() as { port: number }).port;
+    const form = new FormData();
+    form.append('image', new Blob([new Uint8Array(200_000)], { type: 'image/png' }), 'xray.png');
+    const response = await fetch(`http://127.0.0.1:${port}/api/upload`, { method: 'POST', headers: { 'X-Molaris-Patient': 'pt_2' }, body: form });
+    assert.deepEqual(await response.json(), { scoped: 'pt_2' });
+  } finally {
+    server.close();
+  }
+});

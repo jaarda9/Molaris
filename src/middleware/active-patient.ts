@@ -1,3 +1,4 @@
+import { AsyncResource } from 'node:async_hooks';
 import type { NextFunction, Request, Response } from 'express';
 import { patientScope } from '../repositories/patient-scope.js';
 
@@ -21,6 +22,11 @@ export function scopeToPagePatient(patientExists: (id: string) => boolean) {
       });
       return;
     }
-    patientScope.run(patientId, () => next());
+    patientScope.run(patientId, () => {
+      // Multipart parsers (multer: X-ray uploads) call next() from the request stream's events,
+      // which run outside this scope: bind them to it so the upload lands in the right chart.
+      if (typeof req.emit === 'function') req.emit = AsyncResource.bind(req.emit, 'molaris-patient-scope', req) as typeof req.emit;
+      next();
+    });
   };
 }
