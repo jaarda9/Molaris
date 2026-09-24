@@ -188,7 +188,15 @@ function initVoicePicker() {
 
 // -----------------------------------------------------------------------------
 // Hands-free Voice Dictation (Web Speech Recognition)
+//
+// Keeps listening until the doctor has finished: words appear live in the input,
+// the question is sent after DICTATION_SILENCE_MS of silence (or a second click).
+// Browsers end a recognition session on their own (short pause, ~no speech, ~1 min):
+// while the doctor still wants to dictate, the session is simply restarted.
 // -----------------------------------------------------------------------------
+const DICTATION_SILENCE_MS = 2500;
+const DICTATION_MAX_MS = 90_000;
+
 function initSpeechRecognition() {
   const micBtn = document.getElementById('mic-btn');
   const micStatus = document.getElementById('mic-status-label');
@@ -199,53 +207,107 @@ function initSpeechRecognition() {
     if (micBtn) {
       micBtn.title = molarisT('chat.micUnsupported');
       micBtn.classList.add('opacity-50');
+      micBtn.addEventListener('click', () => Molaris.ui.toast(molarisT('chat.micUnsupported'), 'error'));
     }
     return;
   }
 
   const recognition = new SpeechRecognition();
-  recognition.continuous = false;
-  recognition.interimResults = false;
+  recognition.continuous = true;      // do not stop at the first short pause
+  recognition.interimResults = true;  // show the words while they are spoken
+  recognition.maxAlternatives = 1;
   recognition.lang = systemState.language === 'fr' ? 'fr-FR' : 'en-US';
   window.molarisRecognition = recognition;
 
-  isListening = false;
+  let wanted = false;        // the doctor wants to dictate (until silence / click / error)
+  let finalText = '';        // confirmed words of this dictation
+  let silenceTimer = null;
+  let maxTimer = null;
+  let fatalError = null;
 
-  recognition.onstart = () => {
-    isListening = true;
-    micBtn.classList.add('recording-pulse', 'text-rose-600');
-    micStatus.classList.remove('hidden');
-    playClinicalBeep(660, 'sine', 0.15);
+  const setUi = (on) => {
+    isListening = on;
+    micBtn?.classList.toggle('recording-pulse', on);
+    micBtn?.classList.toggle('text-rose-600', on);
+    micStatus?.classList.toggle('hidden', !on);
   };
+
+  const armSilenceTimer = () => {
+    clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => finish(true), DICTATION_SILENCE_MS);
+  };
+
+  function begin() {
+    if (wanted) return;
+    wanted = true;
+    finalText = '';
+    fatalError = null;
+    chatInput.value = '';
+    // The advisor's own voice must not be dictated back into the chat.
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    recognition.lang = systemState.language === 'fr' ? 'fr-FR' : 'en-US';
+    setUi(true);
+    playClinicalBeep(660, 'sine', 0.15);
+    clearTimeout(maxTimer);
+    maxTimer = setTimeout(() => finish(true), DICTATION_MAX_MS);
+    try { recognition.start(); } catch (e) { /* already started: harmless */ }
+  }
+
+  /** Ends the dictation; `submit` sends what was said as the question. */
+  function finish(submit) {
+    if (!wanted) return;
+    wanted = false;
+    clearTimeout(silenceTimer);
+    clearTimeout(maxTimer);
+    try { recognition.stop(); } catch (e) { /* not running */ }
+    setUi(false);
+    const text = chatInput.value.trim();
+    if (submit && text) {
+      playClinicalBeep(880, 'sine', 0.1);
+      document.getElementById('chat-form').dispatchEvent(new Event('submit'));
+    }
+  }
 
   recognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    chatInput.value = transcript;
-    playClinicalBeep(880, 'sine', 0.1);
-    // Automatically submit query
-    document.getElementById('chat-form').dispatchEvent(new Event('submit'));
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const piece = event.results[i][0].transcript;
+      if (event.results[i].isFinal) finalText += piece;
+      else interim += piece;
+    }
+    chatInput.value = `${finalText}${interim}`.replace(/\s+/g, ' ').trim();
+    armSilenceTimer();
   };
 
-  recognition.onerror = (e) => {
-    console.warn('Speech recognition error:', e);
-    isListening = false;
-    micBtn.classList.remove('recording-pulse', 'text-rose-600');
-    micStatus.classList.add('hidden');
+  recognition.onerror = (event) => {
+    // 'no-speech' and 'aborted' are normal pauses: the session is restarted in onend.
+    if (event.error === 'no-speech' || event.error === 'aborted') return;
+    const messages = {
+      'not-allowed': 'chat.micErrorDenied',
+      'service-not-allowed': 'chat.micErrorDenied',
+      'audio-capture': 'chat.micErrorNoDevice',
+      'network': 'chat.micErrorNetwork',
+      'language-not-supported': 'chat.micErrorLanguage'
+    };
+    fatalError = messages[event.error] || 'chat.micErrorGeneric';
+    console.warn('Speech recognition error:', event.error);
   };
 
   recognition.onend = () => {
-    isListening = false;
-    micBtn.classList.remove('recording-pulse', 'text-rose-600');
-    micStatus.classList.add('hidden');
+    if (fatalError) {
+      const key = fatalError;
+      fatalError = null;
+      finish(false);
+      Molaris.ui.toast(molarisT(key), 'error');
+      return;
+    }
+    // Ended by the browser while the doctor is still dictating: listen again.
+    if (wanted) {
+      try { recognition.start(); } catch (e) { finish(true); }
+    }
   };
 
   if (micBtn) {
-    micBtn.addEventListener('click', () => {
-      if (isListening) {
-        recognition.stop();
-      } else {
-        recognition.start();
-      }
-    });
+    micBtn.addEventListener('click', () => (wanted ? finish(true) : begin()));
   }
 }
