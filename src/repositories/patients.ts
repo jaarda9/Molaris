@@ -91,6 +91,9 @@ export interface DentalDatabase {
 
 const LEGACY_JSON_FILE = path.join(DATA_DIR, 'patients-db.json');
 const ACTIVE_PATIENT_KEY = 'activePatientId';
+/** Advisor conversation kept per patient: the most recent messages, each capped in length. */
+const MAX_CONSULT_MESSAGES = 200;
+const MAX_CONSULT_MESSAGE_CHARS = 20_000;
 
 /** Looks a tooth up by internal id: Universal 1–32 (permanent) or FDI 51–85 (primary). */
 export function findPatientTooth(patient: PatientRecord, toothId: number): ToothInfo | undefined {
@@ -537,6 +540,31 @@ export class PatientRepository {
     patient.primaryTeethMode = mode;
     this.touch(patient);
     return patient;
+  }
+
+  // --- Advisor conversation (kept per patient, survives reloads) ----------------
+
+  public getConsultHistory(patientId: string): PatientRecord['consultHistory'] {
+    return this.getPatientById(patientId)?.consultHistory ?? [];
+  }
+
+  /** Appends messages to a patient's advisor conversation; the oldest are dropped past the cap. */
+  public appendConsultMessages(patientId: string, messages: Array<{ role: 'user' | 'model'; content: string }>): void {
+    const patient = this.getPatientById(patientId);
+    if (!patient) throw new Error(`Patient '${patientId}' not found`);
+    const now = nowIso();
+    const history = [...(patient.consultHistory ?? []), ...messages
+      .filter(m => m.content && m.content.trim())
+      .map(m => ({ role: m.role, content: m.content.slice(0, MAX_CONSULT_MESSAGE_CHARS), timestamp: now }))];
+    patient.consultHistory = history.slice(-MAX_CONSULT_MESSAGES);
+    this.touch(patient);
+  }
+
+  public clearConsultHistory(patientId: string): void {
+    const patient = this.getPatientById(patientId);
+    if (!patient) throw new Error(`Patient '${patientId}' not found`);
+    patient.consultHistory = [];
+    this.touch(patient);
   }
 
   // --- Anesthesia & SOAP ------------------------------------------------------

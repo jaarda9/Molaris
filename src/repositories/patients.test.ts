@@ -116,3 +116,22 @@ test('primary teeth: correcting the age re-derives them only while nothing was r
   assert.equal(older.primaryTeeth.find(t => t.id === 75)!.status, 'caries');
   assert.equal(older.primaryTeeth.find(t => t.id === 51)!.status, 'sound');
 });
+
+test('advisor conversation: saved per patient, survives a reload, capped, clearable', () => {
+  const { db, repo } = freshRepo();
+  repo.appendConsultMessages('pt_1', [{ role: 'user', content: 'Combien doit-il ?' }, { role: 'model', content: 'Reste 300,000 DT.' }]);
+  repo.appendConsultMessages('pt_2', [{ role: 'user', content: 'Allergies ?' }]);
+
+  const reopened = new PatientRepository(db, { legacyJsonFile: null });
+  assert.deepEqual(reopened.getConsultHistory('pt_1').map(m => m.content), ['Combien doit-il ?', 'Reste 300,000 DT.']);
+  assert.equal(reopened.getConsultHistory('pt_2').length, 1, 'each patient has their own conversation');
+
+  for (let i = 0; i < 250; i++) reopened.appendConsultMessages('pt_1', [{ role: 'user', content: `q${i}` }]);
+  const capped = reopened.getConsultHistory('pt_1');
+  assert.equal(capped.length, 200);
+  assert.equal(capped[capped.length - 1].content, 'q249');
+
+  reopened.clearConsultHistory('pt_1');
+  assert.equal(reopened.getConsultHistory('pt_1').length, 0);
+  assert.equal(reopened.getConsultHistory('pt_2').length, 1);
+});

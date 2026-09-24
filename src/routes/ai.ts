@@ -52,8 +52,10 @@ function mimeTypeToExtension(mimeType: string): string {
 aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
   // Declared outside the try: a command that already ran must be reported even if the AI fails.
   let actionResult: ReturnType<typeof executeMolarisAction> | null = null;
+  // The conversation is saved in the chart of the patient open when the question was asked.
+  const patientId = patientDb.getActivePatient().id;
   try {
-    const { message, toothId, conversationHistory = [], language = 'en' } = req.body;
+    const { message, toothId, language = 'en' } = req.body;
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'Message text is required' });
     }
@@ -62,7 +64,9 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
 
     // A timer needs no AI answer: reply at once (no quota used, works offline).
     if (actionResult.executed && actionResult.actionType === 'START_TIMER') {
-      return res.json(actionOnlyReply(actionResult));
+      const reply = actionOnlyReply(actionResult);
+      rememberExchange(patientId, message, reply.reply);
+      return res.json(reply);
     }
 
     const memory = loadMemory();
@@ -122,7 +126,8 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     }
 
     const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
-    conversationHistory.slice(-8).forEach((entry: { role: string; content: string }) => {
+    // Context: the last exchanges of this patient's saved conversation (names are redacted on the way out).
+    activePatient.consultHistory.slice(-8).forEach(entry => {
       contents.push({ role: entry.role === 'user' ? 'user' : 'model', parts: [{ text: entry.content }] });
     });
     contents.push({ role: 'user', parts: [{ text: `${contextPrompt}\nDoctor asks: ${safeMessage}` }] });
@@ -153,6 +158,7 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
         : `⚡ **Action executed:** ${actionResult.summary}\n\n${replyText}`;
     }
 
+    rememberExchange(patientId, message, replyText);
     res.json({
       reply: replyText,
       action: actionResult,
@@ -168,10 +174,41 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     if (actionResult?.executed) {
       // The command (tooth update, patient switch…) is done: confirm it, and say the AI is unavailable.
       const reply = actionOnlyReply(actionResult);
-      return res.json({ ...reply, reply: `${reply.reply}\n\n${aiErrorMessage(err, languageOf(req.body?.language))}` });
+      const text = `${reply.reply}\n\n${aiErrorMessage(err, languageOf(req.body?.language))}`;
+      rememberExchange(patientId, req.body.message, text);
+      return res.json({ ...reply, reply: text });
     }
     sendAiError(res, err, req);
   }
+});
+
+/** Saves a question and its answer in the patient's conversation; never breaks the reply. */
+function rememberExchange(patientId: string, question: string, answer: string): void {
+  try {
+    patientDb.appendConsultMessages(patientId, [{ role: 'user', content: question }, { role: 'model', content: answer }]);
+  } catch (err) {
+    console.warn('[Chat] Could not save the conversation:', err);
+  }
+}
+
+// The advisor conversation of the open chart: shown again after a reload or a patient switch.
+aiRouter.get('/api/chat/history', (req: Request, res: Response) => {
+  const patient = patientDb.getActivePatient();
+  res.json({ patientId: patient.id, messages: patient.consultHistory });
+});
+
+// A line added by the app itself (outcome of a confirmed or cancelled assistant action).
+aiRouter.post('/api/chat/history', (req: Request, res: Response) => {
+  const content = typeof req.body?.content === 'string' ? req.body.content.trim() : '';
+  if (!content) return res.status(400).json({ error: 'content is required' });
+  const patient = patientDb.getActivePatient();
+  patientDb.appendConsultMessages(patient.id, [{ role: 'model', content: content.slice(0, 2000) }]);
+  res.json({ success: true });
+});
+
+aiRouter.delete('/api/chat/history', (req: Request, res: Response) => {
+  patientDb.clearConsultHistory(patientDb.getActivePatient().id);
+  res.json({ success: true });
 });
 
 function actionOnlyReply(action: ReturnType<typeof executeMolarisAction>) {

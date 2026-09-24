@@ -13,7 +13,7 @@ const GUARDED_PATHS = [
   /^\/api\/treatment-plan(\/|$)/,
   /^\/api\/lab-cases(\/|$)/,
   /^\/api\/anesthesia\/log$/,
-  /^\/api\/chat$/,
+  /^\/api\/chat(\/history)?$/,
   /^\/api\/generate-soap$/,
   /^\/api\/analyze-image$/
 ];

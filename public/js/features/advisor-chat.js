@@ -62,7 +62,7 @@ if (chatForm) {
 function appendMessage(sender, text, action = null) {
   const msgDiv = document.createElement('div');
   msgDiv.className = 'flex items-start space-x-3';
-  const id = 'msg-' + Date.now();
+  const id = 'msg-' + (++appendMessage.counter || (appendMessage.counter = 1));
   msgDiv.id = id;
 
   if (sender === 'doctor') {
@@ -123,6 +123,7 @@ function appendProposalCard(proposal) {
   };
   card.querySelector('[data-act="cancel"]').addEventListener('click', () => {
     settle(`<span class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(molarisT('assistant.cancelled'))}</span>`, 'neutral');
+    rememberChatNote(molarisT('assistant.cancelled'));
   });
   card.querySelector('[data-act="confirm"]').addEventListener('click', async (e) => {
     card.querySelectorAll('button').forEach(b => { b.disabled = true; });
@@ -130,9 +131,11 @@ function appendProposalCard(proposal) {
     try {
       const done = await executeProposal(proposal);
       settle(`<span class="text-xs font-semibold text-emerald-700 dark:text-emerald-300">✓ ${escapeHtml(done)}</span>`, 'ok');
+      rememberChatNote(`✓ ${done}`);
       playClinicalBeep(880, 'sine', 0.15);
     } catch (err) {
       settle(`<span class="text-xs font-semibold text-rose-700 dark:text-rose-300">⚠️ ${escapeHtml(molarisT('assistant.failed'))} ${escapeHtml(err.message)}</span>`, 'error');
+      rememberChatNote(`⚠️ ${molarisT('assistant.failed')} ${err.message}`);
     }
   });
   chatMessages.appendChild(card);
@@ -176,6 +179,38 @@ async function executeProposal(proposal) {
   }
 }
 
+// -----------------------------------------------------------------------------
+// Saved conversation: each patient's conversation lives in their chart (server),
+// so a reload, a crash or another PC shows it again.
+// -----------------------------------------------------------------------------
+const CHAT_WELCOME_HTML = chatMessages ? chatMessages.innerHTML : '';
+
+function rememberChatNote(text) {
+  Molaris.api.post('/api/chat/history', { content: text }).catch(() => { /* the card already shows the outcome */ });
+}
+
+async function loadChatHistory() {
+  if (!chatMessages) return;
+  let data;
+  try { data = await Molaris.api.get('/api/chat/history'); } catch (err) { return; }
+  chatMessages.innerHTML = CHAT_WELCOME_HTML;
+  chatMessages.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = molarisT(el.getAttribute('data-i18n')); });
+  const messages = data.messages || [];
+  if (messages.length) {
+    const first = messages[0].timestamp ? Molaris.format.date(messages[0].timestamp) : '';
+    const divider = document.createElement('div');
+    divider.className = 'flex items-center gap-3 text-[11px] text-slate-400 dark:text-slate-500';
+    divider.innerHTML = `<span class="flex-1 border-t border-slate-200 dark:border-slate-700"></span><span>${escapeHtml(molarisT('chat.resumed').replace('{name}', systemState.activePatient?.name || '').replace('{date}', first))}</span><span class="flex-1 border-t border-slate-200 dark:border-slate-700"></span>`;
+    chatMessages.appendChild(divider);
+  }
+  for (const m of messages) appendMessage(m.role === 'user' ? 'doctor' : 'molaris', m.content);
+  systemState.chatHistory = messages.map(m => ({ role: m.role, content: m.content }));
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Each chart has its own conversation.
+Molaris.events.on('patient-changed', () => loadChatHistory());
+
 function appendTypingIndicator() {
   const id = 'typing-' + Date.now();
   const div = document.createElement('div');
@@ -212,7 +247,9 @@ function initQuickPrompts() {
 
   const clearBtn = document.getElementById('clear-chat-btn');
   if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
+    clearBtn.addEventListener('click', async () => {
+      if (!confirm(molarisT('chat.clearConfirm'))) return;
+      try { await Molaris.api.del('/api/chat/history'); } catch (err) { Molaris.ui.toast(err.message, 'error'); return; }
       systemState.chatHistory = [];
       chatMessages.innerHTML = `
         <div class="flex items-start space-x-3">

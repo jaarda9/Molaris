@@ -263,12 +263,7 @@ async function selectPatient(patientId) {
       recalculateLA();
       playClinicalBeep(659.25, 'sine', 0.15);
 
-      // Add feedback notification in chat
-      const isFr = systemState.language === 'fr';
-      const notificationMsg = isFr
-        ? `Contexte opératoire basculé sur le patient **${data.activePatient.name}** (${data.activePatient.chartId}). Chargement de l'odontogramme 32 dents, alertes médicales et référence ASA ${data.activePatient.asaStatus}.`
-        : `Operatory context switched to patient **${data.activePatient.name}** (${data.activePatient.chartId}). Loaded 32-tooth odontogram, medical alerts, and ASA ${data.activePatient.asaStatus} baseline.`;
-      appendMessage('molaris', notificationMsg);
+      // The advisor conversation of the new chart is reloaded on 'patient-changed' (advisor-chat.js).
     }
   } catch (err) {
     console.error('Failed to select patient:', err);
