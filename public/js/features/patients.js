@@ -58,7 +58,7 @@ function renderPatientsGrid(filterText = '') {
         </svg>
         <p class="text-sm font-medium">${isFr ? `Aucun dossier ne correspond à "${escapeHtml(filterText)}"` : `No patient records match "${escapeHtml(filterText)}"`}</p>
         <button onclick="document.getElementById('btn-create-patient')?.click()" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer">
-          ${isFr ? '+ Ajouter un Nouveau Dossier Patient' : '+ Add New Patient Record'}
+          ${isFr ? '+ Nouveau patient' : '+ Add New Patient Record'}
         </button>
       </div>
     `;
@@ -125,7 +125,7 @@ function renderPatientsGrid(filterText = '') {
           ${
             patient.cardiacRisk
               ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800 flex items-center space-x-1"><span>⚠️</span><span>${isFr ? 'ALERTE CARDIAQUE' : 'CARDIAC ALERT'}</span></span>`
-              : `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">${isFr ? 'Épi Standard' : 'Standard Epi'}</span>`
+              : ''
           }
           <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
             ${patient.weightKg || 70} kg
@@ -134,7 +134,7 @@ function renderPatientsGrid(filterText = '') {
 
         <!-- Chief Complaint -->
         <div class="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-2.5 text-xs text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-800">
-          <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">${isFr ? 'Motif de Consultation' : 'Chief Complaint'}</div>
+          <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">${isFr ? 'Motif de consultation' : 'Chief Complaint'}</div>
           <p class="italic line-clamp-2">${escapeHtml(patient.chiefComplaint || (isFr ? 'Bilan bucco-dentaire complet de routine' : 'Routine comprehensive evaluation'))}</p>
         </div>
 
@@ -149,10 +149,10 @@ function renderPatientsGrid(filterText = '') {
         }
 
         <!-- Operatory Metrics Grid -->
-        <div class="grid grid-cols-3 gap-2 pt-1 text-center font-mono">
+        <div class="grid grid-cols-3 gap-2 pt-1 text-center">
           <div class="bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-lg border border-slate-100 dark:border-slate-800">
             <div class="text-xs font-bold text-slate-900 dark:text-white">${teethWithFindings}</div>
-            <div class="text-[9px] text-slate-400">${isFr ? 'Dents Chartées' : 'Teeth Charted'}</div>
+            <div class="text-[9px] text-slate-400">${isFr ? 'Dents notées' : 'Teeth Charted'}</div>
           </div>
           <div class="bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-lg border border-slate-100 dark:border-slate-800">
             <div class="text-xs font-bold text-teal-600 dark:text-teal-400">${totalCarpulesGiven}</div>
@@ -172,17 +172,17 @@ function renderPatientsGrid(filterText = '') {
             ? 'bg-teal-700 text-white'
             : 'bg-teal-600 hover:bg-teal-700 text-white'
         }" data-id="${patient.id}">
-          ${isActive ? (isFr ? '✓ Dossier Actif au Fauteuil' : '✓ Active Operatory Patient') : (isFr ? 'Sélectionner &amp; Soigner' : 'Select Patient &amp; Treat')}
+          ${isActive ? (isFr ? '✓ Dossier ouvert' : '✓ Chart open') : (isFr ? 'Ouvrir le dossier' : 'Open chart')}
         </button>
 
-        <button class="btn-edit-patient p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition cursor-pointer" data-id="${patient.id}" title="${isFr ? 'Modifier le Dossier Patient' : 'Edit Patient Chart'}">
+        <button class="btn-edit-patient p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition cursor-pointer" data-id="${patient.id}" title="${isFr ? 'Modifier le dossier patient' : 'Edit Patient Chart'}">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 20h9"></path>
             <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
           </svg>
         </button>
 
-        <button class="btn-delete-patient p-2 rounded-xl bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition cursor-pointer" data-id="${patient.id}" data-name="${escapeHtml(patient.name)}" title="${isFr ? 'Supprimer le Dossier' : 'Delete Patient Record'}">
+        <button class="btn-delete-patient p-2 rounded-xl bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition cursor-pointer" data-id="${patient.id}" data-name="${escapeHtml(patient.name)}" title="${isFr ? 'Supprimer le dossier' : 'Delete Patient Record'}">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6"></polyline>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -281,7 +281,7 @@ function openEditPatientModal(patient) {
   if (!modal) return;
 
   const isFr = systemState.language === 'fr';
-  title.textContent = isFr ? `Modifier la Fiche Patient : ${patient.name}` : `Edit Patient: ${patient.name}`;
+  title.textContent = isFr ? `Modifier le dossier : ${patient.name}` : `Edit Patient: ${patient.name}`;
   document.getElementById('form-patient-id').value = patient.id;
   document.getElementById('form-patient-name').value = patient.name;
   document.getElementById('form-patient-chart').value = patient.chartId;
@@ -335,7 +335,7 @@ function initPatientManager() {
   if (createBtn) {
     createBtn.addEventListener('click', () => {
       const isFr = systemState.language === 'fr';
-      modalTitle.textContent = isFr ? 'Ajouter un Nouveau Patient' : 'Add New Dental Patient';
+      modalTitle.textContent = isFr ? 'Nouveau patient' : 'Add New Dental Patient';
       form.reset();
       document.getElementById('form-patient-id').value = '';
       document.getElementById('form-patient-weight').value = 70;

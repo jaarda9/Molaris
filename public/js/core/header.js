@@ -37,13 +37,20 @@ function updateActivePatientHeaderUI(patient) {
   const cardiacBadge = document.getElementById('header-cardiac-badge');
   const weightEl = document.getElementById('header-patient-weight');
 
+  const initialsEl = document.getElementById('header-patient-initials');
+
   if (nameEl) nameEl.textContent = patient.name;
   if (idEl) idEl.textContent = patient.chartId;
   if (asaEl) asaEl.textContent = patient.asaStatus || 'ASA I';
-  if (weightEl) weightEl.textContent = `${patient.weightKg} kg`;
+  if (initialsEl) {
+    initialsEl.textContent = String(patient.name || '').split(/\s+/).filter(Boolean)
+      .map(part => part[0]).slice(0, 2).join('').toUpperCase() || '—';
+  }
+  // Age matters at a glance (children, elderly patients); weight drives the anesthesia doses.
+  if (weightEl) weightEl.textContent = `${patient.age} ${isFr ? 'ans' : 'y'} · ${patient.weightKg} kg`;
 
   if (cardiacBadge) {
-    cardiacBadge.textContent = isFr ? 'Risque Cardiaque (Épi Max 0,04mg)' : 'Cardiac Risk';
+    cardiacBadge.textContent = isFr ? 'Risque cardiaque' : 'Cardiac risk';
     if (patient.cardiacRisk) cardiacBadge.classList.remove('hidden');
     else cardiacBadge.classList.add('hidden');
   }

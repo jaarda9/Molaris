@@ -38,7 +38,7 @@ function renderProtocolsList(protocols) {
           <span class="text-[10px] font-mono text-teal-700 dark:text-teal-400 uppercase font-semibold">${protocol.category}</span>
         </div>
         <button class="ask-protocol-btn text-xs font-semibold px-2 py-1 rounded bg-teal-600 text-white hover:bg-teal-700" data-title="${protocol.title}">
-          ${isFr ? 'Consulter le Conseiller' : 'Ask Advisor'}
+          ${isFr ? 'Demander au conseiller' : 'Ask Advisor'}
         </button>
       </div>
       <p class="text-xs text-slate-500 dark:text-slate-400 italic">${protocol.summary}</p>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>M.O.L.A.R.I.S — Senior Dental Advisor & Chairside Clinical Assistant</title>
+  <title>M.O.L.A.R.I.S — Cabinet dentaire</title>
   <meta name="description" content="Personal senior dental advisor and chairside clinical copilot for diagnosis, procedure guidance, dental pharmacology, and clinical practice.">
   <meta property="og:title" content="M.O.L.A.R.I.S — Senior Dental Advisor & Chairside Clinical Assistant">
   <meta property="og:description" content="Personal senior dental advisor and chairside clinical copilot for diagnosis, procedure guidance, dental pharmacology, and clinical practice.">
@@ -16,38 +16,68 @@
   <!-- Tailwind served locally so the clinic UI keeps its styling without internet. -->
   <script src="/vendor/tailwindcss-play-3.4.17.js"></script>
   <script>
+    // Design tokens: 'slate' (neutrals) and 'teal' (brand accent) read CSS variables that
+    // each theme redefines (see :root / .dark below), so every screen, including the
+    // markup built in JS, follows the theme without touching its classes.
+    //   Light = "cozy clinic": warm cream surfaces, sage-teal accent, soft warm shadows.
+    //   Dark  = "refined dark": deep navy slate, glowing teal accent.
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-            mono: ['"JetBrains Mono"', 'monospace'],
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
           },
           colors: {
-            molaris: {
-              50: '#f0fdfa',
-              100: '#ccfbf1',
-              200: '#99f6e4',
-              500: '#14b8a6',
-              600: '#0d9488',
-              700: '#0f766e',
-              800: '#115e59',
-              900: '#134e4a',
-            },
-            clinical: {
-              dark: '#0d1519',
-              slate: '#162228',
-              card: '#1f2e35',
-              border: '#2a3d46',
-            }
-          }
+            slate: { 50: 'rgb(var(--slate-50) / <alpha-value>)', 100: 'rgb(var(--slate-100) / <alpha-value>)', 200: 'rgb(var(--slate-200) / <alpha-value>)', 300: 'rgb(var(--slate-300) / <alpha-value>)', 400: 'rgb(var(--slate-400) / <alpha-value>)', 500: 'rgb(var(--slate-500) / <alpha-value>)', 600: 'rgb(var(--slate-600) / <alpha-value>)', 700: 'rgb(var(--slate-700) / <alpha-value>)', 800: 'rgb(var(--slate-800) / <alpha-value>)', 900: 'rgb(var(--slate-900) / <alpha-value>)', 950: 'rgb(var(--slate-950) / <alpha-value>)' },
+            teal: { 50: 'rgb(var(--teal-50) / <alpha-value>)', 100: 'rgb(var(--teal-100) / <alpha-value>)', 200: 'rgb(var(--teal-200) / <alpha-value>)', 300: 'rgb(var(--teal-300) / <alpha-value>)', 400: 'rgb(var(--teal-400) / <alpha-value>)', 500: 'rgb(var(--teal-500) / <alpha-value>)', 600: 'rgb(var(--teal-600) / <alpha-value>)', 700: 'rgb(var(--teal-700) / <alpha-value>)', 800: 'rgb(var(--teal-800) / <alpha-value>)', 900: 'rgb(var(--teal-900) / <alpha-value>)', 950: 'rgb(var(--teal-950) / <alpha-value>)' },
+          },
+          boxShadow: {
+            xs: '0 1px 2px rgb(var(--shadow) / 0.05)',
+            sm: '0 1px 2px rgb(var(--shadow) / 0.04), 0 2px 8px rgb(var(--shadow) / 0.04)',
+            DEFAULT: '0 2px 4px rgb(var(--shadow) / 0.05), 0 6px 18px rgb(var(--shadow) / 0.06)',
+            md: '0 4px 10px rgb(var(--shadow) / 0.06), 0 12px 28px rgb(var(--shadow) / 0.08)',
+            lg: '0 10px 24px rgb(var(--shadow) / 0.08), 0 24px 48px rgb(var(--shadow) / 0.10)',
+          },
         }
       }
     }
   </script>
 
   <style>
+
+    /* ---------- Theme tokens (RGB channels) ---------- */
+    :root {
+      color-scheme: light;
+      /* Warm neutrals: cream paper to espresso ink */
+      --slate-50: 252 250 246;  --slate-100: 245 240 232; --slate-200: 233 226 215;
+      --slate-300: 216 206 192; --slate-400: 168 158 145; --slate-500: 125 116 104;
+      --slate-600: 96 88 78;    --slate-700: 72 64 56;    --slate-800: 48 42 36;
+      --slate-900: 34 29 24;    --slate-950: 22 18 15;
+      /* Sage teal */
+      --teal-50: 238 247 243;   --teal-100: 213 236 228;  --teal-200: 174 217 203;
+      --teal-300: 127 192 172;  --teal-400: 79 163 140;   --teal-500: 46 136 114;
+      --teal-600: 31 111 92;    --teal-700: 25 90 75;     --teal-800: 22 73 62;
+      --teal-900: 19 60 52;     --teal-950: 10 35 30;
+      --shadow: 92 64 36;
+      --page-bg: 247 243 236;
+    }
+    .dark {
+      color-scheme: dark;
+      /* Deep navy slate */
+      --slate-50: 248 250 252;  --slate-100: 236 241 247; --slate-200: 218 226 236;
+      --slate-300: 191 202 216; --slate-400: 145 158 176; --slate-500: 106 119 137;
+      --slate-600: 74 86 104;   --slate-700: 50 62 80;    --slate-800: 31 41 57;
+      --slate-900: 19 27 40;    --slate-950: 10 15 24;
+      /* Glowing teal */
+      --teal-50: 236 253 248;   --teal-100: 204 249 236;  --teal-200: 153 240 219;
+      --teal-300: 94 226 197;   --teal-400: 45 212 191;   --teal-500: 20 184 166;
+      --teal-600: 13 148 136;   --teal-700: 15 118 110;   --teal-800: 17 94 89;
+      --teal-900: 19 78 74;     --teal-950: 4 47 46;
+      --shadow: 0 0 0;
+      --page-bg: 10 15 24;
+    }
     /* Custom operatory aesthetics */
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
@@ -65,9 +95,6 @@
       border-color: #0d9488;
       box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.4);
     }
-
-    /* Keep the active tab teal when hovered (the hover:bg-slate-100 utility made its white label unreadable). */
-    .nav-tab.active, .nav-tab.active:hover { background-color: #0d9488; color: #fff; }
 
     /* FDI dental chart: 8 teeth | midline | 8 teeth per arch, one row per arch. */
     .odonto-chart { min-width: 760px; }
@@ -162,65 +189,270 @@
     .recording-pulse {
       animation: pulse-ring 1.5s infinite;
     }
+
+    /* ================= App shell (sidebar + top bar) ================= */
+    .app-body {
+      background-color: rgb(var(--page-bg));
+      background-attachment: fixed;
+    }
+    .dark .app-body {
+      background-image:
+        radial-gradient(1100px 600px at 0% -10%, rgb(45 212 191 / 0.07), transparent 60%),
+        radial-gradient(900px 500px at 110% 0%, rgb(56 189 248 / 0.05), transparent 60%);
+    }
+    :root { --sidebar-w: 248px; }
+
+    .app-sidebar {
+      position: fixed; inset: 0 auto 0 0; z-index: 50;
+      width: var(--sidebar-w);
+      display: flex; flex-direction: column;
+      background: rgb(var(--slate-50));
+      border-right: 1px solid rgb(var(--slate-200));
+      transition: transform 0.2s ease;
+    }
+    .dark .app-sidebar {
+      background: rgb(var(--slate-950) / 0.82);
+      backdrop-filter: blur(14px);
+      border-right-color: rgb(var(--slate-800));
+    }
+    .sidebar-brand { display: flex; align-items: center; gap: 0.75rem; padding: 1.25rem 1.25rem 1rem; }
+    .brand-mark {
+      width: 2.5rem; height: 2.5rem; border-radius: 0.9rem; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; color: #fff;
+      background: linear-gradient(145deg, rgb(var(--teal-500)), rgb(var(--teal-700)));
+      box-shadow: 0 6px 16px rgb(var(--teal-600) / 0.28);
+    }
+    .brand-name { font-weight: 800; font-size: 0.95rem; letter-spacing: 0.02em; color: rgb(var(--slate-900)); line-height: 1.2; }
+    .dark .brand-name { color: #fff; }
+    .brand-badge {
+      display: inline-block; margin-top: 0.2rem; padding: 0.05rem 0.45rem; border-radius: 9999px;
+      font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: rgb(var(--teal-700)); background: rgb(var(--teal-100));
+    }
+    .dark .brand-badge { color: rgb(var(--teal-300)); background: rgb(var(--teal-400) / 0.12); }
+
+    .sidebar-nav { flex: 1; overflow-y: auto; padding: 0.25rem 0.75rem 1rem; }
+    .nav-group + .nav-group { margin-top: 1.1rem; }
+    .nav-group-label {
+      padding: 0 0.75rem 0.35rem; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: rgb(var(--slate-400));
+    }
+    .dark .nav-group-label { color: rgb(var(--slate-500)); }
+    .nav-item {
+      position: relative; width: 100%; display: flex; align-items: center; gap: 0.7rem;
+      padding: 0.55rem 0.75rem; border-radius: 0.75rem; cursor: pointer; text-align: left;
+      font-size: 0.85rem; font-weight: 500; color: rgb(var(--slate-600));
+      transition: background-color 0.15s, color 0.15s;
+    }
+    .nav-item.hidden { display: none; }
+    .nav-item + .nav-item { margin-top: 2px; }
+    .nav-icon { width: 1.1rem; height: 1.1rem; flex-shrink: 0; opacity: 0.8; }
+    .nav-item:hover { background: rgb(var(--slate-100)); color: rgb(var(--slate-900)); }
+    .nav-item.active { background: rgb(var(--teal-50)); color: rgb(var(--teal-800)); font-weight: 650; }
+    .nav-item.active .nav-icon { opacity: 1; color: rgb(var(--teal-600)); }
+    .nav-item.active::before {
+      content: ''; position: absolute; left: -0.75rem; top: 0.45rem; bottom: 0.45rem; width: 3px;
+      border-radius: 0 3px 3px 0; background: rgb(var(--teal-600));
+    }
+    .dark .nav-item { color: rgb(var(--slate-400)); }
+    .dark .nav-item:hover { background: rgb(var(--slate-800) / 0.7); color: rgb(var(--slate-100)); }
+    .dark .nav-item.active { background: rgb(var(--teal-400) / 0.1); color: rgb(var(--teal-200)); }
+    .dark .nav-item.active .nav-icon { color: rgb(var(--teal-300)); }
+    .dark .nav-item.active::before { background: rgb(var(--teal-400)); box-shadow: 0 0 12px rgb(var(--teal-400) / 0.7); }
+    .sidebar-footer { padding: 0.75rem; border-top: 1px solid rgb(var(--slate-200)); }
+    .dark .sidebar-footer { border-top-color: rgb(var(--slate-800)); }
+
+    .app-main { min-height: 100vh; display: flex; flex-direction: column; }
+    @media (min-width: 1024px) { .app-main { padding-left: var(--sidebar-w); } }
+    @media (max-width: 1023.98px) {
+      .app-sidebar { transform: translateX(-100%); box-shadow: none; }
+      body.nav-open .app-sidebar { transform: none; box-shadow: 0 20px 60px rgb(0 0 0 / 0.25); }
+    }
+    .sidebar-backdrop { display: none; }
+    @media (max-width: 1023.98px) {
+      body.nav-open .sidebar-backdrop { display: block; position: fixed; inset: 0; z-index: 45; background: rgb(15 23 42 / 0.35); backdrop-filter: blur(2px); }
+    }
+
+    .app-topbar {
+      position: sticky; top: 0; z-index: 40;
+      display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+      padding: 0.7rem 1.5rem;
+      background: rgb(var(--page-bg) / 0.82); backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgb(var(--slate-200) / 0.8);
+    }
+    .dark .app-topbar { background: rgb(var(--slate-950) / 0.7); border-bottom-color: rgb(var(--slate-800) / 0.8); }
+    .topbar-tools { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+    .topbar-divider { width: 1px; height: 1.5rem; margin: 0 0.35rem; background: rgb(var(--slate-200)); }
+    .dark .topbar-divider { background: rgb(var(--slate-800)); }
+    .icon-btn { padding: 0.5rem; border-radius: 0.65rem; color: rgb(var(--slate-600)); }
+    .icon-btn:hover { background: rgb(var(--slate-100)); }
+    .dark .icon-btn { color: rgb(var(--slate-300)); }
+    .dark .icon-btn:hover { background: rgb(var(--slate-800)); }
+
+    .patient-chip {
+      display: flex; align-items: center; gap: 0.7rem; min-width: 0; max-width: 100%;
+      padding: 0.4rem 0.75rem 0.4rem 0.45rem; border-radius: 0.9rem; cursor: pointer;
+      background: #fff; border: 1px solid rgb(var(--slate-200));
+      box-shadow: 0 1px 2px rgb(var(--shadow) / 0.05);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .patient-chip:hover { border-color: rgb(var(--teal-300)); box-shadow: 0 4px 14px rgb(var(--shadow) / 0.08); }
+    .dark .patient-chip { background: rgb(var(--slate-900) / 0.8); border-color: rgb(var(--slate-700)); }
+    .dark .patient-chip:hover { border-color: rgb(var(--teal-500) / 0.6); }
+    .patient-avatar {
+      width: 2.25rem; height: 2.25rem; border-radius: 0.7rem; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700; color: rgb(var(--teal-800)); background: rgb(var(--teal-100));
+    }
+    .dark .patient-avatar { color: rgb(var(--teal-200)); background: rgb(var(--teal-400) / 0.14); }
+    .patient-name { font-weight: 700; font-size: 0.85rem; color: rgb(var(--slate-900)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dark .patient-name { color: #fff; }
+    .patient-id { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: rgb(var(--slate-400)); }
+    .patient-meta { font-size: 11px; color: rgb(var(--slate-500)); }
+    .chip { padding: 0.05rem 0.45rem; border-radius: 9999px; font-size: 10.5px; font-weight: 650; }
+    .chip-amber { background: #fdf0d5; color: #8a5a0b; }
+    .chip-rose { background: #fbe2e2; color: #9f1f2c; }
+    .dark .chip-amber { background: rgb(245 158 11 / 0.14); color: #fcd38d; }
+    .dark .chip-rose { background: rgb(244 63 94 / 0.15); color: #fda4af; }
+
+    .app-content { flex: 1; width: 100%; max-width: 88rem; margin: 0 auto; padding: 1.5rem; }
+    @media (max-width: 640px) {
+      .patient-chip { flex: 1 1 auto; }
+      .patient-chip * { white-space: nowrap; }
+      .app-topbar > .flex-1 { display: none; }
+      .patient-id { display: none; }
+      .topbar-tools { width: 100%; justify-content: space-between; }
+    }
+    .app-content > section + section { margin-top: 0; }
+    @media (max-width: 640px) { .app-content { padding: 1rem; } .app-topbar { padding: 0.6rem 1rem; } }
+
+    /* Dark surfaces are slightly translucent so the background glow reads through ("refined"). */
+    .dark .dark\:bg-slate-900 { background-color: rgb(var(--slate-900) / 0.78); }
+
+    /* Focus ring, consistent everywhere */
+    :focus-visible { outline: 2px solid rgb(var(--teal-500)); outline-offset: 2px; }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200 min-h-screen flex flex-col">
+<body class="app-body text-slate-800 dark:text-slate-100 min-h-screen">
 
-  <!-- TOP CLINICAL HUD HEADER -->
-  <header id="clinical-header" class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 py-2.5 sm:px-6 flex flex-wrap items-center justify-between gap-3">
-      
-      <!-- Brand & Identity -->
-      <div class="flex items-center space-x-3">
-        <div id="brand-avatar" class="w-10 h-10 rounded-xl bg-teal-600 flex items-center justify-center text-white font-bold shadow-md shadow-teal-600/20">
-          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M7 3C5 3 3 5 3 8C3 12 4.5 16 7 21C7.8 22 9 22 9.5 21C10.5 19 11 17 12 17C13 17 13.5 19 14.5 21C15 22 16.2 22 17 21C19.5 16 21 12 21 8C21 5 19 3 17 3C15 3 14 4.5 12 4.5C10 4.5 9 3 7 3Z" fill="currentColor" fill-opacity="0.15"/>
-          </svg>
-        </div>
-        <div>
-          <div class="flex items-center space-x-2">
-            <h1 id="brand-title" class="font-bold text-lg tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
-              <span>M.O.L.A.R.I.S</span>
-              <span id="system-badge" class="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 uppercase" data-i18n="brand.badge">Decision support</span>
-            </h1>
-          </div>
-          <p id="brand-subtitle" class="text-xs text-slate-500 dark:text-slate-400" data-i18n="brand.subtitle">
-            Clinical decision-support assistant for the dental practice
-          </p>
-        </div>
+  <div id="sidebar-backdrop" class="sidebar-backdrop" aria-hidden="true"></div>
+
+  <!-- SIDEBAR: brand + navigation grouped by workflow -->
+  <aside id="app-sidebar" class="app-sidebar" aria-label="Navigation">
+    <div class="sidebar-brand">
+      <div id="brand-avatar" class="brand-mark"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <path d="M7 3C5 3 3 5 3 8C3 12 4.5 16 7 21C7.8 22 9 22 9.5 21C10.5 19 11 17 12 17C13 17 13.5 19 14.5 21C15 22 16.2 22 17 21C19.5 16 21 12 21 8C21 5 19 3 17 3C15 3 14 4.5 12 4.5C10 4.5 9 3 7 3Z" fill="currentColor" fill-opacity="0.15"/> </svg></div>
+      <div class="min-w-0">
+        <h1 id="brand-title" class="brand-name"><span>M.O.L.A.R.I.S</span></h1>
+        <span id="system-badge" class="brand-badge" data-i18n="brand.badge">Decision support</span>
       </div>
+    </div>
+    <p id="brand-subtitle" class="sr-only" data-i18n="brand.subtitle">Clinical decision-support assistant for the dental practice</p>
 
-      <!-- Active Patient & Operatory Status Selector -->
-      <div class="flex items-center flex-wrap gap-2 text-xs">
-        <!-- Interactive Patient Switcher Button -->
-        <button id="patient-selector-btn" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 flex items-center space-x-2 text-left cursor-pointer transition shadow-xs" data-i18n-title="header.patientSelectorTitle" title="Click to switch or manage patients">
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-          <div>
-            <div class="flex items-center space-x-1.5">
-              <span id="header-patient-name" class="font-bold text-slate-800 dark:text-slate-100 text-xs">Marcus Vance</span>
-              <span id="header-patient-id" class="font-mono text-slate-500 dark:text-slate-400 text-[10px]">PT-2026-084</span>
-            </div>
-            <div class="flex items-center space-x-1 mt-0.5">
-              <span id="header-patient-asa" class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">ASA II</span>
-              <span id="header-cardiac-badge" class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 hidden">Cardiac Risk</span>
-              <span id="header-patient-weight" class="text-slate-500 dark:text-slate-400 text-[10px]">72 kg</span>
-            </div>
-          </div>
-          <svg class="w-3.5 h-3.5 text-slate-400 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
+    <nav id="clinical-nav" class="sidebar-nav">
+      <div class="nav-group">
+        <div class="nav-group-label" data-i18n="navgroup.practice">Practice</div>
+        <button id="nav-tab-agenda" class="nav-tab nav-item hidden" type="button">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <rect x="3" y="4" width="18" height="18" rx="2"></rect> <line x1="16" y1="2" x2="16" y2="6"></line> <line x1="8" y1="2" x2="8" y2="6"></line> <line x1="3" y1="10" x2="21" y2="10"></line> </svg>
+          <span data-i18n="nav.agenda">Agenda</span>
         </button>
-
-        <button id="btn-open-patient-modal" class="px-2.5 py-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/70 border border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900 font-medium flex items-center gap-1.5 text-xs transition" data-i18n-title="header.openPatientsTitle" title="Open Patient Database">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-          </svg>
-          <span class="hidden sm:inline">Patients</span>
+        <button id="nav-tab-patients" class="nav-tab nav-item" type="button">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path> <circle cx="9" cy="7" r="4"></circle> <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path> <path d="M16 3.13a4 4 0 0 1 0 7.75"></path> </svg>
+          <span data-i18n="nav.patients">Patients</span>
         </button>
+        <button id="nav-tab-billing" class="nav-tab nav-item hidden" type="button">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <rect x="2" y="5" width="20" height="14" rx="2"></rect> <line x1="2" y1="10" x2="22" y2="10"></line> </svg>
+          <span data-i18n="nav.billing">Billing</span>
+        </button>
+        <button id="nav-tab-prescriptions" class="nav-tab nav-item hidden" type="button">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path> <polyline points="14 2 14 8 20 8"></polyline> <path d="M9 13h6M12 10v6"></path> </svg>
+          <span data-i18n="nav.prescriptions">Prescriptions</span>
+        </button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label" data-i18n="navgroup.chart">Clinical chart</div>
+        <button id="nav-tab-odontogram" class="nav-tab nav-item" type="button">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <path d="M7 3C5 3 3 5 3 8C3 12 4.5 16 7 21C7.8 22 9 22 9.5 21C10.5 19 11 17 12 17C13 17 13.5 19 14.5 21C15 22 16.2 22 17 21C19.5 16 21 12 21 8C21 5 19 3 17 3C15 3 14 4.5 12 4.5C10 4.5 9 3 7 3Z"/> </svg>
+          <span data-i18n="nav.odontogram">Odontogram</span>
+        </button>
+        <button id="nav-tab-perio" class="nav-tab nav-item" type="button">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.4 2.4 0 0 1 0-3.4l2.6-2.6a2.4 2.4 0 0 1 3.4 0Z"></path> <path d="m14.5 12.5 2-2"></path> <path d="m11.5 9.5 2-2"></path> <path d="m8.5 6.5 2-2"></path> <path d="m17.5 15.5 2-2"></path> </svg>
+          <span data-i18n="nav.perio">Periodontics</span>
+        </button>
+        <button id="nav-tab-treatment" class="nav-tab nav-item" type="button">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect> <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path> <line x1="9" y1="12" x2="15" y2="12"></line> <line x1="9" y1="16" x2="13" y2="16"></line> </svg>
+          <span data-i18n="nav.treatment">Treatment plan</span>
+        </button>
+        <button id="nav-tab-medications" class="nav-tab nav-item" type="button">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"></path> <path d="m8.5 8.5 7 7"></path> </svg>
+          <span data-i18n="nav.medications">Medications</span>
+        </button>
+        <button id="nav-tab-labcases" class="nav-tab nav-item" type="button">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path> <polyline points="3.29 7 12 12 20.71 7"></polyline> <line x1="12" y1="22" x2="12" y2="12"></line> </svg>
+          <span data-i18n="nav.labcases">Lab cases</span>
+        </button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label" data-i18n="navgroup.assistant">AI assistant</div>
+        <button id="nav-tab-advisor" class="nav-tab nav-item" type="button">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path> </svg>
+          <span data-i18n="nav.advisor">AI advisor</span>
+        </button>
+        <button id="nav-tab-vision" class="nav-tab nav-item" type="button">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect> <circle cx="9" cy="9" r="2"></circle> <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path> </svg>
+          <span data-i18n="nav.vision">X-rays</span>
+        </button>
+        <button id="nav-tab-soap" class="nav-tab nav-item" type="button">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path> <polyline points="14 2 14 8 20 8"></polyline> <line x1="16" y1="13" x2="8" y2="13"></line> <line x1="16" y1="17" x2="8" y2="17"></line> <polyline points="10 9 9 9 8 9"></polyline> </svg>
+          <span data-i18n="nav.soap">SOAP notes</span>
+        </button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label" data-i18n="navgroup.reference">Reference</div>
+        <button id="nav-tab-anesthesia" class="nav-tab nav-item" type="button">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <path d="m19 5-3-3L4 14l-2 5 5-2L19 5z"></path> <path d="m14 7 3 3"></path> </svg>
+          <span data-i18n="nav.anesthesia">Anesthesia</span>
+        </button>
+        <button id="nav-tab-protocols" class="nav-tab nav-item" type="button">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path> <path d="M6 6h10"></path> <path d="M6 10h10"></path> </svg>
+          <span data-i18n="nav.protocols">Protocols</span>
+        </button>
+      </div>
+    </nav>
 
+    <div class="sidebar-footer">
+        <button id="nav-tab-preferences" class="nav-tab nav-item" type="button">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <circle cx="12" cy="12" r="3"></circle> <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path> </svg>
+          <span data-i18n="nav.preferences">Profile &amp; preferences</span>
+        </button>
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <!-- TOP BAR: active patient, chairside timer, display settings -->
+    <header id="clinical-header" class="app-topbar">
+      <button id="sidebar-toggle" type="button" class="icon-btn lg:hidden" data-i18n-title="header.menu" title="Menu" aria-controls="app-sidebar" aria-expanded="false">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg>
+      </button>
+
+      <button id="patient-selector-btn" type="button" class="patient-chip" data-i18n-title="header.patientSelectorTitle" title="Click to switch or manage patients">
+        <span id="header-patient-initials" class="patient-avatar">—</span>
+        <span class="min-w-0 text-left">
+          <span class="flex items-center gap-2">
+            <span id="header-patient-name" class="patient-name">—</span>
+            <span id="header-patient-id" class="patient-id"></span>
+          </span>
+          <span class="flex items-center gap-1.5 mt-0.5">
+            <span id="header-patient-asa" class="chip chip-amber">ASA I</span>
+            <span id="header-cardiac-badge" class="chip chip-rose hidden">Cardiac Risk</span>
+            <span id="header-patient-weight" class="patient-meta"></span>
+          </span>
+        </span>
+        <svg class="w-4 h-4 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </button>
+
+      <div class="flex-1"></div>
+
+      <div class="topbar-tools">
         <!-- Chairside Timer Widget -->
         <div id="chairside-timer-widget" class="bg-teal-50 dark:bg-teal-950/60 px-3 py-1.5 rounded-lg border border-teal-200 dark:border-teal-800 flex items-center space-x-2">
           <svg class="w-4 h-4 text-teal-600 dark:text-teal-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -234,10 +466,8 @@
             <button id="timer-btn-stop" class="px-1.5 py-0.5 rounded text-[11px] bg-rose-100 text-rose-700 border border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800 hidden cursor-pointer">Stop</button>
           </div>
         </div>
-
-        <!-- Controls: Voice Toggle & Theme Switcher -->
-        <div class="flex items-center space-x-1 pl-2 border-l border-slate-200 dark:border-slate-800">
-          <button id="voice-synthesis-btn" class="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer" title="Toggle Advisor Voice Readout">
+        <span class="topbar-divider" aria-hidden="true"></span>
+        <button id="voice-synthesis-btn" class="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer" title="Toggle Advisor Voice Readout">
             <svg id="voice-icon-on" class="w-4 h-4 text-teal-600 dark:text-teal-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
               <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
@@ -248,8 +478,7 @@
               <line x1="17" y1="9" x2="23" y2="15"></line>
             </svg>
           </button>
-          
-          <button id="theme-toggle-btn" class="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer" title="Toggle Operatory Light/Dark Mode">
+        <button id="theme-toggle-btn" class="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer" title="Toggle Operatory Light/Dark Mode">
             <svg id="sun-icon" class="w-4 h-4 hidden dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="5"></circle>
               <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -265,8 +494,7 @@
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
             </svg>
           </button>
-
-          <!-- Language Selector: EN | FR -->
+        <!-- Language Selector: EN | FR -->
           <div id="language-switcher" class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-300 dark:border-slate-700 text-xs font-semibold ml-1">
             <button type="button" id="lang-btn-en" class="px-2 py-0.5 rounded-md bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs transition cursor-pointer" title="Switch to English">
               EN
@@ -275,157 +503,13 @@
               FR
             </button>
           </div>
-        </div>
       </div>
-    </div>
-  </header>
+    </header>
 
-  <!-- NAVIGATION TABS FOR CLINICAL MODULES -->
-  <nav id="clinical-nav" class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6">
-    <div class="max-w-7xl mx-auto flex items-center space-x-1 overflow-x-auto py-2 text-sm font-medium">
-      <button id="nav-tab-advisor" class="nav-tab active px-3.5 py-1.5 rounded-lg bg-teal-600 text-white flex items-center space-x-2 whitespace-nowrap cursor-pointer">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-        </svg>
-        <span data-i18n="nav.advisor">Senior Advisor Chat</span>
-      </button>
-
-      <button id="nav-tab-patients" class="nav-tab px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-          <circle cx="9" cy="7" r="4"></circle>
-          <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-        </svg>
-        <span data-i18n="nav.patients">Patient Records &amp; DB</span>
-      </button>
-
-      <!-- Practice-management tabs: hidden until their feature script calls
-           Molaris.showTab('<name>') (see public/js/features/<name>.js). -->
-      <button id="nav-tab-agenda" class="nav-tab hidden px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="4" width="18" height="18" rx="2"></rect>
-          <line x1="16" y1="2" x2="16" y2="6"></line>
-          <line x1="8" y1="2" x2="8" y2="6"></line>
-          <line x1="3" y1="10" x2="21" y2="10"></line>
-        </svg>
-        <span data-i18n="nav.agenda">Agenda</span>
-      </button>
-
-      <button id="nav-tab-billing" class="nav-tab hidden px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="2" y="5" width="20" height="14" rx="2"></rect>
-          <line x1="2" y1="10" x2="22" y2="10"></line>
-        </svg>
-        <span data-i18n="nav.billing">Billing</span>
-      </button>
-
-      <button id="nav-tab-prescriptions" class="nav-tab hidden px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <path d="M9 13h6M12 10v6"></path>
-        </svg>
-        <span data-i18n="nav.prescriptions">Prescriptions</span>
-      </button>
-
-      <button id="nav-tab-odontogram" class="nav-tab px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M7 3C5 3 3 5 3 8C3 12 4.5 16 7 21C7.8 22 9 22 9.5 21C10.5 19 11 17 12 17C13 17 13.5 19 14.5 21C15 22 16.2 22 17 21C19.5 16 21 12 21 8C21 5 19 3 17 3C15 3 14 4.5 12 4.5C10 4.5 9 3 7 3Z"/>
-        </svg>
-        <span data-i18n="nav.odontogram">Odontogram</span>
-      </button>
-
-      <button id="nav-tab-anesthesia" class="nav-tab px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m19 5-3-3L4 14l-2 5 5-2L19 5z"></path>
-          <path d="m14 7 3 3"></path>
-        </svg>
-        <span data-i18n="nav.anesthesia">LA Carpule &amp; Dosing Calc</span>
-      </button>
-
-      <button id="nav-tab-vision" class="nav-tab px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
-          <circle cx="9" cy="9" r="2"></circle>
-          <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
-        </svg>
-        <span data-i18n="nav.vision">X-Ray &amp; Vision Diagnostics</span>
-      </button>
-
-      <button id="nav-tab-protocols" class="nav-tab px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
-          <path d="M6 6h10"></path>
-          <path d="M6 10h10"></path>
-        </svg>
-        <span data-i18n="nav.protocols">Chairside Protocols</span>
-      </button>
-
-      <button id="nav-tab-soap" class="nav-tab px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="16" y1="13" x2="8" y2="13"></line>
-          <line x1="16" y1="17" x2="8" y2="17"></line>
-          <polyline points="10 9 9 9 8 9"></polyline>
-        </svg>
-        <span data-i18n="nav.soap">SOAP Note</span>
-      </button>
-
-      <button id="nav-tab-preferences" class="nav-tab px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="3"></circle>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-        </svg>
-        <span data-i18n="nav.preferences">Doctor Profile &amp; Memory</span>
-      </button>
-
-      <button id="nav-tab-treatment" class="nav-tab px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-          <line x1="9" y1="12" x2="15" y2="12"></line>
-          <line x1="9" y1="16" x2="13" y2="16"></line>
-        </svg>
-        <span data-i18n="nav.treatment">Treatment Plan</span>
-      </button>
-
-      <button id="nav-tab-medications" class="nav-tab px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"></path>
-          <path d="m8.5 8.5 7 7"></path>
-        </svg>
-        <span data-i18n="nav.medications">Medications</span>
-      </button>
-
-      <button id="nav-tab-perio" class="nav-tab px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.4 2.4 0 0 1 0-3.4l2.6-2.6a2.4 2.4 0 0 1 3.4 0Z"></path>
-          <path d="m14.5 12.5 2-2"></path>
-          <path d="m11.5 9.5 2-2"></path>
-          <path d="m8.5 6.5 2-2"></path>
-          <path d="m17.5 15.5 2-2"></path>
-        </svg>
-        <span data-i18n="nav.perio">Perio Chart</span>
-      </button>
-
-      <button id="nav-tab-labcases" class="nav-tab px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path>
-          <polyline points="3.29 7 12 12 20.71 7"></polyline>
-          <line x1="12" y1="22" x2="12" y2="12"></line>
-        </svg>
-        <span data-i18n="nav.labcases">Lab Cases</span>
-      </button>
-    </div>
-  </nav>
-
-  <!-- MAIN VIEWPORT CONTAINER -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+  <main class="app-content">
 
     <!-- VIEW 1: SENIOR ADVISOR CHAT -->
-    <section id="view-advisor" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <section id="view-advisor" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
       
       <!-- Chat Column (8 cols) -->
       <div class="lg:col-span-8 flex flex-col h-[740px] bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
@@ -782,7 +866,7 @@
 
           <!-- Drug Selection -->
           <div class="space-y-2">
-            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Select Local Anesthetic Agent:</label>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide" data-i18n="la.selectDrug">Select Local Anesthetic Agent:</label>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="anesthetic-drug-options">
               <!-- Rendered via JS -->
             </div>
@@ -829,7 +913,7 @@
           <div id="calc-result-box" class="p-4 rounded-xl bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 space-y-3">
             <div class="flex items-center justify-between">
               <span class="text-xs font-bold text-teal-900 dark:text-teal-200 uppercase tracking-wide" data-i18n="la.result.title">Calculated safe limit</span>
-              <span id="calc-limiting-factor" class="text-[11px] font-mono text-teal-700 dark:text-teal-400 font-medium"></span>
+              <span id="calc-limiting-factor" class="text-[11px] text-teal-700 dark:text-teal-400 font-medium"></span>
             </div>
 
             <div class="grid grid-cols-3 gap-2 text-center">
@@ -908,7 +992,7 @@
           <div>
             <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <span data-i18n="vision.title">Radiograph &amp; Intraoral Vision Analysis</span>
-              <span class="text-[10px] font-mono bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 px-2 py-0.5 rounded font-bold" data-i18n="vision.badge">Gemini Multimodal</span>
+              <span class="text-[10px] font-mono bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 px-2 py-0.5 rounded font-bold whitespace-nowrap" data-i18n="vision.badge">Gemini Multimodal</span>
             </h2>
             <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="vision.subtitle">Upload periapical x-rays, bitewings, panoramic radiographs, or intraoral camera photographs for senior second-opinion diagnostic review.</p>
           </div>
@@ -1344,7 +1428,7 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Full Patient Name *</label>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="patients.fullName">Full Patient Name *</label>
               <input type="text" id="form-patient-name" required data-i18n-placeholder="patients.namePlaceholder" placeholder="e.g. Amira Jlassi" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
             <div>
@@ -1377,11 +1461,11 @@
 
           <div class="grid grid-cols-3 gap-3">
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Age</label>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="patients.age">Age</label>
               <input type="number" id="form-patient-age" value="35" min="1" max="120" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Gender</label>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="patients.gender">Gender</label>
               <select id="form-patient-gender" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-slate-900 dark:text-white">
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -1389,14 +1473,14 @@
               </select>
             </div>
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Weight (kg) *</label>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="patients.weight">Weight (kg) *</label>
               <input type="number" id="form-patient-weight" value="70" min="10" max="250" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">ASA Physical Status *</label>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="patients.asa">ASA Physical Status *</label>
               <select id="form-patient-asa" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
                 <option value="ASA I">ASA I - Normal healthy patient</option>
                 <option value="ASA II">ASA II - Mild systemic disease</option>
@@ -1417,17 +1501,17 @@
           </div>
 
           <div>
-            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Chief Complaint *</label>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="patients.chiefComplaint">Chief Complaint *</label>
             <textarea id="form-patient-complaint" rows="2" required data-i18n-placeholder="patients.complaintPlaceholder" placeholder="e.g. Sensitivity to cold on tooth 46 when chewing" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white"></textarea>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Medical Alerts</label>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="patients.medicalAlerts">Medical Alerts</label>
               <input type="text" id="form-patient-alerts" data-i18n-placeholder="patients.alertsPlaceholder" placeholder="e.g. Hypertension, Penicillin allergy" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
             <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Known Allergies</label>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="patients.allergies">Known Allergies</label>
               <input type="text" id="form-patient-allergies" data-i18n-placeholder="patients.allergiesPlaceholder" placeholder="e.g. Penicillin, Latex, NKDA" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
           </div>
@@ -1669,6 +1753,7 @@
     </div>
 
   </main>
+  </div>
 
   <!-- Translations, shared toolkit, features, then startup (order matters). -->
   <script src="/i18n/core.js"></script>

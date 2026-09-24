@@ -113,7 +113,7 @@ async function recalculateLA() {
 
     const data = await res.json();
     const isFr = systemState.language === 'fr';
-    document.getElementById('calc-limiting-factor').textContent = `${isFr ? 'Facteur Limitant :' : 'Limiting Factor:'} ${data.limitingFactor}`;
+    document.getElementById('calc-limiting-factor').textContent = `${isFr ? 'Facteur limitant :' : 'Limiting Factor:'} ${data.limitingFactor}`;
     document.getElementById('calc-res-max-carpules').textContent = `${formatDecimal(data.safeMaxCarpules)} ${molarisT('la.carpulesUnit')}`;
     document.getElementById('calc-res-max-mg').textContent = `${data.allowedMaxMg} mg`;
     document.getElementById('calc-res-remaining').textContent = `${formatDecimal(data.remainingCarpules)}`;

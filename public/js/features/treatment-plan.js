@@ -42,7 +42,7 @@ function getTreatmentStatusLabel(status, isFr) {
   switch (status) {
     case 'proposed': return isFr ? 'Proposé' : 'Proposed';
     case 'accepted': return isFr ? 'Accepté' : 'Accepted';
-    case 'in_progress': return isFr ? 'En Cours' : 'In Progress';
+    case 'in_progress': return isFr ? 'En cours' : 'In Progress';
     case 'completed': return isFr ? 'Terminé' : 'Completed';
     case 'declined': return isFr ? 'Refusé' : 'Declined';
     default: return status;

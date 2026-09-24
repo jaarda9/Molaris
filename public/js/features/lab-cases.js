@@ -5,10 +5,10 @@ function getLabStatusLabel(status, isFr) {
   switch (status) {
     case 'planned': return isFr ? 'Planifié' : 'Planned';
     case 'sent': return isFr ? 'Envoyé' : 'Sent';
-    case 'in_lab': return isFr ? 'Au Laboratoire' : 'In Lab';
+    case 'in_lab': return isFr ? 'Au laboratoire' : 'In Lab';
     case 'returned': return isFr ? 'Retourné' : 'Returned';
     case 'seated': return isFr ? 'Posé' : 'Seated';
-    case 'remake': return isFr ? 'À Refaire' : 'Remake';
+    case 'remake': return isFr ? 'À refaire' : 'Remake';
     default: return status;
   }
 }

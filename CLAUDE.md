@@ -92,6 +92,13 @@ data/                      molaris.db, backups/, images/ — git-ignored, NEVER 
   hover:bg-teal-700 text-white rounded-xl text-xs font-semibold`, inputs `bg-slate-50
   dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs`.
   Support dark mode.
+- Colors are theme tokens: `slate` (neutrals) and `teal` (accent) read CSS variables that
+  `:root` (light, "cozy clinic": warm cream + sage teal) and `.dark` ("refined dark": deep navy +
+  glowing teal) redefine in `index.html`. Use those two scales, never raw hex, so both themes follow.
+- Navigation is the left sidebar in `index.html`, grouped by workflow (Cabinet, Dossier clinique,
+  Assistant IA, Référence). A new screen = a `.nav-item` button `nav-tab-<name>` in the right group
+  + a `<section id="view-<name>">`.
+- French UI text uses sentence case (« Plan de traitement », not « Plan de Traitement »).
 
 ## AI, privacy, clinical content
 

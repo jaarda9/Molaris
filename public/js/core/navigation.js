@@ -13,22 +13,25 @@ function initNavigation() {
     const btn = document.getElementById(t.id);
     if (!btn) return;
     btn.addEventListener('click', () => {
-      // Update buttons
+      // Sidebar items are styled by .nav-item.active (index.html).
       tabs.forEach(other => {
         const b = document.getElementById(other.id);
         const v = document.getElementById(other.view);
         if (b) {
-          b.classList.remove('bg-teal-600', 'text-white', 'active');
-          b.classList.add('text-slate-600', 'dark:text-slate-300');
+          b.classList.remove('active');
+          b.removeAttribute('aria-current');
         }
         if (v) v.classList.add('hidden');
       });
 
-      btn.classList.add('bg-teal-600', 'text-white', 'active');
-      btn.classList.remove('text-slate-600', 'dark:text-slate-300');
+      btn.classList.add('active');
+      btn.setAttribute('aria-current', 'page');
       const targetView = document.getElementById(t.view);
       if (targetView) targetView.classList.remove('hidden');
       systemState.activeTab = t.view;
+      closeMobileNav();
+      window.scrollTo({ top: 0 });
+      try { sessionStorage.setItem('molaris_view', t.id); } catch (e) { /* storage unavailable */ }
 
       if (t.view === 'view-treatment') fetchTreatmentPlan();
       if (t.view === 'view-medications') fetchMedications();
@@ -51,4 +54,25 @@ function initNavigation() {
       document.getElementById('nav-tab-preferences')?.click();
     });
   }
+
+  // Small screens: the sidebar slides in over the page.
+  const toggle = document.getElementById('sidebar-toggle');
+  toggle?.addEventListener('click', () => {
+    const open = !document.body.classList.contains('nav-open');
+    document.body.classList.toggle('nav-open', open);
+    toggle.setAttribute('aria-expanded', String(open));
+  });
+  document.getElementById('sidebar-backdrop')?.addEventListener('click', closeMobileNav);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMobileNav(); });
+
+  // Landing view: the one open before a reload, otherwise the day's agenda.
+  let startId = 'nav-tab-agenda';
+  try { startId = sessionStorage.getItem('molaris_view') || startId; } catch (e) { /* storage unavailable */ }
+  const start = document.getElementById(startId);
+  (start && !start.classList.contains('hidden') ? start : document.getElementById('nav-tab-advisor'))?.click();
+}
+
+function closeMobileNav() {
+  document.body.classList.remove('nav-open');
+  document.getElementById('sidebar-toggle')?.setAttribute('aria-expanded', 'false');
 }
