@@ -46,11 +46,11 @@ function initPreferencesForm() {
       if (data.success) {
         updateSidebarPreferences(updated);
         playClinicalBeep(880, 'sine', 0.2);
-        alert("Clinical preferences updated. M.O.L.A.R.I.S will now advise according to these practice standards.");
+        alert(molarisT('prefs.saved'));
         document.getElementById('nav-tab-advisor')?.click();
       }
     } catch (err) {
-      alert("Failed to save preferences: " + err.message);
+      alert(molarisT('common.networkError') + ' ' + err.message);
     }
   });
 }

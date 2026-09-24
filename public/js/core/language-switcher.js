@@ -48,6 +48,9 @@ function initLanguageSwitcher() {
     renderPerioGrid();
     renderPerioHistory();
     renderLabCasesList();
+    // Server-built texts (safety alerts, anesthesia drug list) are fetched in the new language.
+    fetchActivePatientSafetyAlerts();
+    if (Array.isArray(systemState.anesthetics)) renderAnestheticDrugOptions(systemState.anesthetics);
     playClinicalBeep(lang === 'fr' ? 660 : 880, 'sine', 0.1);
   };
 

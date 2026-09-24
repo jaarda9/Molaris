@@ -78,14 +78,12 @@ function renderPerioGrid() {
   const teeth = systemState.perioTeeth || [];
   if (teeth.length === 0) return;
 
-  maxGrid.innerHTML = '';
-  manGrid.innerHTML = '';
-
+  // Same FDI layout as the odontogram: 18→11 | 21→28 over 48→41 | 31→38.
   const maxillary = teeth.filter(t => isMaxillaryToothId(t.toothId)).sort((a, b) => a.toothId - b.toothId);
   const mandibular = teeth.filter(t => !isMaxillaryToothId(t.toothId)).sort((a, b) => b.toothId - a.toothId);
 
-  maxillary.forEach(t => maxGrid.appendChild(createPerioToothCard(t)));
-  mandibular.forEach(t => manGrid.appendChild(createPerioToothCard(t)));
+  fillArchRow(maxGrid, maxillary, createPerioToothCard);
+  fillArchRow(manGrid, mandibular, createPerioToothCard);
 }
 
 function createPerioToothCard(entry) {
@@ -101,11 +99,11 @@ function createPerioToothCard(entry) {
   const card = document.createElement('div');
   card.className = `cursor-pointer p-2 rounded-xl border text-center flex flex-col items-center justify-between gap-1 min-h-[72px] ${severityClass}`;
   card.innerHTML = `
-    <span class="text-[10px] font-mono font-bold">#${entry.toothId}</span>
-    <span class="text-sm font-bold">${maxDepth}mm</span>
+    <span class="text-[10px] font-mono font-bold">${escapeHtml(String(fdiForToothId(entry.toothId)))}</span>
+    <span class="text-sm font-bold">${maxDepth} mm</span>
     <span class="flex items-center gap-1 h-3">
-      ${anyBleeding ? '<span class="w-2 h-2 rounded-full bg-rose-500" title="Bleeding on probing"></span>' : ''}
-      ${anySuppuration ? '<span class="w-2 h-2 rounded-full bg-amber-500" title="Suppuration"></span>' : ''}
+      ${anyBleeding ? `<span class="w-2 h-2 rounded-full bg-rose-500" title="${escapeHtml(molarisT('perio.bleedingTitle'))}"></span>` : ''}
+      ${anySuppuration ? `<span class="w-2 h-2 rounded-full bg-amber-500" title="${escapeHtml(molarisT('perio.suppurationTitle'))}"></span>` : ''}
       ${entry.mobility > 0 ? `<span class="text-[9px] font-mono">M${entry.mobility}</span>` : ''}
     </span>
   `;
@@ -120,7 +118,7 @@ function openPerioToothModal(entry) {
   const isFr = systemState.language === 'fr';
 
   document.getElementById('form-perio-tooth-id').value = entry.toothId;
-  title.textContent = isFr ? `Saisie Parodontale — Dent #${entry.toothId}` : `Perio Entry — Tooth #${entry.toothId}`;
+  title.textContent = isFr ? `Saisie parodontale — dent ${fdiForToothId(entry.toothId)}` : `Perio entry — tooth ${fdiForToothId(entry.toothId)}`;
   document.getElementById('form-perio-mobility').value = String(entry.mobility);
   document.getElementById('form-perio-furcation').value = (entry.furcation === null || entry.furcation === undefined) ? 'null' : String(entry.furcation);
 
@@ -204,10 +202,10 @@ function initPerioChartManager() {
           await fetchPerioLatest();
           await fetchPerioHistory();
         } else {
-          alert('Error saving perio snapshot: ' + (data.error || 'Unknown error'));
+          alert(molarisT('perio.errSave') + ' ' + (data.error || ''));
         }
       } catch (err) {
-        alert('Network error saving perio snapshot: ' + err.message);
+        alert(molarisT('common.networkError') + ' ' + err.message);
       }
     });
   }

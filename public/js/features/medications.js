@@ -64,7 +64,7 @@ function renderMedicationsList() {
           await fetchMedications();
         }
       } catch (err) {
-        alert('Failed to update medication: ' + err.message);
+        alert(molarisT('common.networkError') + ' ' + err.message);
       }
     });
 
@@ -75,7 +75,7 @@ function renderMedicationsList() {
         await fetch(`/api/medications/${med.id}`, { method: 'DELETE' });
         await fetchMedications();
       } catch (err) {
-        alert('Failed to delete medication: ' + err.message);
+        alert(molarisT('common.networkError') + ' ' + err.message);
       }
     });
 
@@ -127,10 +127,10 @@ function initMedicationManager() {
           playClinicalBeep(300, 'sawtooth', 0.25);
         }
       } else {
-        alert('Error: ' + (data.error || 'Unknown error'));
+        alert(molarisT('common.saveError') + ' ' + (data.error || ''));
       }
     } catch (err) {
-      alert('Network error saving medication: ' + err.message);
+      alert(molarisT('common.networkError') + ' ' + err.message);
     }
   });
 }

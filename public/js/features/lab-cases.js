@@ -57,7 +57,7 @@ function renderLabCasesList() {
     row.innerHTML = `
       <div class="flex-1 min-w-[220px] space-y-1">
         <div class="flex items-center gap-2 flex-wrap">
-          ${lc.toothId ? `<span class="font-mono font-bold text-xs bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-1.5 py-0.5 rounded">#${lc.toothId}</span>` : ''}
+          ${lc.toothId ? `<span class="font-mono font-bold text-xs bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-1.5 py-0.5 rounded">${escapeHtml(String(fdiForToothId(lc.toothId)))}</span>` : ''}
           <span class="font-semibold text-sm text-slate-900 dark:text-white">${escapeHtml(lc.caseType)}</span>
           ${lc.material ? `<span class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(lc.material)}${lc.shade ? ' • ' + escapeHtml(lc.shade) : ''}</span>` : ''}
           <span class="px-2 py-0.5 rounded border text-[10px] font-semibold labstatus-${lc.status}">${getLabStatusLabel(lc.status, isFr)}</span>
@@ -103,7 +103,7 @@ function renderLabCasesList() {
             await fetchLabCases();
           }
         } catch (err) {
-          alert('Failed to update lab case status: ' + err.message);
+          alert(molarisT('common.networkError') + ' ' + err.message);
         }
       });
     }
@@ -115,7 +115,7 @@ function renderLabCasesList() {
         await fetch(`/api/lab-cases/${lc.id}`, { method: 'DELETE' });
         await fetchLabCases();
       } catch (err) {
-        alert('Failed to delete lab case: ' + err.message);
+        alert(molarisT('common.networkError') + ' ' + err.message);
       }
     });
 
@@ -134,7 +134,7 @@ function initLabCaseManager() {
   if (addBtn) {
     addBtn.addEventListener('click', () => {
       form.reset();
-      populateToothSelect(document.getElementById('form-labcase-tooth'));
+      fillFdiToothSelect(document.getElementById('form-labcase-tooth'));
       modal.classList.remove('hidden');
     });
   }
@@ -167,10 +167,10 @@ function initLabCaseManager() {
         playClinicalBeep(880, 'sine', 0.15);
         await fetchLabCases();
       } else {
-        alert('Error: ' + (data.error || 'Unknown error'));
+        alert(molarisT('common.saveError') + ' ' + (data.error || ''));
       }
     } catch (err) {
-      alert('Network error saving lab case: ' + err.message);
+      alert(molarisT('common.networkError') + ' ' + err.message);
     }
   });
 }

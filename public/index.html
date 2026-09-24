@@ -66,6 +66,21 @@
       box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.4);
     }
 
+    /* Keep the active tab teal when hovered (the hover:bg-slate-100 utility made its white label unreadable). */
+    .nav-tab.active, .nav-tab.active:hover { background-color: #0d9488; color: #fff; }
+
+    /* FDI dental chart: 8 teeth | midline | 8 teeth per arch, one row per arch. */
+    .odonto-chart { min-width: 760px; }
+    .arch-row {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr)) 2px repeat(8, minmax(0, 1fr));
+      column-gap: 0.375rem;
+    }
+    .arch-midline { background-color: #64748b; align-self: stretch; margin: -0.25rem 0; }
+    .arch-occlusal { height: 2px; background-color: #64748b; margin: 0.25rem 0; }
+    .dark .arch-midline, .dark .arch-occlusal { background-color: #94a3b8; }
+    .arch-upper .tooth-svg { transform: scaleY(-1); }
+
     /* Status indicators */
     .status-sound { background-color: #f8fafc; border-color: #cbd5e1; color: #334155; }
     .status-caries { background-color: #fef2f2; border-color: #f87171; color: #b91c1c; }
@@ -173,7 +188,7 @@
       <!-- Active Patient & Operatory Status Selector -->
       <div class="flex items-center flex-wrap gap-2 text-xs">
         <!-- Interactive Patient Switcher Button -->
-        <button id="patient-selector-btn" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 flex items-center space-x-2 text-left cursor-pointer transition shadow-xs" title="Click to switch or manage patients">
+        <button id="patient-selector-btn" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 flex items-center space-x-2 text-left cursor-pointer transition shadow-xs" data-i18n-title="header.patientSelectorTitle" title="Click to switch or manage patients">
           <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
           <div>
             <div class="flex items-center space-x-1.5">
@@ -191,7 +206,7 @@
           </svg>
         </button>
 
-        <button id="btn-open-patient-modal" class="px-2.5 py-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/70 border border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900 font-medium flex items-center gap-1.5 text-xs transition" title="Open Patient Database">
+        <button id="btn-open-patient-modal" class="px-2.5 py-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/70 border border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900 font-medium flex items-center gap-1.5 text-xs transition" data-i18n-title="header.openPatientsTitle" title="Open Patient Database">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
             <circle cx="9" cy="7" r="4"></circle>
@@ -605,13 +620,7 @@
           </div>
 
           <div class="flex items-center space-x-3">
-            <!-- Numbering system toggle -->
-            <div class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700 text-xs">
-              <button id="btn-numbering-universal" class="px-2.5 py-1 rounded-md font-medium text-slate-600 dark:text-slate-400">Universal (#1-32)</button>
-              <button id="btn-numbering-fdi" class="px-2.5 py-1 rounded-md font-semibold bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-sm">FDI (11-48)</button>
-            </div>
-
-            <button id="reset-odontogram-btn" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs text-slate-600 dark:text-slate-300">
+            <button id="reset-odontogram-btn" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs text-slate-600 dark:text-slate-300" data-i18n="odonto.resetBtn">
               Reset Chart
             </button>
           </div>
@@ -619,41 +628,41 @@
 
         <!-- Odontogram Legend -->
         <div class="flex flex-wrap items-center gap-2 text-xs">
-          <span class="text-slate-400 font-medium">Status Legend:</span>
-          <span class="px-2 py-0.5 rounded status-sound border text-[11px] font-medium">Sound</span>
-          <span class="px-2 py-0.5 rounded status-caries border text-[11px] font-medium">Caries</span>
-          <span class="px-2 py-0.5 rounded status-restoration border text-[11px] font-medium">Composite/Amalgam</span>
-          <span class="px-2 py-0.5 rounded status-crown border text-[11px] font-medium">Crown/Bridge</span>
-          <span class="px-2 py-0.5 rounded status-rct border text-[11px] font-medium">Endo (RCT)</span>
-          <span class="px-2 py-0.5 rounded status-implant border text-[11px] font-medium">Implant</span>
-          <span class="px-2 py-0.5 rounded status-missing border text-[11px] font-medium">Missing/Extract</span>
+          <span class="text-slate-400 font-medium" data-i18n="odonto.legendTitle">Status Legend:</span>
+          <span class="px-2 py-0.5 rounded status-sound border text-[11px] font-medium" data-i18n="odonto.legendSound">Sound</span>
+          <span class="px-2 py-0.5 rounded status-caries border text-[11px] font-medium" data-i18n="odonto.legendCaries">Caries</span>
+          <span class="px-2 py-0.5 rounded status-restoration border text-[11px] font-medium" data-i18n="odonto.legendFilled">Composite/Amalgam</span>
+          <span class="px-2 py-0.5 rounded status-crown border text-[11px] font-medium" data-i18n="odonto.legendCrown">Crown/Bridge</span>
+          <span class="px-2 py-0.5 rounded status-rct border text-[11px] font-medium" data-i18n="odonto.legendRct">Endo (RCT)</span>
+          <span class="px-2 py-0.5 rounded status-implant border text-[11px] font-medium" data-i18n="odonto.legendImplant">Implant</span>
+          <span class="px-2 py-0.5 rounded status-missing border text-[11px] font-medium" data-i18n="odonto.legendMissing">Missing/Extract</span>
         </div>
 
-        <!-- Odontogram Grid: Maxillary Arch (1-16) -->
-        <div class="space-y-2">
-          <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
-            <span>Upper Arch &bull; Maxillary (Right &rarr; Left)</span>
-            <span class="text-[11px] font-normal text-slate-400">Quadrant 1 (1-8) &bull; Quadrant 2 (9-16)</span>
-          </div>
-          <div id="maxillary-teeth-grid" class="grid grid-cols-8 sm:grid-cols-16 gap-1.5">
-            <!-- Rendered by JS -->
-          </div>
-        </div>
-
-        <!-- Odontogram Divider Line with midline mark -->
-        <div class="relative py-2">
-          <div class="border-t border-dashed border-slate-300 dark:border-slate-700"></div>
-          <span class="absolute left-1/2 -top-1 -translate-x-1/2 bg-white dark:bg-slate-900 px-2 text-[10px] text-slate-400 uppercase font-mono">Occlusal Plane</span>
-        </div>
-
-        <!-- Odontogram Grid: Mandibular Arch (32-17) -->
-        <div class="space-y-2">
-          <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
-            <span>Lower Arch &bull; Mandibular (Right &rarr; Left)</span>
-            <span class="text-[11px] font-normal text-slate-400">Quadrant 4 (32-25) &bull; Quadrant 3 (24-17)</span>
-          </div>
-          <div id="mandibular-teeth-grid" class="grid grid-cols-8 sm:grid-cols-16 gap-1.5">
-            <!-- Rendered by JS -->
+        <!-- FDI dental chart as used in Tunisia: patient's right on the left of the screen.
+             Upper: 18→11 | 21→28, lower: 48→41 | 31→38, numbers along the occlusal plane. -->
+        <div class="overflow-x-auto">
+          <div class="odonto-chart space-y-1">
+            <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <span data-i18n="odonto.quadrant1">Quadrant 1 · upper right</span>
+              <span data-i18n="odonto.maxillaryArchShort">Maxillary</span>
+              <span data-i18n="odonto.quadrant2">Quadrant 2 · upper left</span>
+            </div>
+            <div id="maxillary-teeth-grid" class="arch-row arch-upper">
+              <!-- Rendered by JS -->
+            </div>
+            <div class="arch-occlusal" aria-hidden="true"></div>
+            <div id="mandibular-teeth-grid" class="arch-row arch-lower">
+              <!-- Rendered by JS -->
+            </div>
+            <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <span data-i18n="odonto.quadrant4">Quadrant 4 · lower right</span>
+              <span data-i18n="odonto.mandibularArchShort">Mandible</span>
+              <span data-i18n="odonto.quadrant3">Quadrant 3 · lower left</span>
+            </div>
+            <div class="flex justify-between text-[10px] text-slate-400 pt-1">
+              <span data-i18n="odonto.patientRight">← Patient's right</span>
+              <span data-i18n="odonto.patientLeft">Patient's left →</span>
+            </div>
           </div>
         </div>
 
@@ -675,13 +684,13 @@
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
               </svg>
-              <span>Ask Senior Advisor About This Tooth</span>
+              <span data-i18n="odonto.consultBtn">Ask Senior Advisor About This Tooth</span>
             </button>
           </div>
 
           <!-- Tooth Status Selector Buttons -->
           <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-slate-600 dark:text-slate-300">Tooth Condition:</label>
+            <label class="text-xs font-semibold text-slate-600 dark:text-slate-300" data-i18n="odonto.statusLabel">Tooth Condition:</label>
             <div class="flex flex-wrap gap-1.5">
               <button class="status-choice-btn px-2.5 py-1 rounded-lg text-xs font-medium border" data-status="sound">Sound</button>
               <button class="status-choice-btn px-2.5 py-1 rounded-lg text-xs font-medium border" data-status="caries">Active Caries</button>
@@ -722,8 +731,8 @@
 
           <!-- Notes for this tooth -->
           <div class="flex gap-2">
-            <input type="text" id="detail-tooth-notes" placeholder="Clinical notes (e.g. 'DO composite planned, cold lingered 15s, distolingual fracture')..." class="flex-1 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
-            <button id="save-tooth-note-btn" class="px-3 py-2 bg-slate-800 dark:bg-slate-700 text-white rounded-lg text-xs font-medium hover:bg-slate-700">Save Note</button>
+            <input type="text" id="detail-tooth-notes" data-i18n-placeholder="odonto.notesPlaceholder" placeholder="Clinical notes (e.g. 'DO composite planned, cold lingered 15s, distolingual fracture')..." class="flex-1 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
+            <button id="save-tooth-note-btn" class="px-3 py-2 bg-slate-800 dark:bg-slate-700 text-white rounded-lg text-xs font-medium hover:bg-slate-700" data-i18n="odonto.saveBtn">Save Note</button>
           </div>
         </div>
 
@@ -796,7 +805,7 @@
           <div id="calc-result-box" class="p-4 rounded-xl bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 space-y-3">
             <div class="flex items-center justify-between">
               <span class="text-xs font-bold text-teal-900 dark:text-teal-200 uppercase tracking-wide" data-i18n="la.result.title">Calculated safe limit</span>
-              <span id="calc-limiting-factor" class="text-[11px] font-mono text-teal-700 dark:text-teal-400 font-medium">Factor: Mg/Kg Body Weight</span>
+              <span id="calc-limiting-factor" class="text-[11px] font-mono text-teal-700 dark:text-teal-400 font-medium"></span>
             </div>
 
             <div class="grid grid-cols-3 gap-2 text-center">
@@ -817,7 +826,7 @@
             <!-- Dynamic Warning Alert -->
             <div id="calc-warning-banner" class="hidden p-3 rounded-lg bg-amber-50 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 font-medium flex items-start gap-2">
               <span class="text-base">⚠️</span>
-              <span id="calc-warning-text">Epinephrine restricted to 0.04mg for cardiac safety.</span>
+              <span id="calc-warning-text"></span>
             </div>
           </div>
 
@@ -1108,7 +1117,7 @@
           <div>
             <div class="flex items-center space-x-2">
               <h2 class="text-lg font-bold text-slate-900 dark:text-white" data-i18n="patients.title">Patient Records &amp; Operatory Database</h2>
-              <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 border border-teal-200 dark:border-teal-800">Local File: data/patients-db.json</span>
+              <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 border border-teal-200 dark:border-teal-800" data-i18n="patients.localDbBadge">Local database (this PC)</span>
             </div>
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Select a patient to bind the 32-tooth odontogram, local anesthesia calculator, and clinical notes to their chart.</p>
           </div>
@@ -1128,7 +1137,7 @@
                 <polyline points="7 10 12 15 17 10"></polyline>
                 <line x1="12" y1="15" x2="12" y2="3"></line>
               </svg>
-              <span>Export DB</span>
+              <span data-i18n="patients.exportDb">Export DB</span>
             </a>
 
             <label class="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700 flex items-center space-x-1.5 cursor-pointer transition">
@@ -1137,7 +1146,7 @@
                 <polyline points="17 8 12 3 7 8"></polyline>
                 <line x1="12" y1="3" x2="12" y2="15"></line>
               </svg>
-              <span>Import DB</span>
+              <span data-i18n="patients.importDb">Import DB</span>
               <input type="file" id="input-import-db" accept=".json" class="hidden">
             </label>
           </div>
@@ -1223,7 +1232,7 @@
             <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="perio.subtitle">Click a tooth to record 6-site probing depths, recession, bleeding, mobility &amp; furcation. Save creates a new dated snapshot.</p>
           </div>
           <div class="flex items-center gap-2">
-            <input type="text" id="perio-notes-input" placeholder="Snapshot notes (optional)..." class="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 w-48">
+            <input type="text" id="perio-notes-input" data-i18n-placeholder="perio.notesPlaceholder" placeholder="Snapshot notes (optional)..." class="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 w-48">
             <button id="btn-save-perio-snapshot" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer whitespace-nowrap">
               <span data-i18n="perio.saveSnapshot">Save Snapshot</span>
             </button>
@@ -1234,27 +1243,24 @@
           ✓ <span data-i18n="perio.saved">Snapshot saved to periodontal chart history.</span>
         </div>
 
-        <!-- Perio Grid: Maxillary Arch -->
-        <div class="space-y-2">
-          <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
-            <span data-i18n="odonto.maxillaryArch">Upper Arch • Maxillary (Right → Left)</span>
-          </div>
-          <div id="perio-maxillary-grid" class="grid grid-cols-4 sm:grid-cols-8 gap-2">
-            <!-- Rendered by JS -->
-          </div>
-        </div>
-
-        <div class="relative py-2">
-          <div class="border-t border-dashed border-slate-300 dark:border-slate-700"></div>
-        </div>
-
-        <!-- Perio Grid: Mandibular Arch -->
-        <div class="space-y-2">
-          <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
-            <span data-i18n="odonto.mandibularArch">Lower Arch • Mandibular (Right → Left)</span>
-          </div>
-          <div id="perio-mandibular-grid" class="grid grid-cols-4 sm:grid-cols-8 gap-2">
-            <!-- Rendered by JS -->
+        <!-- Perio chart in the same FDI layout as the odontogram (18→11 | 21→28 over 48→41 | 31→38). -->
+        <div class="overflow-x-auto">
+          <div class="odonto-chart space-y-1">
+            <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <span data-i18n="odonto.quadrant1">Quadrant 1 · upper right</span>
+              <span data-i18n="odonto.quadrant2">Quadrant 2 · upper left</span>
+            </div>
+            <div id="perio-maxillary-grid" class="arch-row">
+              <!-- Rendered by JS -->
+            </div>
+            <div class="arch-occlusal" aria-hidden="true"></div>
+            <div id="perio-mandibular-grid" class="arch-row">
+              <!-- Rendered by JS -->
+            </div>
+            <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <span data-i18n="odonto.quadrant4">Quadrant 4 · lower right</span>
+              <span data-i18n="odonto.quadrant3">Quadrant 3 · lower left</span>
+            </div>
           </div>
         </div>
 
@@ -1300,7 +1306,7 @@
     <div id="modal-patient" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
       <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-          <h3 id="modal-patient-title" class="font-bold text-base text-slate-900 dark:text-white">Add New Dental Patient</h3>
+          <h3 id="modal-patient-title" class="font-bold text-base text-slate-900 dark:text-white" data-i18n="patients.modalAddTitle">Add New Dental Patient</h3>
           <button id="btn-close-modal-patient" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1379,8 +1385,8 @@
               <label class="flex items-center space-x-2.5 cursor-pointer">
                 <input type="checkbox" id="form-patient-cardiac" class="w-4 h-4 text-rose-600 rounded border-slate-300">
                 <div>
-                  <span class="font-semibold text-slate-900 dark:text-white">Cardiac Risk Alert</span>
-                  <p class="text-[10px] text-slate-500 dark:text-slate-400">Strictly caps epinephrine at 0.04mg</p>
+                  <span class="font-semibold text-slate-900 dark:text-white" data-i18n="patients.cardiacRiskLabel">Cardiac Risk Alert</span>
+                  <p class="text-[10px] text-slate-500 dark:text-slate-400" data-i18n="patients.cardiacRiskHint">Caps adrenaline at 0.04 mg</p>
                 </div>
               </label>
             </div>
@@ -1394,11 +1400,11 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Medical Alerts</label>
-              <input type="text" id="form-patient-alerts" placeholder="e.g. Hypertension, Penicillin allergy" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+              <input type="text" id="form-patient-alerts" data-i18n-placeholder="patients.alertsPlaceholder" placeholder="e.g. Hypertension, Penicillin allergy" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
             <div>
               <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Known Allergies</label>
-              <input type="text" id="form-patient-allergies" placeholder="e.g. Penicillin, Latex, NKDA" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+              <input type="text" id="form-patient-allergies" data-i18n-placeholder="patients.allergiesPlaceholder" placeholder="e.g. Penicillin, Latex, NKDA" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
           </div>
 
@@ -1491,7 +1497,7 @@
         <form id="medication-form" class="space-y-3.5 text-xs">
           <div>
             <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="meds.name">Medication Name *</label>
-            <input type="text" id="form-med-name" required placeholder="e.g. Warfarin" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+            <input type="text" id="form-med-name" required data-i18n-placeholder="meds.namePlaceholder" placeholder="e.g. Warfarin" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -1500,12 +1506,12 @@
             </div>
             <div>
               <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="meds.frequency">Frequency</label>
-              <input type="text" id="form-med-frequency" placeholder="e.g. Once daily" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+              <input type="text" id="form-med-frequency" data-i18n-placeholder="meds.frequencyPlaceholder" placeholder="e.g. Once daily" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
           </div>
           <div>
             <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="meds.prescribedFor">Prescribed For</label>
-            <input type="text" id="form-med-prescribedfor" placeholder="e.g. Atrial fibrillation" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+            <input type="text" id="form-med-prescribedfor" data-i18n-placeholder="meds.prescribedForPlaceholder" placeholder="e.g. Atrial fibrillation" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
           </div>
 
           <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end space-x-2">
@@ -1539,14 +1545,14 @@
             </div>
             <div>
               <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="labcases.caseType">Case Type *</label>
-              <input type="text" id="form-labcase-type" required placeholder="e.g. Crown, Bridge, Denture" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+              <input type="text" id="form-labcase-type" required data-i18n-placeholder="labcases.typePlaceholder" placeholder="e.g. Crown, Bridge, Denture" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="labcases.material">Material</label>
-              <input type="text" id="form-labcase-material" placeholder="e.g. Zirconia" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+              <input type="text" id="form-labcase-material" data-i18n-placeholder="labcases.materialPlaceholder" placeholder="e.g. Zirconia" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
             <div>
               <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="labcases.shade">Shade</label>
@@ -1556,7 +1562,7 @@
 
           <div>
             <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="labcases.marginDesign">Margin Design</label>
-            <input type="text" id="form-labcase-margin" placeholder="e.g. Deep chamfer, feather-edge" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+            <input type="text" id="form-labcase-margin" data-i18n-placeholder="labcases.marginPlaceholder" placeholder="e.g. Deep chamfer, feather-edge" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
           </div>
 
           <div>

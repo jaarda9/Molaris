@@ -14,6 +14,11 @@ async function fetchAnestheticsAndProtocols() {
   }
 }
 
+// French decimal comma in FR (11,1 carpules), dot in EN.
+function formatDecimal(value) {
+  return systemState.language === 'fr' ? String(value).replace('.', ',') : String(value);
+}
+
 function renderAnestheticDrugOptions(drugs) {
   const container = document.getElementById('anesthetic-drug-options');
   if (!container) return;
@@ -31,11 +36,11 @@ function renderAnestheticDrugOptions(drugs) {
 
     card.innerHTML = `
       <div class="flex items-start justify-between">
-        <span class="font-bold text-slate-900 dark:text-white">${drug.name}</span>
-        <span class="font-mono text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded font-semibold">${drug.mgPerCartridge}mg</span>
+        <span class="font-bold text-slate-900 dark:text-white">${escapeHtml(drug.name)}</span>
+        <span class="font-mono text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded font-semibold">${formatDecimal(drug.mgPerCartridge)} mg</span>
       </div>
       <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-        ${drug.vasoconstrictor} &bull; Max: ${drug.maxDoseMgKg} mg/kg
+        ${escapeHtml(drug.vasoconstrictor)} &bull; ${escapeHtml(molarisT('la.maxLabel'))} ${formatDecimal(drug.maxDoseMgKg)} mg/kg
       </div>
     `;
 
@@ -109,9 +114,9 @@ async function recalculateLA() {
     const data = await res.json();
     const isFr = systemState.language === 'fr';
     document.getElementById('calc-limiting-factor').textContent = `${isFr ? 'Facteur Limitant :' : 'Limiting Factor:'} ${data.limitingFactor}`;
-    document.getElementById('calc-res-max-carpules').textContent = `${data.safeMaxCarpules} carpules`;
+    document.getElementById('calc-res-max-carpules').textContent = `${formatDecimal(data.safeMaxCarpules)} ${molarisT('la.carpulesUnit')}`;
     document.getElementById('calc-res-max-mg').textContent = `${data.allowedMaxMg} mg`;
-    document.getElementById('calc-res-remaining').textContent = `${data.remainingCarpules}`;
+    document.getElementById('calc-res-remaining').textContent = `${formatDecimal(data.remainingCarpules)}`;
 
     const warningBanner = document.getElementById('calc-warning-banner');
     const warningText = document.getElementById('calc-warning-text');

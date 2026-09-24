@@ -16,6 +16,13 @@ async function fetchPatients() {
   }
 }
 
+function genderLabel(gender, isFr) {
+  if (gender === 'Male') return isFr ? 'H' : 'M';
+  if (gender === 'Female') return 'F';
+  if (gender === 'Other') return isFr ? 'Autre' : 'Other';
+  return gender || '';
+}
+
 function renderPatientsGrid(filterText = '') {
   const grid = document.getElementById('patients-grid');
   const countBadge = document.getElementById('patient-count-badge');
@@ -98,7 +105,7 @@ function renderPatientsGrid(filterText = '') {
               <div class="flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                 <span>${escapeHtml(patient.chartId)}</span>
                 <span>&bull;</span>
-                <span>${patient.age || 35}${isFr ? ' ans' : 'y'} / ${patient.gender || 'M'}</span>
+                <span>${patient.age || 35}${isFr ? ' ans' : 'y'} / ${escapeHtml(genderLabel(patient.gender, isFr))}</span>
               </div>
             </div>
           </div>
@@ -209,7 +216,7 @@ function renderPatientsGrid(filterText = '') {
           await fetchSystemStatus();
         }
       } catch (err) {
-        alert('Failed to delete patient: ' + err.message);
+        alert(molarisT('common.networkError') + ' ' + err.message);
       }
     });
 
@@ -384,10 +391,10 @@ function initPatientManager() {
           await fetchPatients();
           await selectPatient(data.patient.id);
         } else {
-          alert('Error saving patient: ' + (data.error || 'Unknown error'));
+          alert(molarisT('common.saveError') + ' ' + (data.error || ''));
         }
       } catch (err) {
-        alert('Network error saving patient: ' + err.message);
+        alert(molarisT('common.networkError') + ' ' + err.message);
       }
     });
   }
@@ -410,15 +417,15 @@ function initPatientManager() {
           const result = await res.json();
           if (result.success) {
             playClinicalBeep(880, 'sine', 0.3);
-            alert(`Database successfully imported! Loaded ${result.count} patient records.`);
+            alert(molarisT('patients.importDone').replace('{count}', result.count));
             await fetchPatients();
             await fetchOdontogram();
             await fetchSystemStatus();
           } else {
-            alert('Import failed: ' + (result.error || 'Invalid file format'));
+            alert(molarisT('patients.importFailed') + ' ' + (result.error || ''));
           }
         } catch (err) {
-          alert('Failed to parse database file: ' + err.message);
+          alert(molarisT('patients.importFailed') + ' ' + err.message);
         }
       };
       reader.readAsText(file);

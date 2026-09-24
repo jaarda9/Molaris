@@ -17,41 +17,43 @@ function renderOdontogram() {
   if (!maxGrid || !manGrid) return;
   if (!systemState.teethData || !Array.isArray(systemState.teethData)) return;
 
-  maxGrid.innerHTML = '';
-  manGrid.innerHTML = '';
+  // FDI chart as drawn in Tunisia, patient's right on the left of the screen:
+  // upper 18→11 | 21→28 (internal ids 1..16), lower 48→41 | 31→38 (ids 32..17).
+  const upper = systemState.teethData.filter(t => t.arch === 'maxillary').sort((a, b) => a.id - b.id);
+  const lower = systemState.teethData.filter(t => t.arch === 'mandibular').sort((a, b) => b.id - a.id);
+  fillArchRow(maxGrid, upper, createToothCard);
+  fillArchRow(manGrid, lower, createToothCard);
+}
 
-  // Maxillary teeth: 1 to 16
-  const maxillaryTeeth = systemState.teethData.filter(t => t.arch === 'maxillary');
-  maxillaryTeeth.forEach(tooth => {
-    maxGrid.appendChild(createToothCard(tooth));
-  });
-
-  // Mandibular teeth: 32 down to 17 (standard dental arch view)
-  const mandibularTeeth = systemState.teethData.filter(t => t.arch === 'mandibular');
-  // Order: 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17
-  const orderedMandibular = [...mandibularTeeth].sort((a, b) => b.id - a.id);
-  orderedMandibular.forEach(tooth => {
-    manGrid.appendChild(createToothCard(tooth));
+// Lays out one arch as 8 teeth | midline | 8 teeth. Shared with the perio chart.
+function fillArchRow(grid, teeth, createCard) {
+  grid.innerHTML = '';
+  teeth.forEach((tooth, index) => {
+    if (index === 8) {
+      const midline = document.createElement('div');
+      midline.className = 'arch-midline';
+      midline.setAttribute('aria-hidden', 'true');
+      grid.appendChild(midline);
+    }
+    grid.appendChild(createCard(tooth));
   });
 }
 
 function createToothCard(tooth) {
   const card = document.createElement('div');
   const isSelected = systemState.selectedTooth && systemState.selectedTooth.id === tooth.id;
-  card.className = `tooth-card cursor-pointer p-2 rounded-xl border text-center relative flex flex-col items-center justify-between min-h-[78px] status-${tooth.status} ${isSelected ? 'selected' : ''}`;
+  card.className = `tooth-card cursor-pointer p-1.5 rounded-xl border text-center relative flex flex-col items-center justify-between gap-0.5 min-h-[78px] status-${tooth.status} ${isSelected ? 'selected' : ''}`;
   card.id = `tooth-card-${tooth.id}`;
 
-  const toothLabel = systemState.numberingSystem === 'universal' ? `#${tooth.id}` : `FDI ${tooth.fdi}`;
+  const isFr = systemState.language === 'fr';
+  const frTooth = window.MOLARIS_FRENCH_TEETH && window.MOLARIS_FRENCH_TEETH[tooth.id];
+  card.title = isFr && frTooth ? frTooth.name : tooth.name;
 
-  card.innerHTML = `
-    <span class="text-[10px] font-mono font-bold">${toothLabel}</span>
-    <div class="my-1">
-      <svg class="w-6 h-6 mx-auto opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        ${getToothSvgPath(tooth.type)}
-      </svg>
-    </div>
-    <span class="text-[9px] uppercase tracking-wider font-semibold opacity-70 truncate w-full">${getTranslatedToothStatus(tooth.status, systemState.language === 'fr')}</span>
-  `;
+  // The FDI number sits next to the occlusal plane, as on the paper chart.
+  const number = `<span class="text-sm font-mono font-bold leading-none">${escapeHtml(String(tooth.fdi))}</span>`;
+  const icon = `<svg class="tooth-svg w-6 h-6 mx-auto opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${getToothSvgPath(tooth.type)}</svg>`;
+  const status = `<span class="text-[9px] uppercase tracking-wide font-semibold opacity-70 truncate w-full">${escapeHtml(getTranslatedToothStatus(tooth.status, isFr))}</span>`;
+  card.innerHTML = tooth.arch === 'maxillary' ? status + icon + number : number + icon + status;
 
   card.addEventListener('click', () => {
     selectTooth(tooth);
@@ -90,7 +92,7 @@ function selectTooth(tooth) {
   const archText = isFr ? (tooth.arch === 'maxillary' ? 'MAXILLAIRE' : 'MANDIBULAIRE') : tooth.arch.toUpperCase();
   const typeText = isFr && frTooth ? frTooth.type.toUpperCase() : tooth.type.toUpperCase();
 
-  numberEl.textContent = systemState.numberingSystem === 'universal' ? `#${tooth.id}` : String(tooth.fdi);
+  numberEl.textContent = String(tooth.fdi);
   nameEl.textContent = toothName;
   fdiEl.textContent = isFr
     ? `Notation FDI : ${tooth.fdi} • Arcade : ${archText} • Type : ${typeText}`
@@ -240,28 +242,10 @@ if (removeToothContextBtn) {
   });
 }
 
-// Numbering toggle buttons
-const btnNumUniversal = document.getElementById('btn-numbering-universal');
-const btnNumFdi = document.getElementById('btn-numbering-fdi');
-if (btnNumUniversal && btnNumFdi) {
-  btnNumUniversal.addEventListener('click', () => {
-    systemState.numberingSystem = 'universal';
-    btnNumUniversal.className = 'px-2.5 py-1 rounded-md font-semibold bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-sm';
-    btnNumFdi.className = 'px-2.5 py-1 rounded-md font-medium text-slate-600 dark:text-slate-400';
-    renderOdontogram();
-  });
-  btnNumFdi.addEventListener('click', () => {
-    systemState.numberingSystem = 'fdi';
-    btnNumFdi.className = 'px-2.5 py-1 rounded-md font-semibold bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-sm';
-    btnNumUniversal.className = 'px-2.5 py-1 rounded-md font-medium text-slate-600 dark:text-slate-400';
-    renderOdontogram();
-  });
-}
-
 const resetOdontogramBtn = document.getElementById('reset-odontogram-btn');
 if (resetOdontogramBtn) {
   resetOdontogramBtn.addEventListener('click', async () => {
-    if (!confirm("Reset all 32 teeth to pristine sound condition?")) return;
+    if (!confirm(molarisT('odonto.resetConfirm'))) return;
     await fetch('/api/odontogram/reset', { method: 'POST' });
     await fetchOdontogram();
     systemState.selectedTooth = null;
