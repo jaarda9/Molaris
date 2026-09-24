@@ -18,6 +18,37 @@ Molaris.events = {
   }
 };
 
+// ---------------------------------------------------------------------------
+// Wrong-patient guard. Every API write carries the patient this page is showing
+// (X-Molaris-Patient). If another tab or PC switched the active patient, the server
+// refuses writes to the legacy "active patient" endpoints with 409 ACTIVE_PATIENT_CHANGED;
+// the page then reloads on the right patient instead of charting on the wrong one.
+// ---------------------------------------------------------------------------
+(function guardActivePatientWrites() {
+  const nativeFetch = window.fetch.bind(window);
+  let reloading = false;
+  window.fetch = async (input, init = {}) => {
+    const url = typeof input === 'string' ? input : input.url;
+    const method = String(init.method || (typeof input === 'string' ? 'GET' : input.method) || 'GET').toUpperCase();
+    const activeId = window.systemState && systemState.activePatient && systemState.activePatient.id;
+    if (method !== 'GET' && activeId && url.startsWith('/api/')) {
+      const headers = new Headers(init.headers || {});
+      headers.set('X-Molaris-Patient', activeId);
+      init = { ...init, headers };
+    }
+    const res = await nativeFetch(input, init);
+    if (res.status === 409 && !reloading) {
+      const data = await res.clone().json().catch(() => null);
+      if (data && data.code === 'ACTIVE_PATIENT_CHANGED') {
+        reloading = true;
+        alert(data.error);
+        location.reload();
+      }
+    }
+    return res;
+  };
+})();
+
 // Practice-management tabs ship hidden; a feature reveals its tab when ready.
 Molaris.showTab = (name) => {
   document.getElementById(`nav-tab-${name}`)?.classList.remove('hidden');

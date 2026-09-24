@@ -24,6 +24,16 @@ export function localDateTime(d: Date = new Date()): string {
   return `${localDate(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/** A real calendar date/time ('YYYY-MM-DD' or 'YYYY-MM-DDTHH:MM'): rejects 2026-02-30 or 25:99. */
+export function isRealLocalDate(value: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/.exec(value);
+  if (!m) return false;
+  const [y, mo, d, h, mi] = m.slice(1).map(v => (v === undefined ? 0 : Number(v)));
+  const date = new Date(Date.UTC(y, mo - 1, d, h, mi));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === mo - 1 && date.getUTCDate() === d
+    && date.getUTCHours() === h && date.getUTCMinutes() === mi;
+}
+
 export function addDays(isoDate: string, days: number): string {
   const [y, m, d] = isoDate.split('-').map(Number);
   return localDate(new Date(y, m - 1, d + days));
@@ -380,6 +390,7 @@ export class QuoteRepository {
     const id = newId('quote');
     const issuedAt = localDate(now);
     const validUntil = input.validUntil === undefined ? addDays(issuedAt, 30) : input.validUntil;
+    if (validUntil && !isRealLocalDate(validUntil)) throw new HttpError(400, 'validUntil: not a real date');
     if (validUntil && validUntil < issuedAt) throw new HttpError(400, 'validUntil: must not be before the issue date');
     this.db.transaction(() => {
       const number = nextDocumentNumber(this.db, 'DV', now);
@@ -400,6 +411,7 @@ export class QuoteRepository {
     if (current.status !== 'draft') throw new HttpError(409, 'Only a draft quote can be edited');
     if (input.items) validateItems(input.items);
     const validUntil = input.validUntil === undefined ? current.validUntil : input.validUntil;
+    if (validUntil && !isRealLocalDate(validUntil)) throw new HttpError(400, 'validUntil: not a real date');
     if (validUntil && validUntil < current.issuedAt) throw new HttpError(400, 'validUntil: must not be before the issue date');
     this.db.transaction(() => {
       this.db.prepare('UPDATE quotes SET valid_until = ?, notes = ?, updated_at = ? WHERE id = ?')
@@ -580,7 +592,9 @@ export class PaymentRepository {
     if (/^\d{4}-\d{2}-\d{2}$/.test(paidAt)) {
       paidAt = paidAt === localDate(now) ? localDateTime(now) : `${paidAt}T12:00`;
     }
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(paidAt)) throw new HttpError(400, 'paidAt: expected YYYY-MM-DD or YYYY-MM-DDTHH:MM');
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(paidAt) || !isRealLocalDate(paidAt)) {
+      throw new HttpError(400, 'paidAt: expected a real date, YYYY-MM-DD or YYYY-MM-DDTHH:MM');
+    }
     if (paidAt.slice(0, 10) > localDate(now)) throw new HttpError(400, 'paidAt: a payment cannot be dated in the future');
 
     const id = newId('pay');

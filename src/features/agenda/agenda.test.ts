@@ -213,3 +213,29 @@ test('demo seed builds a consistent agenda: no overlaps, a waiting room and remi
   assert.ok(all.some(a => a.reminderSentAt === null && a.status !== 'cancelled'), 'some reminders still to send');
   assert.deepEqual(getAgendaSettings(db).chairs, ['Fauteuil 1', 'Fauteuil 2']);
 });
+
+test('the same patient cannot be booked twice at the same time, even on another chair', () => {
+  const { repo } = setup();
+  repo.create({ patientId: 'pt_1', startAt: '2026-10-05T10:00', durationMinutes: 30, chair: 'Fauteuil 1' });
+  assertHttpError(
+    () => repo.create({ patientId: 'pt_1', startAt: '2026-10-05T10:15', durationMinutes: 30, chair: 'Fauteuil 2' }),
+    409, /déjà un rendez-vous/
+  );
+  // Back to back is fine, and so is another patient at the same time on another chair.
+  repo.create({ patientId: 'pt_1', startAt: '2026-10-05T10:30', durationMinutes: 30, chair: 'Fauteuil 2' });
+  repo.create({ patientId: 'pt_2', startAt: '2026-10-05T10:00', durationMinutes: 30, chair: 'Fauteuil 2' });
+});
+
+test("a cancelled appointment does not block rebooking the same patient", () => {
+  const { repo } = setup();
+  const first = repo.create({ patientId: 'pt_1', startAt: '2026-10-05T10:00', durationMinutes: 30, chair: 'Fauteuil 1' });
+  repo.setStatus(first.id, 'cancelled');
+  repo.create({ patientId: 'pt_1', startAt: '2026-10-05T10:00', durationMinutes: 30, chair: 'Fauteuil 2' });
+});
+
+test('moving an appointment onto another booking of the same patient is refused', () => {
+  const { repo } = setup();
+  repo.create({ patientId: 'pt_3', startAt: '2026-10-05T14:00', durationMinutes: 30, chair: 'Fauteuil 1' });
+  const other = repo.create({ patientId: 'pt_3', startAt: '2026-10-05T16:00', durationMinutes: 30, chair: 'Fauteuil 2' });
+  assertHttpError(() => repo.update(other.id, { startAt: '2026-10-05T14:10' }), 409, /déjà un rendez-vous/);
+});

@@ -35,6 +35,31 @@ const MAOIS = ['phenelzine', 'nardil', 'tranylcypromine', 'parnate', 'isocarboxa
 const VASOCONSTRICTOR_TERMS = ['epinephrin', 'epi ', 'levonordefrin', 'adrenalin'];
 const PENICILLIN_CLASS = ['cillin', 'amoxil', 'augmentin', 'clamoxyl', 'hiconcil'];
 const BETA_LACTAM_ALLERGY_TERMS = [...PENICILLIN_CLASS, 'lactam'];
+const CEPHALOSPORINS = ['cefa', 'cefu', 'cefi', 'cefo', 'cefp', 'cefr', 'ceft', 'cefz', 'cepha', 'keforal', 'oroken', 'orelox', 'zinnat'];
+const ASPIRIN = ['aspirin', 'acetylsalicyl', 'aspegic', 'kardegic'];
+const PARACETAMOL = ['paracetamol', 'acetaminophen', 'doliprane', 'efferalgan', 'dafalgan', 'panadol', 'algesic'];
+/** Words of an allergy entry that describe the reaction, not the allergen. */
+const ALLERGY_STOPWORDS = new Set([
+  'allergie', 'allergies', 'allergique', 'allergy', 'allergic', 'aucune', 'aucun', 'connue', 'connues', 'known',
+  'medicamenteuse', 'medicamenteuses', 'reaction', 'reactions', 'severe', 'grave', 'urticaire', 'oedeme', 'quincke',
+  'anaphylaxie', 'anaphylaxis', 'anaphylactique', 'eruption', 'cutanee', 'prurit', 'intolerance', 'digestive',
+  'choc', 'asthme', 'aussi', 'suspectee', 'suspicion', 'enfance', 'depuis'
+]);
+
+/** True when the drug name is an NSAID (aspirin included). */
+export function isNsaid(drugName: string): boolean {
+  return containsAny(drugName, NSAIDS) || containsAny(drugName, ASPIRIN);
+}
+
+/** True when the drug name contains paracetamol (alone or in a combination). */
+export function isParacetamol(drugName: string): boolean {
+  return containsAny(drugName, PARACETAMOL);
+}
+
+/** Allergen words of a free-text allergy entry ("Ibuprofène (œdème)" -> ["ibuprofene"]). */
+function allergenTokens(allergies: string): string[] {
+  return normalize(allergies).split(/[^a-z]+/).filter(w => w.length >= 5 && !ALLERGY_STOPWORDS.has(w));
+}
 
 const PROPHYLAXIS_KEYWORDS = [
   'prosthetic heart valve', 'artificial heart valve', 'mechanical valve',
@@ -106,17 +131,53 @@ export function checkDrugInteractions(
 }
 
 /**
- * Checks a single planned drug against the patient's recorded allergies.
- * Currently covers the penicillin-class cross-reactivity case, the most
- * common real-world prescribing error in dental practice.
+ * Checks a single planned drug against the patient's recorded (free-text) allergies:
+ * - penicillin allergy vs any penicillin (critical) or a cephalosporin (cross-reactivity, warning);
+ * - NSAID-class or aspirin allergy vs any NSAID (critical);
+ * - any other allergen named in the entry that appears in the drug name (critical),
+ *   e.g. "Métronidazole" vs "Spiramycine + métronidazole".
  */
 export function checkAllergyConflict(allergies: string, drugName: string, language: 'en' | 'fr' = 'en'): SafetyAlert | null {
-  if (containsAny(drugName, PENICILLIN_CLASS) && containsAny(allergies, BETA_LACTAM_ALLERGY_TERMS)) {
+  const fr = language === 'fr';
+  const allergyText = normalize(allergies);
+  const penicillinAllergy = containsAny(allergies, BETA_LACTAM_ALLERGY_TERMS);
+
+  if (containsAny(drugName, PENICILLIN_CLASS) && penicillinAllergy) {
     return {
       severity: 'critical',
-      message: language === 'fr'
+      message: fr
         ? `Allergie documentée aux pénicillines : ${drugName} est contre-indiqué. Choisir une alternative selon le type d'allergie et les recommandations en vigueur, et vérifier sa disponibilité en Tunisie.`
         : `Documented penicillin allergy: ${drugName} is contraindicated. Choose an alternative according to the type of allergy and current guidance, and check its availability in Tunisia.`
+    };
+  }
+
+  const nsaidAllergy = /\b(ains|nsaids?|anti-?inflammatoires?)\b/.test(allergyText) || containsAny(allergies, ASPIRIN);
+  if (nsaidAllergy && isNsaid(drugName)) {
+    return {
+      severity: 'critical',
+      message: fr
+        ? `Allergie documentée à l'aspirine ou aux AINS : ${drugName} est contre-indiqué (réactivité croisée entre AINS). Préférer un antalgique non AINS.`
+        : `Documented aspirin/NSAID allergy: ${drugName} is contraindicated (cross-reactivity between NSAIDs). Prefer a non-NSAID analgesic.`
+    };
+  }
+
+  const drugText = normalize(drugName);
+  const allergen = allergenTokens(allergies).find(token => drugText.includes(token));
+  if (allergen) {
+    return {
+      severity: 'critical',
+      message: fr
+        ? `Allergie documentée (« ${allergies.trim()} ») : ${drugName} est contre-indiqué.`
+        : `Documented allergy ("${allergies.trim()}"): ${drugName} is contraindicated.`
+    };
+  }
+
+  if (penicillinAllergy && containsAny(drugName, CEPHALOSPORINS)) {
+    return {
+      severity: 'warning',
+      message: fr
+        ? `Allergie aux pénicillines : réactivité croisée possible avec ${drugName} (céphalosporine). À éviter en cas d'allergie immédiate grave ; préciser le type de réaction.`
+        : `Penicillin allergy: possible cross-reactivity with ${drugName} (cephalosporin). Avoid after a severe immediate reaction; check the type of reaction.`
     };
   }
   return null;

@@ -3,6 +3,8 @@ import session from 'express-session';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { AUTH_ENABLED, requireAuth, checkPassword } from './middleware/auth.js';
+import { guardActivePatient } from './middleware/active-patient.js';
+import { patientDb } from './repositories/patients.js';
 import { errorMiddleware } from './routes/http.js';
 import { patientsRouter } from './routes/patients.js';
 import { settingsRouter } from './routes/settings.js';
@@ -61,6 +63,9 @@ export function createApp(): express.Express {
 
   const publicDir = path.join(process.cwd(), 'public');
   app.use(express.static(publicDir));
+
+  // Refuse legacy writes aimed at a patient who is no longer the active one (other tab/PC).
+  app.use(guardActivePatient(() => patientDb.getActivePatient().id));
 
   app.use(patientsRouter);
   app.use(settingsRouter);

@@ -60,8 +60,10 @@
   const amountInput = (m) => Molaris.format.tnd(m || 0).replace(/\s?DT$/, '').replace(/\s/g, '');
 
   /** Treatment plans use Universal numbering (1-32); quotes use FDI. */
+  // Plan teeth are Universal 1-32 (permanent) or already FDI 51-85 (primary teeth).
   function universalToFdi(n) {
     n = Number(n);
+    if (Number.isInteger(n) && n >= 51 && n <= 85 && n % 10 >= 1 && n % 10 <= 5) return n;
     if (!Number.isInteger(n) || n < 1 || n > 32) return null;
     if (n <= 8) return 19 - n;        // 1..8   → 18..11
     if (n <= 16) return n + 12;       // 9..16  → 21..28
@@ -382,6 +384,8 @@
   }
 
   async function quoteFromPlan() {
+    // /api/treatment-plan is the active chart's plan: never import it into another patient's quote.
+    if (!isActivePatient()) { refresh(); return; }
     const [{ items }, { procedures }] = await Promise.all([
       Molaris.api.get('/api/treatment-plan'),
       Molaris.api.get('/api/procedures')

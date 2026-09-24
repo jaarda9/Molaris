@@ -320,6 +320,24 @@ export class AppointmentRepository {
     if (row.end_at <= row.start_at) throw new HttpError(400, 'La durée doit être positive.');
 
     if (NON_BLOCKING.includes(row.status)) return;
+
+    // One patient cannot sit in two chairs at once.
+    if (row.patient_id) {
+      const own = this.db.prepare(`
+        ${SELECT}
+        WHERE a.patient_id = @patientId AND a.start_at < @endAt AND a.end_at > @startAt
+          AND a.status NOT IN (${NON_BLOCKING.map(s => `'${s}'`).join(', ')})
+          AND a.id != @id
+        ORDER BY a.start_at LIMIT 1
+      `).get({ patientId: row.patient_id, startAt: row.start_at, endAt: row.end_at, id: row.id }) as AppointmentRow | undefined;
+      if (own) {
+        const where = own.chair ? ` (${own.chair})` : '';
+        throw new HttpError(409,
+          `Ce patient a déjà un rendez-vous de ${hhmm(own.start_at)} à ${hhmm(own.end_at)}${where}. ` +
+          'Déplacez ce rendez-vous ou choisissez un autre horaire.');
+      }
+    }
+
     const conflict = this.findConflict(row.start_at, row.end_at, row.chair, row.id);
     if (conflict) {
       const where = row.chair ? `sur « ${row.chair} »` : 'sur ce fauteuil';

@@ -1,17 +1,23 @@
-import { checkAllergyConflict, checkDrugInteractions, type AlertSeverity } from '../../domain/clinical-safety.js';
+import { checkAllergyConflict, checkDrugInteractions, isNsaid, isParacetamol, type AlertSeverity } from '../../domain/clinical-safety.js';
 import type { PatientRecord } from '../../repositories/patients.js';
 
 /** A clinical-safety alert raised while writing a prescription. */
 export interface PrescriptionSafetyAlert {
   severity: AlertSeverity;
   message: string;
-  /** 'patient' = a standing alert about the patient that this prescription does not cause. */
-  source: 'allergy' | 'interaction' | 'patient';
+  /**
+   * 'patient' = a standing alert about the patient that this prescription does not cause;
+   * 'duplicate' = two lines of the same class (two NSAIDs, paracetamol twice).
+   */
+  source: 'allergy' | 'interaction' | 'patient' | 'duplicate';
   /** The prescription line that triggered it (allergy alerts only). */
   drugLabel?: string;
 }
 
-export type SafetyPatient = Pick<PatientRecord, 'allergies' | 'medications'>;
+export type SafetyPatient = Pick<PatientRecord, 'allergies' | 'medications'> & Partial<Pick<PatientRecord, 'age' | 'weightKg'>>;
+
+/** Under this age the catalog's default (adult) doses must be adapted to the child's weight. */
+export const PEDIATRIC_AGE_LIMIT = 15;
 
 export interface SafetyLine {
   drugLabel: string;
@@ -54,6 +60,38 @@ export function checkPrescriptionSafety(
     } else {
       alerts.push({ ...alert, source: 'interaction' });
     }
+  }
+
+  const nsaids = planned.filter(isNsaid);
+  if (nsaids.length >= 2) {
+    alerts.push({
+      severity: 'critical',
+      source: 'duplicate',
+      message: language === 'fr'
+        ? `Deux AINS sur la même ordonnance (${nsaids.join(', ')}) : association déconseillée (toxicité digestive et rénale, sans gain antalgique). N'en garder qu'un.`
+        : `Two NSAIDs on the same prescription (${nsaids.join(', ')}): combination not recommended (GI and renal toxicity, no added analgesia). Keep only one.`
+    });
+  }
+  const paracetamol = planned.filter(isParacetamol);
+  if (paracetamol.length >= 2) {
+    alerts.push({
+      severity: 'warning',
+      source: 'duplicate',
+      message: language === 'fr'
+        ? `Paracétamol présent sur plusieurs lignes (${paracetamol.join(', ')}) : les doses s'additionnent, vérifier que le total journalier reste sous la dose maximale.`
+        : `Paracetamol on several lines (${paracetamol.join(', ')}): doses add up, check the daily total stays under the maximum dose.`
+    });
+  }
+
+  if (typeof patient.age === 'number' && patient.age < PEDIATRIC_AGE_LIMIT && planned.length > 0) {
+    const weight = patient.weightKg ? ` (${patient.weightKg} kg)` : '';
+    alerts.push({
+      severity: 'warning',
+      source: 'patient',
+      message: language === 'fr'
+        ? `Enfant de ${patient.age} ans${weight} : les posologies proposées par défaut sont des posologies adultes. Adapter chaque dose au poids et à la forme pédiatrique.`
+        : `Child aged ${patient.age}${weight}: the default doses are adult doses. Adapt each dose to the weight and use a paediatric form.`
+    });
   }
 
   const order: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 };

@@ -220,3 +220,11 @@ test('demo data seeds a consistent billing history', () => {
   assert.equal(new QuoteRepository(db).listForPatient('pt_2')[0].status, 'draft');
   assert.equal(payments.daily(localDate()).totalMillimes, 395_000);
 });
+
+test('impossible dates and times are rejected (31 February, 25:99)', () => {
+  const { quotes, payments } = setup();
+  assert.throws(() => quotes.create({ patientId: 'pt_1', validUntil: '2099-02-31', items: [] }), status(400));
+  assert.throws(() => payments.create({ patientId: 'pt_1', amountMillimes: 10_000, method: 'cash', paidAt: '2026-02-30' }), status(400));
+  assert.throws(() => payments.create({ patientId: 'pt_1', amountMillimes: 10_000, method: 'cash', paidAt: '2026-01-10T25:99' }), status(400));
+  assert.equal(payments.create({ patientId: 'pt_1', amountMillimes: 10_000, method: 'cash', paidAt: '2024-02-29T09:30' }).paidAt, '2024-02-29T09:30');
+});

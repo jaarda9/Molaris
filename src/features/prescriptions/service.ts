@@ -9,7 +9,7 @@ import {
 } from './repository.js';
 import { checkPrescriptionSafety, type PrescriptionSafetyAlert } from './safety.js';
 
-export type PrescribingPatient = Pick<PatientRecord, 'id' | 'name' | 'age' | 'allergies' | 'medications' | 'cnamId' | 'cnamQuality'>;
+export type PrescribingPatient = Pick<PatientRecord, 'id' | 'name' | 'age' | 'allergies' | 'medications' | 'cnamId' | 'cnamQuality'> & Partial<Pick<PatientRecord, 'weightKg'>>;
 
 export interface IssueRequest {
   language?: PrescriptionLanguage;
