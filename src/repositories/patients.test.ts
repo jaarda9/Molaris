@@ -165,3 +165,20 @@ test('with a birth date, the age is computed (and follows the calendar)', () => 
   const edited = repo.updatePatient(created.id, { birthDate: '2016-02-29' });
   assert.equal(edited.age, ageOn('2016-02-29'));
 });
+
+test('import only adds new charts: an older export never overwrites current records', () => {
+  const { repo } = freshRepo();
+  const old = JSON.parse(JSON.stringify(repo.getDatabaseRaw()));
+  // Work done after the export: a note on pt_1's tooth 46.
+  repo.setActivePatient('pt_1');
+  repo.updateToothForActivePatient(30, { notes: 'Travail du jour' });
+
+  old.patients.push({ id: 'pt_new', chartId: 'PT-2020-0001', name: 'Importée Test', age: 30, weightKg: 60 });
+  old.patients.push({ id: 'pt_bad', chartId: 'PT-2020-0002', name: '', weightKg: 700 });
+  const result = repo.importDatabase(old);
+
+  assert.deepEqual(result, { imported: 1, skipped: 4, invalid: 1 });
+  assert.equal(repo.getPatientById('pt_1')!.teeth.find(t => t.id === 30)!.notes, 'Travail du jour', 'current record kept');
+  assert.equal(repo.getPatientById('pt_new')!.name, 'Importée Test');
+  assert.equal(repo.getPatientById('pt_bad'), undefined);
+});

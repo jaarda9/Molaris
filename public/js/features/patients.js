@@ -437,7 +437,10 @@ function initPatientManager() {
           const result = await res.json();
           if (result.success) {
             playClinicalBeep(880, 'sine', 0.3);
-            alert(molarisT('patients.importDone').replace('{count}', result.count));
+            alert(molarisT('patients.importDone')
+              .replace('{imported}', result.imported ?? 0)
+              .replace('{skipped}', result.skipped ?? 0)
+              .replace('{invalid}', result.invalid ?? 0));
             await fetchPatients();
             await fetchOdontogram();
             await fetchSystemStatus();

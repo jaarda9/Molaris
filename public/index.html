@@ -1140,7 +1140,18 @@
             </button>
           </div>
 
-          <div id="soap-output-area" class="flex-1 overflow-y-auto py-4 text-xs font-mono text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed"><span data-i18n="soap.outputEmpty">Fill in the procedure, then generate the note. Review it before saving it to the chart.</span></div>
+          <p class="pt-3 text-[11px] text-amber-700 dark:text-amber-300" data-i18n="soap.draftNotice">AI draft: read it, correct it, then sign it. Nothing is saved to the chart before you sign.</p>
+          <textarea id="soap-output-area" data-i18n-placeholder="soap.outputEmpty" class="flex-1 mt-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-700 dark:text-slate-200 leading-relaxed resize-none" placeholder="Fill in the procedure, then generate the note."></textarea>
+          <div class="pt-3 flex items-center justify-end gap-2">
+            <span id="soap-sign-status" class="mr-auto text-[11px] text-slate-500 dark:text-slate-400"></span>
+            <button id="sign-soap-btn" type="button" disabled class="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-xs font-semibold" data-i18n="soap.signBtn">Sign and save to the chart</button>
+          </div>
+        </div>
+
+        <!-- Signed notes of the open chart (immutable; corrections as addenda) -->
+        <div class="lg:col-span-12 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-3">
+          <h3 class="font-bold text-sm text-slate-900 dark:text-white" data-i18n="soap.historyTitle">Signed notes</h3>
+          <div id="soap-history-list" class="space-y-3 text-xs"></div>
         </div>
 
       </div>
@@ -1238,7 +1249,12 @@
               <span>+ Add New Patient</span>
             </button>
 
-            <a href="/api/database/export" download="molaris-patients-database.json" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700 flex items-center space-x-1.5 transition">
+            <a href="/api/database/backup" data-i18n-title="patients.backupTitle" title="Download a complete copy of the database" class="px-3 py-2 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/50 dark:hover:bg-teal-900/60 text-teal-800 dark:text-teal-200 rounded-xl text-xs font-semibold border border-teal-200 dark:border-teal-800 flex items-center space-x-1.5 transition">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"></ellipse><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"></path><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"></path></svg>
+              <span data-i18n="patients.backupDb">Full backup</span>
+            </a>
+
+            <a href="/api/database/export" download="molaris-dossiers-patients.json" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700 flex items-center space-x-1.5 transition">
               <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>

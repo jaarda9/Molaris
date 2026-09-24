@@ -12,7 +12,9 @@ import { ASSISTANT_TOOLS, detokenize, runAssistantTools, tokenizePatients, toolI
 import { computePatientSafetyAlerts } from '../domain/patient-safety.js';
 import { dosesLoggedOn } from '../domain/anesthesia-calc.js';
 import { DATA_DIR, getDb } from '../db/connection.js';
-import { languageOf } from './http.js';
+import { HttpError, languageOf, parse, route } from './http.js';
+import { z } from 'zod';
+import { toothId as toothIdSchema } from './clinical-validation.js';
 
 export const aiRouter = Router();
 
@@ -320,6 +322,38 @@ aiRouter.get('/api/images/:id', (req: Request, res: Response) => {
 
 // --- SOAP progress notes ------------------------------------------------------------
 
+const soapSignSchema = z.object({
+  procedure: z.string().trim().min(1, 'l’acte est obligatoire').max(300),
+  toothId: z.preprocess(v => (v === '' || v === null ? undefined : v), toothIdSchema.optional()),
+  anesthesiaUsed: z.string().trim().max(300).optional(),
+  materialsUsed: z.string().trim().max(300).optional(),
+  content: z.string().trim().min(20, 'le compte-rendu est vide ou trop court').max(20_000)
+});
+
+// The dentist signs the (reviewed) note: from then on it is immutable; corrections are addenda.
+aiRouter.post('/api/soap/notes', route((req: Request, res: Response) => {
+  const input = parse(soapSignSchema, req.body);
+  const memory = loadMemory();
+  const note = patientDb.addSoapNoteForActivePatient({
+    procedure: input.procedure,
+    toothId: input.toothId as number | undefined,
+    anesthesiaUsed: input.anesthesiaUsed || '',
+    materialsUsed: input.materialsUsed,
+    content: input.content,
+    cdtCodes: [],
+    author: memory.preferences.doctorName || 'Praticien traitant'
+  });
+  res.status(201).json({ success: true, note });
+}));
+
+aiRouter.post('/api/soap/notes/:id/addenda', route((req: Request, res: Response) => {
+  const { content } = parse(z.object({ content: z.string().trim().min(3, 'addendum vide').max(5000) }), req.body);
+  const patient = patientDb.getActivePatient();
+  if (!patient.soapNotes.some(n => n.id === String(req.params.id))) throw new HttpError(404, 'Compte-rendu introuvable.');
+  const addendum = patientDb.addSoapAddendum(String(req.params.id), { content, author: loadMemory().preferences.doctorName });
+  res.status(201).json({ success: true, addendum });
+}));
+
 aiRouter.get('/api/soap/history', (req: Request, res: Response) => {
   const activePatient = patientDb.getActivePatient();
   res.json({
@@ -403,21 +437,11 @@ Do not invent any finding, measurement or value that is not given above: write "
     const isFr = language === 'fr';
     const noteText = result.text || (isFr ? 'Compte-rendu SOAP généré.' : 'Clinical SOAP note generated.');
 
-    const savedNote = patientDb.addSoapNoteForActivePatient({
-      procedure: procedure || (isFr ? 'Soin dentaire' : 'Dental treatment'),
-      toothId: tooth ? tooth.id : undefined,
-      anesthesiaUsed: anesthesiaUsed || (isFr ? 'Anesthésie locale' : 'Local anesthesia'),
-      materialsUsed,
-      content: noteText,
-      // Procedure codes come from the official CNAM nomenclature, never from the AI;
-      // the field stays for notes saved before this change.
-      cdtCodes: [],
-      author: memory.preferences.doctorName || (isFr ? 'Praticien traitant' : 'Treating dentist')
-    });
-
+    // A DRAFT only: an AI text is never signed into the medical record by itself.
+    // The dentist reviews/edits it, then signs it (POST /api/soap/notes).
     res.json({
       soapNote: noteText,
-      savedRecord: savedNote,
+      draft: true,
       modelUsed: result.modelUsed,
       patient: patientDb.getActivePatient(),
       timestamp: new Date().toISOString()

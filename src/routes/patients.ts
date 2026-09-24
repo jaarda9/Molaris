@@ -1,4 +1,8 @@
 import { Router, Request, Response } from 'express';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { getDb } from '../db/connection.js';
 import { patientDb, type PatientRecord } from '../repositories/patients.js';
 import { loadMemory } from '../repositories/preferences.js';
 import { computePatientSafetyAlerts } from '../domain/patient-safety.js';
@@ -80,6 +84,16 @@ patientsRouter.delete('/api/patients/:id', (req: Request, res: Response) => {
   }
 });
 
+// Full backup: a consistent copy of the whole database (agenda, billing, prescriptions,
+// charts, settings) — unlike the JSON export, which only holds the patient charts.
+patientsRouter.get('/api/database/backup', route(async (req: Request, res: Response) => {
+  const now = new Date();
+  const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const file = path.join(os.tmpdir(), `molaris-export-${process.pid}-${Date.now()}.db`);
+  await getDb().backup(file);
+  res.download(file, `molaris-sauvegarde-${day}.db`, () => fs.unlink(file, () => { /* temp file */ }));
+}));
+
 patientsRouter.get('/api/database/export', (req: Request, res: Response) => {
   res.setHeader('Content-Disposition', 'attachment; filename="molaris-patients.json"');
   res.setHeader('Content-Type', 'application/json');
@@ -88,8 +102,8 @@ patientsRouter.get('/api/database/export', (req: Request, res: Response) => {
 
 patientsRouter.post('/api/database/import', (req: Request, res: Response) => {
   try {
-    patientDb.importDatabase(req.body);
-    res.json({ success: true, activePatient: patientDb.getActivePatient() });
+    const result = patientDb.importDatabase(req.body);
+    res.json({ success: true, ...result, activePatient: patientDb.getActivePatient() });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }

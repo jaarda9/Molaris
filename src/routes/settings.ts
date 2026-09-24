@@ -12,18 +12,29 @@ settingsRouter.get('/api/memory', (req: Request, res: Response) => {
   res.json(loadMemory());
 });
 
-settingsRouter.post('/api/memory', (req: Request, res: Response) => {
-  try {
-    const memory = loadMemory();
-    if (req.body.preferences) {
-      memory.preferences = { ...memory.preferences, ...req.body.preferences };
-    }
-    saveMemory(memory);
-    res.json({ success: true, memory });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
+// Only these fields, of sensible length: they are sent to the AI with every question.
+const preferencesSchema = z.object({
+  preferences: z.object({
+    doctorName: z.string().trim().max(120),
+    clinicName: z.string().trim().max(200),
+    bondingSystem: z.string().trim().max(200),
+    compositeSystem: z.string().trim().max(200),
+    rotarySystem: z.string().trim().max(200),
+    implantSystem: z.string().trim().max(200),
+    numberingSystem: z.enum(['fdi', 'universal']),
+    preferredAnesthetic: z.string().trim().max(60),
+    voiceFeedbackEnabled: z.boolean(),
+    notes: z.string().trim().max(2000, '2000 caractères maximum')
+  }).partial()
 });
+
+settingsRouter.post('/api/memory', route((req: Request, res: Response) => {
+  const { preferences } = parse(preferencesSchema, req.body);
+  const memory = loadMemory();
+  memory.preferences = { ...memory.preferences, ...preferences };
+  saveMemory(memory);
+  res.json({ success: true, memory });
+}));
 
 // Clinic identity printed as the letterhead of quotes, receipts and prescriptions.
 settingsRouter.get('/api/settings/clinic', route((req, res) => {

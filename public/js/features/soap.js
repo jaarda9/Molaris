@@ -48,6 +48,13 @@ function initSOAPGenerator() {
     if (view === 'soap' && toothSelect) refreshSOAPToothSelect(toothSelect);
   });
 
+  const output = document.getElementById('soap-output-area');
+  const signBtn = document.getElementById('sign-soap-btn');
+  const signStatus = document.getElementById('soap-sign-status');
+  const syncSignButton = () => { if (signBtn) signBtn.disabled = output.value.trim().length < 20; };
+  output?.addEventListener('input', () => { syncSignButton(); if (signStatus) signStatus.textContent = ''; });
+
+  // Generate = an AI DRAFT in the editable box; nothing is saved to the chart.
   if (btn) {
     btn.addEventListener('click', async () => {
       const proc = document.getElementById('soap-input-proc')?.value;
@@ -56,8 +63,9 @@ function initSOAPGenerator() {
       const materials = document.getElementById('soap-input-materials')?.value;
       const details = document.getElementById('soap-input-outcome')?.value;
 
-      const output = document.getElementById('soap-output-area');
-      output.textContent = molarisT('soap.generating');
+      output.value = molarisT('soap.generating');
+      if (signBtn) signBtn.disabled = true;
+      if (signStatus) signStatus.textContent = '';
 
       try {
         const res = await fetch('/api/generate-soap', {
@@ -75,20 +83,43 @@ function initSOAPGenerator() {
 
         const data = await res.json();
         if (data.error) {
-          output.textContent = `${molarisT('soap.error')} ${data.error}`;
+          output.value = `${molarisT('soap.error')} ${data.error}`;
         } else {
-          output.textContent = data.soapNote;
+          output.value = data.soapNote;
           playClinicalBeep(880, 'sine', 0.15);
         }
       } catch (err) {
-        output.textContent = `${molarisT('soap.connectError')} ${err.message}`;
+        output.value = `${molarisT('soap.connectError')} ${err.message}`;
       }
+      syncSignButton();
     });
   }
 
+  // Sign = the reviewed text becomes a signed (immutable) note of the open chart.
+  signBtn?.addEventListener('click', async () => {
+    if (!confirm(molarisT('soap.signConfirm'))) return;
+    signBtn.disabled = true;
+    try {
+      await Molaris.api.post('/api/soap/notes', {
+        procedure: document.getElementById('soap-input-proc')?.value || molarisT('soap.defaultProcedure'),
+        toothId: toothSelect?.value || undefined,
+        anesthesiaUsed: document.getElementById('soap-input-anesthesia')?.value || '',
+        materialsUsed: document.getElementById('soap-input-materials')?.value || undefined,
+        content: output.value
+      });
+      output.value = '';
+      if (signStatus) signStatus.textContent = `✓ ${molarisT('soap.signed')}`;
+      playClinicalBeep(880, 'sine', 0.2);
+      loadSignedSOAPNotes();
+    } catch (err) {
+      Molaris.ui.toast(err.message, 'error');
+      syncSignButton();
+    }
+  });
+
   if (copyBtn) {
     copyBtn.addEventListener('click', () => {
-      const text = document.getElementById('soap-output-area')?.textContent;
+      const text = output?.value;
       if (text) {
         navigator.clipboard.writeText(text);
         copyBtn.textContent = molarisT('soap.copied');
@@ -96,4 +127,46 @@ function initSOAPGenerator() {
       }
     });
   }
+
+  Molaris.events.on('patient-changed', loadSignedSOAPNotes);
+  Molaris.events.on('view-shown', ({ view }) => { if (view === 'soap') loadSignedSOAPNotes(); });
+  Molaris.events.on('language-changed', loadSignedSOAPNotes);
+}
+
+// -----------------------------------------------------------------------------
+// Signed notes of the open chart: read-only, with addenda (dated corrections).
+// -----------------------------------------------------------------------------
+async function loadSignedSOAPNotes() {
+  const list = document.getElementById('soap-history-list');
+  if (!list) return;
+  let notes = [];
+  try { notes = (await Molaris.api.get('/api/soap/history')).soapNotes || []; } catch (err) { return; }
+  if (!notes.length) {
+    list.innerHTML = `<p class="text-slate-400">${escapeHtml(molarisT('soap.historyEmpty'))}</p>`;
+    return;
+  }
+  list.innerHTML = notes.map(n => `
+    <div class="rounded-xl border border-slate-200 dark:border-slate-800 p-3 space-y-2">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <span class="font-semibold text-slate-900 dark:text-white">${escapeHtml(n.procedure)}${n.toothId ? ` · ${escapeHtml(String(fdiForToothId(n.toothId)))}` : ''}</span>
+        <span class="text-[11px] text-slate-500 dark:text-slate-400">${escapeHtml(molarisT('soap.signedBy').replace('{author}', n.author || '').replace('{date}', Molaris.format.dateTime(n.timestamp)))}</span>
+      </div>
+      <pre class="whitespace-pre-wrap font-mono text-[11px] text-slate-700 dark:text-slate-300 max-h-48 overflow-y-auto">${escapeHtml(n.content)}</pre>
+      ${(n.addenda || []).map(a => `
+        <div class="border-l-2 border-amber-400 pl-2 text-[11px]">
+          <span class="font-semibold text-amber-700 dark:text-amber-300">${escapeHtml(molarisT('soap.addendumLabel'))} — ${escapeHtml(Molaris.format.dateTime(a.timestamp))}${a.author ? ` · ${escapeHtml(a.author)}` : ''}</span>
+          <div class="whitespace-pre-wrap text-slate-700 dark:text-slate-300">${escapeHtml(a.content)}</div>
+        </div>`).join('')}
+      <button type="button" data-addendum="${escapeHtml(n.id)}" class="text-[11px] font-semibold text-teal-700 dark:text-teal-300 hover:underline">${escapeHtml(molarisT('soap.addendumBtn'))}</button>
+    </div>`).join('');
+  list.querySelectorAll('[data-addendum]').forEach(button => button.addEventListener('click', async () => {
+    const content = prompt(molarisT('soap.addendumPrompt'));
+    if (!content || !content.trim()) return;
+    try {
+      await Molaris.api.post(`/api/soap/notes/${encodeURIComponent(button.dataset.addendum)}/addenda`, { content });
+      loadSignedSOAPNotes();
+    } catch (err) {
+      Molaris.ui.toast(err.message, 'error');
+    }
+  }));
 }

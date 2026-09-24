@@ -886,18 +886,52 @@ export class PatientRepository {
   }
 
   /**
-   * Upserts every patient in a JSON export. Patients missing from the file are
-   * kept, not deleted: they may own quotes, payments or prescriptions.
+   * Adds the charts of a JSON export that are not here yet. A chart already present
+   * (same id or chart number) is never overwritten: an older export would silently
+   * roll back everything recorded since. Implausible records are skipped.
    */
-  public importDatabase(raw: DentalDatabase): void {
-    if (!raw.patients || !Array.isArray(raw.patients) || raw.patients.length === 0) {
-      throw new Error('Invalid database format. Must contain a patients array.');
+  public importDatabase(raw: DentalDatabase): { imported: number; skipped: number; invalid: number } {
+    if (!raw || !Array.isArray(raw.patients) || raw.patients.length === 0) {
+      throw new Error('Fichier non valide : il doit contenir une liste de dossiers patients.');
     }
+    const result = { imported: 0, skipped: 0, invalid: 0 };
+    const chartIds = new Set([...this.patients.values()].map(p => p.chartId.toLowerCase()));
     this.db.transaction(() => {
-      for (const p of raw.patients) this.save(withClinicalDefaults(p as PatientSeed));
-      if (raw.activePatientId && this.patients.has(raw.activePatientId)) this.setActiveId(raw.activePatientId);
+      for (const p of raw.patients as Array<Partial<PatientRecord>>) {
+        if (!p || typeof p.id !== 'string' || typeof p.name !== 'string' || !p.name.trim()
+          || typeof p.chartId !== 'string' || !p.chartId.trim()) { result.invalid++; continue; }
+        if (this.patients.has(p.id) || chartIds.has(p.chartId.toLowerCase())) { result.skipped++; continue; }
+        const age = Number(p.age), weight = Number(p.weightKg);
+        if ((p.age !== undefined && !(age >= 0 && age <= 120)) || (p.weightKg !== undefined && !(weight >= 2 && weight <= 250))) {
+          result.invalid++; continue;
+        }
+        const now = nowIso();
+        const record = withClinicalDefaults({
+          ...(p as PatientSeed),
+          age: p.age !== undefined ? age : 35,
+          weightKg: p.weightKg !== undefined ? weight : 70,
+          gender: p.gender ?? 'Other',
+          asaStatus: p.asaStatus ?? 'ASA I',
+          cardiacRisk: !!p.cardiacRisk,
+          medicalAlerts: p.medicalAlerts ?? '',
+          allergies: p.allergies ?? '',
+          chiefComplaint: p.chiefComplaint ?? '',
+          deliveredCarpules: 0,
+          selectedDrugId: p.selectedDrugId ?? 'lido_100k',
+          teeth: Array.isArray(p.teeth) && p.teeth.length === 32 ? p.teeth : createPatientTeeth(),
+          anesthesiaLog: Array.isArray(p.anesthesiaLog) ? p.anesthesiaLog : [],
+          soapNotes: Array.isArray(p.soapNotes) ? p.soapNotes : [],
+          consultHistory: Array.isArray(p.consultHistory) ? p.consultHistory : [],
+          createdAt: p.createdAt ?? now,
+          updatedAt: now
+        } as PatientSeed);
+        this.save(record);
+        chartIds.add(record.chartId.toLowerCase());
+        result.imported++;
+      }
     })();
     this.ensureActivePatient();
+    return result;
   }
 }
 
