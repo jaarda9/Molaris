@@ -435,6 +435,10 @@ export class QuoteRepository {
     if (!QUOTE_TRANSITIONS[current.status].includes(status)) {
       throw new HttpError(409, `Cannot change a quote from ${current.status} to ${status}`);
     }
+    // Past its validity date the prices are no longer binding: re-issue (duplicate) instead.
+    if (status === 'accepted' && current.pastValidity) {
+      throw new HttpError(409, `Ce devis a expiré le ${frDate(current.validUntil!)} : dupliquez-le pour le réémettre à jour, puis faites accepter le nouveau.`);
+    }
     if ((status === 'sent' || status === 'accepted') && current.items.length === 0) {
       throw new HttpError(409, 'Un devis sans acte ne peut pas être envoyé ni accepté.');
     }

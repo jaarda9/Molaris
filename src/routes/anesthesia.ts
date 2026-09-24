@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { patientDb } from '../repositories/patients.js';
 import { ANESTHETICS, QUICK_PROTOCOLS } from '../domain/dental-data.js';
-import { calculateAnestheticDose } from '../domain/anesthesia-calc.js';
+import { calculateAnestheticDose, dosesLoggedOn } from '../domain/anesthesia-calc.js';
 import { checkDrugInteractions } from '../domain/clinical-safety.js';
 import { HttpError, languageOf, parse } from './http.js';
 import { anesthesiaCalcSchema, anesthesiaLogSchema } from './clinical-validation.js';
@@ -18,13 +18,20 @@ anesthesiaRouter.post('/api/calc-la', (req: Request, res: Response) => {
     const { drugId, weightKg, isCardiacRisk, carpulesGiven, language = 'en' } = parse(anesthesiaCalcSchema, req.body);
     const drug = ANESTHETICS.find(a => a.id === drugId) || ANESTHETICS[0];
 
-    res.json(calculateAnestheticDose({
-      drug,
-      weightKg: weightKg !== undefined ? Number(weightKg) : activePatient.weightKg,
-      isCardiacRisk: isCardiacRisk !== undefined ? !!isCardiacRisk : activePatient.cardiacRisk,
-      carpulesGiven: carpulesGiven !== undefined ? Number(carpulesGiven) : activePatient.deliveredCarpules,
-      language
-    }));
+    // Injections already logged today (any drug) count toward today's maximum; the UI
+    // counter only holds carpules of the selected drug injected now and not yet logged.
+    const loggedToday = dosesLoggedOn(activePatient.anesthesiaLog);
+    res.json({
+      ...calculateAnestheticDose({
+        drug,
+        weightKg: weightKg !== undefined ? Number(weightKg) : activePatient.weightKg,
+        isCardiacRisk: isCardiacRisk !== undefined ? !!isCardiacRisk : activePatient.cardiacRisk,
+        carpulesGiven: carpulesGiven !== undefined ? Number(carpulesGiven) : 0,
+        priorDoses: loggedToday,
+        language
+      }),
+      loggedToday: loggedToday.map(d => ({ drugId: d.drug.id, drugName: d.drug.name, carpules: d.carpules }))
+    });
   } catch (err: any) {
     // Validation errors (HttpError) keep their 400; anything else is a server error.
     res.status(err instanceof HttpError ? err.status : 500).json({ error: err.message });

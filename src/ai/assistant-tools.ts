@@ -445,9 +445,19 @@ function runTool(name: string, args: Record<string, unknown>, ctx: ToolContext):
         throw new ToolError(fr ? `Aucun fauteuil libre le ${frDate(date)} de ${time} à ${endAt.slice(11)}.` : `No free chair on ${frDate(date)} from ${time} to ${endAt.slice(11)}.`);
       }
       const reason = str(args.reason) || null;
-      const summary = fr
+      // Allowed (emergencies happen) but flagged: a closed day or outside opening hours.
+      const { hours } = getAgendaSettings(ctx.db);
+      const weekday = new Date(`${date}T12:00:00`).getDay();
+      const closedDay = !hours.days.includes(weekday);
+      const outsideHours = time < hours.start || endAt.slice(11) > hours.end || endAt.slice(0, 10) !== date;
+      const caution = closedDay
+        ? (fr ? `\n⚠️ Le cabinet est fermé ce jour-là.` : `\n⚠️ The clinic is closed that day.`)
+        : outsideHours
+          ? (fr ? `\n⚠️ En dehors des horaires d’ouverture (${hours.start}–${hours.end}).` : `\n⚠️ Outside opening hours (${hours.start}–${hours.end}).`)
+          : '';
+      const summary = (fr
         ? `Prendre rendez-vous pour **${patient.name}** le **${frDate(date)} à ${time}** (${duration} min${chair ? `, ${chair}` : ''}${reason ? `, ${reason}` : ''}).`
-        : `Book **${patient.name}** on **${frDate(date)} at ${time}** (${duration} min${chair ? `, ${chair}` : ''}${reason ? `, ${reason}` : ''}).`;
+        : `Book **${patient.name}** on **${frDate(date)} at ${time}** (${duration} min${chair ? `, ${chair}` : ''}${reason ? `, ${reason}` : ''}).`) + caution;
       return {
         reply: summary,
         proposal: { tool: name, patientId: patient.id, summary, request: { method: 'POST', url: '/api/appointments', body: { patientId: patient.id, startAt, durationMinutes: duration, chair, reason } } }

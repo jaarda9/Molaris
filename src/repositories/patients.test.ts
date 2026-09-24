@@ -5,6 +5,7 @@ import os from 'os';
 import path from 'path';
 import { openDatabase } from '../db/connection.js';
 import { PatientRepository } from './patients.js';
+import { ageOn } from '../domain/age.js';
 
 function freshRepo() {
   const db = openDatabase(':memory:');
@@ -35,9 +36,10 @@ test('writes persist: a new repository on the same database sees them', () => {
 
 test('updatePatient cannot change the id or creation date', () => {
   const { repo } = freshRepo();
-  const before = repo.getPatientById('pt_2')!;
-  const updated = repo.updatePatient('pt_2', { id: 'hijacked', createdAt: '1999-01-01', age: 68 } as any);
-  assert.equal(updated.id, 'pt_2');
+  // pt_3 has no birth date, so a typed age is kept (with a birth date, the age is derived).
+  const before = repo.getPatientById('pt_3')!;
+  const updated = repo.updatePatient('pt_3', { id: 'hijacked', createdAt: '1999-01-01', age: 68 } as any);
+  assert.equal(updated.id, 'pt_3');
   assert.equal(updated.createdAt, before.createdAt);
   assert.equal(updated.age, 68);
 });
@@ -134,4 +136,32 @@ test('advisor conversation: saved per patient, survives a reload, capped, cleara
   reopened.clearConsultHistory('pt_1');
   assert.equal(reopened.getConsultHistory('pt_1').length, 0);
   assert.equal(reopened.getConsultHistory('pt_2').length, 1);
+});
+
+test('a chart with clinical history cannot be deleted; an empty one (created by mistake) can', () => {
+  const { db, repo } = freshRepo();
+  // pt_1 has a signed SOAP note and an anesthesia log (demo data).
+  assert.throws(() => repo.deletePatient('pt_1'), /ne peut pas être supprimé/);
+
+  const empty = repo.createPatient({ name: 'Erreur de saisie' });
+  assert.equal(repo.deletePatient(empty.id), true);
+
+  const withVisit = repo.createPatient({ name: 'Patient vu' });
+  db.prepare(`INSERT INTO appointments (id, patient_id, start_at, end_at, status, created_at, updated_at)
+              VALUES ('apt_x', ?, '2020-01-10T10:00', '2020-01-10T10:30', 'completed', 'now', 'now')`).run(withVisit.id);
+  assert.throws(() => repo.deletePatient(withVisit.id), /ne peut pas être supprimé/);
+  assert.ok(db.prepare("SELECT 1 FROM appointments WHERE id = 'apt_x'").get(), 'the visit is still there');
+});
+
+test('with a birth date, the age is computed (and follows the calendar)', () => {
+  const { repo } = freshRepo();
+  const lina = repo.getPatientById('pt_4')!;
+  assert.equal(lina.birthDate, '2019-05-14');
+  assert.equal(lina.age, ageOn('2019-05-14'));
+
+  const created = repo.createPatient({ name: 'Nouveau-né', birthDate: '2024-01-20', age: 99 });
+  assert.equal(created.age, ageOn('2024-01-20'), 'the birth date wins over a typed age');
+
+  const edited = repo.updatePatient(created.id, { birthDate: '2016-02-29' });
+  assert.equal(edited.age, ageOn('2016-02-29'));
 });

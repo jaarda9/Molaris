@@ -214,6 +214,9 @@ function renderPatientsGrid(filterText = '') {
           await fetchPatients();
           await fetchOdontogram();
           await fetchSystemStatus();
+        } else {
+          // e.g. a chart with clinical history, which is kept.
+          Molaris.ui.toast(resData.error || molarisT('common.saveError'), 'error');
         }
       } catch (err) {
         alert(molarisT('common.networkError') + ' ' + err.message);
@@ -254,11 +257,10 @@ async function selectPatient(patientId) {
       const calcCardiac = document.getElementById('calc-cardiac-toggle');
       if (calcCardiac) calcCardiac.checked = !!data.activePatient.cardiacRisk;
 
-      // Reset delivered carpules to match patient's log
-      const totalCarpules = (data.activePatient.anesthesiaLog || []).reduce((sum, item) => sum + (Number(item.carpules) || 0), 0);
-      systemState.deliveredCarpules = totalCarpules;
+      // New chart: the "injected now" counter starts at 0 (today's logged injections are counted by the server).
+      systemState.deliveredCarpules = 0;
       const calcDelivered = document.getElementById('calc-delivered-carpules');
-      if (calcDelivered) calcDelivered.textContent = totalCarpules;
+      if (calcDelivered) calcDelivered.textContent = '0';
 
       recalculateLA();
       playClinicalBeep(659.25, 'sine', 0.15);
@@ -283,7 +285,9 @@ function openEditPatientModal(patient) {
   document.getElementById('form-patient-phone').value = patient.phone || '';
   document.getElementById('form-patient-cnam-id').value = patient.cnamId || '';
   document.getElementById('form-patient-cnam-quality').value = patient.cnamQuality || '';
+  document.getElementById('form-patient-birthdate').value = patient.birthDate || '';
   document.getElementById('form-patient-age').value = patient.age || 35;
+  syncAgeFromBirthDate();
   document.getElementById('form-patient-gender').value = patient.gender || 'Male';
   document.getElementById('form-patient-weight').value = patient.weightKg || 70;
   document.getElementById('form-patient-asa').value = patient.asaStatus || 'ASA I';
@@ -295,7 +299,26 @@ function openEditPatientModal(patient) {
   modal.classList.remove('hidden');
 }
 
+/** With a birth date the age is computed (and the age box is read-only). */
+function syncAgeFromBirthDate() {
+  const birth = document.getElementById('form-patient-birthdate');
+  const ageInput = document.getElementById('form-patient-age');
+  if (!birth || !ageInput) return;
+  const value = birth.value;
+  ageInput.readOnly = !!value;
+  ageInput.classList.toggle('opacity-60', !!value);
+  if (!value) return;
+  const [y, m, d] = value.split('-').map(Number);
+  const now = new Date();
+  let age = now.getFullYear() - y;
+  if (now.getMonth() + 1 < m || (now.getMonth() + 1 === m && now.getDate() < d)) age--;
+  if (age >= 0 && age <= 120) ageInput.value = age;
+}
+
 function initPatientManager() {
+  document.getElementById('form-patient-birthdate')?.addEventListener('input', syncAgeFromBirthDate);
+  const birthInput = document.getElementById('form-patient-birthdate');
+  if (birthInput) birthInput.max = new Date().toISOString().slice(0, 10);
   const searchInput = document.getElementById('patient-search-input');
   const createBtn = document.getElementById('btn-create-patient');
   const modal = document.getElementById('modal-patient');
@@ -335,6 +358,7 @@ function initPatientManager() {
       document.getElementById('form-patient-id').value = '';
       document.getElementById('form-patient-weight').value = 70;
       document.getElementById('form-patient-age').value = 35;
+      syncAgeFromBirthDate();
       modal.classList.remove('hidden');
     });
   }
@@ -353,6 +377,7 @@ function initPatientManager() {
         phone: document.getElementById('form-patient-phone').value.trim(),
         cnamId: document.getElementById('form-patient-cnam-id').value.trim(),
         cnamQuality: document.getElementById('form-patient-cnam-quality').value,
+        birthDate: document.getElementById('form-patient-birthdate').value || undefined,
         age: Number(document.getElementById('form-patient-age').value) || 35,
         gender: document.getElementById('form-patient-gender').value,
         weightKg: Number(document.getElementById('form-patient-weight').value) || 70,

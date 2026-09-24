@@ -1,10 +1,13 @@
-import { AnestheticDrug } from './dental-data.js';
+import { AnestheticDrug, ANESTHETICS } from './dental-data.js';
 
 export interface AnestheticDoseInput {
   drug: AnestheticDrug;
   weightKg: number;
   isCardiacRisk: boolean;
+  /** Carpules of THIS drug injected now (not yet logged). */
   carpulesGiven: number;
+  /** Other injections earlier today (any drug), e.g. from the anesthesia log. */
+  priorDoses?: Array<{ drug: AnestheticDrug; carpules: number }>;
   language?: 'en' | 'fr';
 }
 
@@ -21,6 +24,35 @@ export interface AnestheticDoseResult {
   remainingCarpules: number;
   isExceeded: boolean;
   warning: string | null;
+}
+
+/** Maximum mg of this agent for this patient (mg/kg limit, capped by the absolute maximum). */
+function allowedMgFor(drug: AnestheticDrug, weightKg: number): number {
+  return Math.min(weightKg * drug.maxDoseMgKg, drug.absoluteMaxMg);
+}
+
+/**
+ * The injections logged on the clinic-local day of `now` (earlier visits do not count
+ * toward today's maximum), grouped by drug.
+ */
+export function dosesLoggedOn(
+  log: Array<{ drugId: string; carpules: number; timestamp: string }>,
+  now: Date = new Date(),
+  drugs: AnestheticDrug[] = ANESTHETICS
+): Array<{ drug: AnestheticDrug; carpules: number }> {
+  const sameDay = (iso: string) => {
+    const d = new Date(iso);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  };
+  const byDrug = new Map<string, number>();
+  for (const entry of log) {
+    if (!sameDay(entry.timestamp) || !(entry.carpules > 0)) continue;
+    byDrug.set(entry.drugId, (byDrug.get(entry.drugId) ?? 0) + entry.carpules);
+  }
+  return [...byDrug].flatMap(([drugId, carpules]) => {
+    const drug = drugs.find(d => d.id === drugId);
+    return drug ? [{ drug, carpules: Math.round(carpules * 10) / 10 }] : [];
+  });
 }
 
 // Epinephrine mg per cartridge, by labeled ratio (cartridge volume in mL).
@@ -55,9 +87,20 @@ export function calculateAnestheticDose(input: AnestheticDoseInput): AnestheticD
 
   const safeMaxCarpules = Math.min(maxCarpulesByAgent, maxCarpulesByEpi);
   const mgDelivered = carpules * drug.mgPerCartridge;
-  const epiDelivered = carpules * epiPerCartridge;
-  const remainingCarpules = Math.max(0, Math.round((safeMaxCarpules - carpules) * 10) / 10);
-  const isExceeded = carpules > safeMaxCarpules;
+
+  // Everything injected this session: earlier drugs (logged today) + this drug now.
+  // Local-anesthetic toxicity is additive: each dose uses a fraction of ITS OWN maximum
+  // for this patient; adrenaline simply adds up across all drugs.
+  const doses = [...(input.priorDoses ?? []), { drug, carpules }];
+  const toxicFractionUsed = doses.reduce((sum, d) => sum + (d.carpules * d.drug.mgPerCartridge) / allowedMgFor(d.drug, weight), 0);
+  const epiDelivered = doses.reduce((sum, d) => sum + d.carpules * epiMgPerCartridge(d.drug), 0);
+  const epiLimit = isCardiacRisk ? 0.04 : 0.2;
+
+  const remainingByAgent = ((1 - toxicFractionUsed) * allowedMaxMg) / drug.mgPerCartridge;
+  const remainingByEpi = epiPerCartridge > 0 ? (epiLimit - epiDelivered) / epiPerCartridge : Infinity;
+  const EPS = 1e-9;
+  const remainingCarpules = Math.max(0, Math.floor(Math.min(remainingByAgent, remainingByEpi) * 10 + EPS) / 10);
+  const isExceeded = toxicFractionUsed > 1 + EPS || epiDelivered > epiLimit + EPS;
 
   const limitingFactor = safeMaxCarpules === maxCarpulesByEpi
     ? (language === 'fr' ? 'Adrénaline (plafond cardiovasculaire 0,04 mg)' : 'Epinephrine (Cardiac threshold)')

@@ -40,9 +40,10 @@ function handleMolarisAutonomousAction(action) {
     case 'LOG_ANESTHESIA':
       fetchPatients().then(() => {
         if (action.data && action.data.patient) {
-          systemState.deliveredCarpules = action.data.patient.deliveredCarpules;
+          // Logged now: counted from the log by the calculator, so the "injected now" counter is back to 0.
+          systemState.deliveredCarpules = 0;
           const calcDelivered = document.getElementById('calc-delivered-carpules');
-          if (calcDelivered) calcDelivered.textContent = action.data.patient.deliveredCarpules;
+          if (calcDelivered) calcDelivered.textContent = '0';
         }
         recalculateLA();
         if (action.data && action.data.safetyAlerts) {

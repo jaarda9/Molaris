@@ -1,6 +1,7 @@
 import { patientDb } from '../repositories/patients.js';
 import { checkDrugInteractions } from '../domain/clinical-safety.js';
 import { isPrimaryToothId } from '../domain/primary-teeth.js';
+import { dosesLoggedOn } from '../domain/anesthesia-calc.js';
 
 export interface ActionResult {
   executed: boolean;
@@ -142,9 +143,10 @@ export function executeMolarisAction(commandText: string, language: string = 'en
 
     const safetyAlerts = checkDrugInteractions(res.patient.medications, [drugName], isFr ? 'fr' : 'en');
 
+    const today = Math.round(dosesLoggedOn(res.patient.anesthesiaLog).reduce((s, d) => s + d.carpules, 0) * 10) / 10;
     let summary = isFr
-      ? `**${carpules} carpule(s)** de **${drugName}** ajoutée(s) au dossier de ${res.patient.name} (Total délivré aujourd'hui : ${res.patient.deliveredCarpules} carpules).`
-      : `Logged **${carpules} carpules** of **${drugName}** to ${res.patient.name}'s chart (Total delivered: ${res.patient.deliveredCarpules} carpules).`;
+      ? `**${carpules} carpule(s)** de **${drugName}** ajoutée(s) au dossier de ${res.patient.name} (total aujourd'hui : ${today} carpules).`
+      : `Logged **${carpules} carpules** of **${drugName}** to ${res.patient.name}'s chart (total today: ${today} carpules).`;
 
     if (safetyAlerts.length > 0) {
       const alertPrefix = isFr ? '⚠️ ALERTE : ' : '⚠️ ALERT: ';

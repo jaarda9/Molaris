@@ -19,6 +19,10 @@ const blankAsUndefined = (value: unknown) => (value === '' || value === null ? u
 // (preprocess loses the output type; the schema still validates the value.)
 const optional = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess(blankAsUndefined, schema.optional()) as unknown as z.ZodOptional<T>;
+const localToday = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 const text = (max: number) => z.string().trim().max(max, `${max} caractères maximum`);
 
 const realDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date attendue au format AAAA-MM-JJ').refine(value => {
@@ -34,6 +38,8 @@ const patientFields = {
   phone: text(40).optional(),
   cnamId: text(40).optional(),
   cnamQuality: z.enum(['assure', 'conjoint', 'enfant', 'ascendant', '']).optional(),
+  // Age is derived from it when given.
+  birthDate: optional(realDate.refine(value => value >= '1900-01-01' && value <= localToday(), 'date de naissance impossible')),
   // Weight and age drive anesthetic doses and paediatric warnings: keep them plausible.
   age: z.coerce.number({ invalid_type_error: 'nombre attendu' }).int('âge en années entières').min(0, 'âge entre 0 et 120 ans').max(120, 'âge entre 0 et 120 ans'),
   gender: z.enum(['Male', 'Female', 'Other']),

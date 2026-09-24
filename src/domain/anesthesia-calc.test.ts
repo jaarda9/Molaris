@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateAnestheticDose } from './anesthesia-calc.js';
+import { calculateAnestheticDose, dosesLoggedOn } from './anesthesia-calc.js';
 import { ANESTHETICS } from './dental-data.js';
 
 const lidocaine = ANESTHETICS.find(a => a.id === 'lido_100k')!;
@@ -88,4 +88,46 @@ test('remainingCarpules never goes negative once the safe max is exceeded', () =
     carpulesGiven: 50
   });
   assert.equal(result.remainingCarpules, 0);
+});
+
+// --- Several anesthetics in one session: toxicity is additive (fraction of each maximum) ---
+
+test('articaine already given counts against bupivacaine (fraction of each maximum)', () => {
+  // 5 articaine carpules = 340 mg of the 490 mg allowed at 70 kg (7 mg/kg) -> 69.4 % of the toxic budget used.
+  const result = calculateAnestheticDose({
+    drug: bupivacaine, weightKg: 70, isCardiacRisk: false, carpulesGiven: 0,
+    priorDoses: [{ drug: articaine, carpules: 5 }]
+  });
+  // Bupivacaine max 90 mg = 10 carpules; only 30.6 % of the budget is left -> 3.0 carpules, not 10.
+  assert.equal(result.remainingCarpules, 3);
+  assert.equal(result.isExceeded, false);
+});
+
+test('mixing drugs past the combined maximum is flagged, even if each alone is under its own', () => {
+  const result = calculateAnestheticDose({
+    drug: bupivacaine, weightKg: 70, isCardiacRisk: false, carpulesGiven: 5, // 50 % of bupivacaine
+    priorDoses: [{ drug: articaine, carpules: 5 }]                          // + 68 % of articaine
+  });
+  assert.equal(result.isExceeded, true);
+  assert.equal(result.remainingCarpules, 0);
+});
+
+test('adrenaline adds up across drugs (cardiac ceiling 0.04 mg)', () => {
+  // 1 lidocaine carpule = 0.018 mg; 1 articaine carpule = 0.017 mg -> 0.035 mg of 0.04 mg.
+  const result = calculateAnestheticDose({
+    drug: articaine, weightKg: 70, isCardiacRisk: true, carpulesGiven: 1,
+    priorDoses: [{ drug: lidocaine, carpules: 1 }]
+  });
+  assert.equal(result.epiDeliveredMg, 0.035);
+  assert.ok(result.remainingCarpules <= 0.3, `only ~0.005 mg of adrenaline left, got ${result.remainingCarpules} carpules`);
+});
+
+test('only injections logged today count; earlier visits do not', () => {
+  const log = [
+    { drugId: 'arti_100k', carpules: 4, timestamp: new Date(2026, 8, 10, 10, 0).toISOString() },
+    { drugId: 'lido_100k', carpules: 1.5, timestamp: new Date(2026, 8, 24, 9, 30).toISOString() },
+    { drugId: 'lido_100k', carpules: 0.5, timestamp: new Date(2026, 8, 24, 11, 0).toISOString() }
+  ];
+  const today = dosesLoggedOn(log, new Date(2026, 8, 24, 15, 0));
+  assert.deepEqual(today.map(d => [d.drug.id, d.carpules]), [['lido_100k', 2]]);
 });

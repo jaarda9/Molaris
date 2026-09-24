@@ -265,3 +265,13 @@ test('payment errors are in French for the clinic UI', () => {
   const draft = quotes.create({ patientId: 'pt_1', items: [{ label: 'Détartrage', quantity: 1, unitPriceMillimes: 80_000 }] });
   assert.match(message(() => payments.create({ patientId: 'pt_1', quoteId: draft.id, amountMillimes: 1_000, method: 'cash' })), /devis accepté/);
 });
+
+test('an expired quote cannot be accepted at its old prices (duplicate it instead)', () => {
+  const { quotes } = setup();
+  const old = quotes.create({ patientId: 'pt_1', validUntil: '2026-01-31', items: [{ label: 'Couronne', quantity: 1, unitPriceMillimes: 500_000 }] }, new Date(2026, 0, 5));
+  quotes.setStatus(old.id, 'sent');
+  const err = (() => { try { quotes.setStatus(old.id, 'accepted'); } catch (e) { return e as HttpError; } })();
+  assert.ok(err instanceof HttpError && err.status === 409);
+  assert.match(err!.message, /expiré/);
+  assert.equal(quotes.setStatus(quotes.duplicate(old.id).id, 'accepted').status, 'accepted');
+});

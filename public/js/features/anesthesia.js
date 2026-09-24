@@ -118,6 +118,12 @@ async function recalculateLA() {
     document.getElementById('calc-res-max-mg').textContent = `${data.allowedMaxMg} mg`;
     document.getElementById('calc-res-remaining').textContent = `${formatDecimal(data.remainingCarpules)}`;
 
+    const loggedEl = document.getElementById('calc-logged-today');
+    if (loggedEl) {
+      const logged = (data.loggedToday || []).map(d => `${formatDecimal(d.carpules)} × ${d.drugName}`).join(' + ');
+      loggedEl.textContent = logged ? `${molarisT('la.form.loggedToday')} ${logged}` : '';
+      loggedEl.classList.toggle('hidden', !logged);
+    }
     const warningBanner = document.getElementById('calc-warning-banner');
     const warningText = document.getElementById('calc-warning-text');
     if (data.warning) {

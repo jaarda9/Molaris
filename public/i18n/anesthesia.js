@@ -5,8 +5,9 @@ Molaris.i18n.register({
   en: {
     'la.form.weight': 'Patient weight',
     'la.form.cardiac': 'Cardiac risk / ASA III+',
-    'la.form.delivered': 'Carpules delivered so far',
-    'la.form.deliveredHint': 'Keep track as you inject during the appointment',
+    'la.form.delivered': 'Carpules injected now',
+    'la.form.deliveredHint': 'This drug, not yet logged. Injections already logged today (any drug) are counted automatically.',
+    'la.form.loggedToday': 'Already logged today:',
     'la.result.title': 'Calculated safe limit',
     'la.result.maxCarpules': 'Safe max carpules',
     'la.result.maxMg': 'Max anesthetic (mg)',
@@ -37,8 +38,9 @@ Molaris.i18n.register({
   fr: {
     'la.form.weight': 'Poids du patient',
     'la.form.cardiac': 'Risque cardiaque / ASA III+',
-    'la.form.delivered': 'Carpules déjà injectées',
-    'la.form.deliveredHint': 'À mettre à jour au fil des injections pendant la séance',
+    'la.form.delivered': 'Carpules injectées maintenant',
+    'la.form.deliveredHint': 'De cette molécule, pas encore enregistrées. Les injections déjà enregistrées aujourd’hui (toutes molécules) sont comptées automatiquement.',
+    'la.form.loggedToday': 'Déjà enregistré aujourd’hui :',
     'la.result.title': 'Limite de sécurité calculée',
     'la.result.maxCarpules': 'Carpules maximales',
     'la.result.maxMg': 'Dose maximale (mg)',

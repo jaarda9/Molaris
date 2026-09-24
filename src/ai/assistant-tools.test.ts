@@ -156,3 +156,14 @@ test('a cheque payment asks for the cheque number, then carries it to the receip
   assert.equal(ok.proposal!.request.body.reference, '4521087');
   assert.match(ok.proposal!.summary, /chèque n° 4521087/);
 });
+
+test('an appointment on a closed day or outside opening hours is proposed with a warning', () => {
+  const { ctx } = setup();
+  // Default hours: Monday-Saturday, 08:30-18:00. 2026-09-27 is a Sunday.
+  const sunday = runAssistantTools([{ name: 'create_appointment', args: { patient: 'ACTIVE', date: '2026-09-27', time: '10:00' } }], ctx('x'));
+  assert.match(sunday.proposal!.summary, /fermé ce jour-là/);
+  const late = runAssistantTools([{ name: 'create_appointment', args: { patient: 'ACTIVE', date: '2026-09-28', time: '19:30' } }], ctx('x'));
+  assert.match(late.proposal!.summary, /En dehors des horaires/);
+  const normal = runAssistantTools([{ name: 'create_appointment', args: { patient: 'ACTIVE', date: '2026-09-28', time: '10:00' } }], ctx('x'));
+  assert.doesNotMatch(normal.proposal!.summary, /⚠️/);
+});

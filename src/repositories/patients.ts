@@ -16,6 +16,7 @@ import {
 import { DB, DATA_DIR, getDb } from '../db/connection.js';
 import { nextDocumentNumber } from '../db/counters.js';
 import { newId, nowIso } from '../db/ids.js';
+import { ageOn } from '../domain/age.js';
 
 export interface PatientRecord {
   id: string;
@@ -26,6 +27,8 @@ export interface PatientRecord {
   cnamId?: string;
   /** Beneficiary status on the CNAM card: the insured person or a dependant. */
   cnamQuality?: 'assure' | 'conjoint' | 'enfant' | 'ascendant';
+  /** 'YYYY-MM-DD'. When known, `age` is derived from it on every read (so it never goes stale). */
+  birthDate?: string;
   age: number;
   gender: 'Male' | 'Female' | 'Other';
   weightKg: number;
@@ -101,6 +104,13 @@ export function findPatientTooth(patient: PatientRecord, toothId: number): Tooth
   return list.find(t => t.id === toothId);
 }
 
+/** Keeps `age` in step with the birth date (a 7-year-old is not 7 forever). */
+function withCurrentAge(patient: PatientRecord): PatientRecord {
+  const age = ageOn(patient.birthDate);
+  if (age !== null) patient.age = age;
+  return patient;
+}
+
 function createPatientTeeth(modifications?: Array<{ id: number; status: ToothInfo['status']; notes?: string }>): ToothInfo[] {
   const teeth: ToothInfo[] = JSON.parse(JSON.stringify(DEFAULT_TEETH));
   modifications?.forEach(mod => {
@@ -147,6 +157,7 @@ function buildSeedPatients(): PatientRecord[] {
       phone: '+216 98 123 456',
       cnamId: 'DEMO-0000084',
       cnamQuality: 'assure',
+      birthDate: '1978-03-02',
       age: 48,
       gender: 'Male',
       weightKg: 78,
@@ -202,6 +213,7 @@ function buildSeedPatients(): PatientRecord[] {
       phone: '+216 22 456 789',
       cnamId: 'DEMO-0000091',
       cnamQuality: 'conjoint',
+      birthDate: '1959-06-20',
       age: 67,
       gender: 'Female',
       weightKg: 60,
@@ -262,6 +274,7 @@ function buildSeedPatients(): PatientRecord[] {
       phone: '+216 55 214 380',
       cnamId: 'DEMO-0000112',
       cnamQuality: 'enfant',
+      birthDate: '2019-05-14',
       age: 7,
       gender: 'Female',
       weightKg: 24,
@@ -412,16 +425,17 @@ export class PatientRepository {
   // --- Patients ------------------------------------------------------------
 
   public getAllPatients(): PatientRecord[] {
-    return [...this.patients.values()];
+    return [...this.patients.values()].map(withCurrentAge);
   }
 
   public getActivePatient(): PatientRecord {
     this.ensureActivePatient();
-    return this.patients.get(this.activePatientId)!;
+    return withCurrentAge(this.patients.get(this.activePatientId)!);
   }
 
   public getPatientById(id: string): PatientRecord | undefined {
-    return this.patients.get(id) ?? this.getAllPatients().find(p => p.chartId.toLowerCase() === id.toLowerCase());
+    const patient = this.patients.get(id) ?? [...this.patients.values()].find(p => p.chartId.toLowerCase() === id.toLowerCase());
+    return patient && withCurrentAge(patient);
   }
 
   /** Throws a 'not found' error; use in routes that take an explicit patient id. */
@@ -456,7 +470,8 @@ export class PatientRepository {
       phone: data.phone,
       cnamId: data.cnamId,
       cnamQuality: data.cnamQuality,
-      age: Number(data.age) || 35,
+      birthDate: data.birthDate,
+      age: ageOn(data.birthDate) ?? (Number(data.age) || 35),
       gender: data.gender || 'Other',
       weightKg: Number(data.weightKg) || 70,
       asaStatus: data.asaStatus || 'ASA I',
@@ -487,7 +502,7 @@ export class PatientRepository {
     const current = this.patients.get(id);
     if (!current) throw new Error(`Patient '${id}' not found`);
     const { id: _ignoredId, createdAt: _ignoredCreated, ...allowed } = updates;
-    const updated: PatientRecord = { ...current, ...allowed, id: current.id, createdAt: current.createdAt, updatedAt: nowIso() };
+    const updated: PatientRecord = withCurrentAge({ ...current, ...allowed, id: current.id, createdAt: current.createdAt, updatedAt: nowIso() });
     // An age correction (e.g. 35 -> 7) re-derives the primary teeth while nothing was recorded on them.
     if (updated.age !== current.age && !allowed.primaryTeeth && isUntouchedPrimaryChart(current.primaryTeeth, current.age)) {
       updated.primaryTeeth = createPrimaryTeeth(updated.age);
@@ -500,6 +515,25 @@ export class PatientRepository {
     if (!this.patients.has(id)) return false;
     if (this.patients.size <= 1) {
       throw new Error('Cannot delete the only remaining patient record in the database.');
+    }
+    // A chart with clinical history is a medical record: it is kept. Only a chart created
+    // by mistake (nothing recorded) can be deleted — deleting would also cascade the agenda.
+    const patient = this.patients.get(id)!;
+    const visits = (this.db.prepare(`
+      SELECT COUNT(*) AS n FROM appointments
+      WHERE patient_id = ? AND status IN ('arrived', 'in_progress', 'completed', 'no_show')
+    `).get(id) as { n: number }).n;
+    const upcoming = (this.db.prepare(`
+      SELECT COUNT(*) AS n FROM appointments
+      WHERE patient_id = ? AND status IN ('scheduled', 'confirmed')
+    `).get(id) as { n: number }).n;
+    const history: string[] = [];
+    if (patient.soapNotes?.length) history.push(`${patient.soapNotes.length} compte(s)-rendu(s)`);
+    if (patient.anesthesiaLog?.length) history.push(`${patient.anesthesiaLog.length} anesthésie(s)`);
+    if (visits) history.push(`${visits} consultation(s) passée(s)`);
+    if (upcoming) history.push(`${upcoming} rendez-vous à venir`);
+    if (history.length) {
+      throw new Error(`Ce dossier contient ${history.join(', ')} : il ne peut pas être supprimé (dossier médical à conserver).`);
     }
     try {
       this.db.prepare('DELETE FROM patients WHERE id = ?').run(id);

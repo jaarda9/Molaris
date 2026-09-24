@@ -10,6 +10,7 @@ import { MOLARIS_SYSTEM_PROMPT } from '../ai/system-prompt.js';
 import { executeMolarisAction } from '../ai/voice-actions.js';
 import { ASSISTANT_TOOLS, detokenize, runAssistantTools, tokenizePatients, toolInstructions, type Proposal } from '../ai/assistant-tools.js';
 import { computePatientSafetyAlerts } from '../domain/patient-safety.js';
+import { dosesLoggedOn } from '../domain/anesthesia-calc.js';
 import { DATA_DIR, getDb } from '../db/connection.js';
 import { languageOf } from './http.js';
 
@@ -91,7 +92,8 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     contextPrompt += `- Allergies: ${activePatient.allergies}\n`;
     const activeMeds = activePatient.medications.filter(m => m.active).map(m => [m.name, m.dosage, m.frequency].filter(Boolean).join(' '));
     contextPrompt += `- Current Medications: ${activeMeds.length ? activeMeds.join('; ') : 'none recorded'}\n`;
-    contextPrompt += `- Local Anesthesia Delivered Today: ${activePatient.deliveredCarpules} carpules\n`;
+    const anesthesiaToday = dosesLoggedOn(activePatient.anesthesiaLog).map(d => `${d.carpules} x ${d.drug.name}`).join(', ');
+    contextPrompt += `- Local Anesthesia Delivered Today: ${anesthesiaToday || 'none'}\n`;
 
     if (tooth) {
       contextPrompt += `- Targeted Tooth: ${tooth.fdi} (FDI) - ${tooth.name} [Status: ${tooth.status.toUpperCase()}]`;
