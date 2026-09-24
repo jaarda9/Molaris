@@ -29,16 +29,15 @@ function renderPatientsGrid(filterText = '') {
   if (!grid) return;
   if (!systemState.patients || !Array.isArray(systemState.patients)) return;
 
-  const q = filterText.toLowerCase().trim();
+  // Accent-insensitive ("hedi" finds "Hédi"); phone and CNAM numbers match on their digits.
+  const plain = (s) => String(s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+  const q = plain(filterText).trim();
+  const qDigits = filterText.replace(/\D/g, '');
   const filtered = systemState.patients.filter(p => {
     if (!q) return true;
-    return (
-      (p.name && p.name.toLowerCase().includes(q)) ||
-      (p.chartId && p.chartId.toLowerCase().includes(q)) ||
-      (p.asaStatus && p.asaStatus.toLowerCase().includes(q)) ||
-      (p.chiefComplaint && p.chiefComplaint.toLowerCase().includes(q)) ||
-      (p.medicalAlerts && p.medicalAlerts.toLowerCase().includes(q))
-    );
+    const text = [p.name, p.chartId, p.asaStatus, p.chiefComplaint, p.medicalAlerts, p.cnamId].map(plain).join(' | ');
+    if (text.includes(q)) return true;
+    return qDigits.length >= 4 && [p.phone, p.cnamId].some(v => String(v || '').replace(/\D/g, '').includes(qDigits));
   });
 
   if (countBadge) {

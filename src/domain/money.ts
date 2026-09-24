@@ -14,7 +14,11 @@ export function parseDinarsToMillimes(input: string | number): number | null {
   if (typeof input === 'number') {
     return Number.isFinite(input) && input >= 0 ? Math.round(input * MILLIMES_PER_DINAR) : null;
   }
-  const cleaned = input.trim().replace(/\s/g, '').replace(/(dt|tnd|د\.ت)$/i, '').replace(',', '.');
+  let cleaned = input.trim().replace(/\s/g, '').replace(/(dt|tnd|د\.ت)$/i, '');
+  // "1.250,500": dots group thousands, the comma marks millimes. "1.250.000": several
+  // dots are thousands too. A single dot ("1.250") is the dinar/millime separator.
+  if (cleaned.includes(',')) cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  else if ((cleaned.match(/\./g) || []).length > 1) cleaned = cleaned.replace(/\./g, '');
   if (!/^\d+(\.\d{1,3})?$/.test(cleaned)) return null;
   const [whole, fraction = ''] = cleaned.split('.');
   return Number(whole) * MILLIMES_PER_DINAR + Number(fraction.padEnd(3, '0'));

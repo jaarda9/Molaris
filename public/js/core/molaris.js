@@ -104,7 +104,10 @@ Molaris.format = {
   },
   // "125,500" / "125.5" / "1 250" -> millimes, or null if invalid.
   parseTnd(input) {
-    const cleaned = String(input ?? '').trim().replace(/\s/g, '').replace(/(dt|tnd)$/i, '').replace(',', '.');
+    // Same rules as the server (src/domain/money.ts): '1.250,500' and '1.250.000' use dots for thousands.
+    let cleaned = String(input ?? '').trim().replace(/\s/g, '').replace(/(dt|tnd)$/i, '');
+    if (cleaned.includes(',')) cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+    else if ((cleaned.match(/\./g) || []).length > 1) cleaned = cleaned.replace(/\./g, '');
     if (!/^\d+(\.\d{1,3})?$/.test(cleaned)) return null;
     const [whole, fraction = ''] = cleaned.split('.');
     return Number(whole) * 1000 + Number(fraction.padEnd(3, '0'));

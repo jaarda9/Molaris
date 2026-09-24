@@ -30,3 +30,12 @@ test('formats with space thousands and 3 decimals', () => {
   assert.equal(formatTnd(5), '0,005 DT');
   assert.equal(formatTnd(-12000), '-12,000 DT');
 });
+
+test('Tunisian ways of writing an amount', () => {
+  assert.equal(parseDinarsToMillimes('1.250,500'), 1_250_500);   // dots for thousands, comma for millimes
+  assert.equal(parseDinarsToMillimes('1.250.000'), 1_250_000_000); // several dots: thousands (1 250 000 DT)
+  assert.equal(parseDinarsToMillimes('1.250'), 1_250);             // one dot: dinars.millimes
+  assert.equal(parseDinarsToMillimes('1 250,5 DT'), 1_250_500);
+  assert.equal(parseDinarsToMillimes('1 250,000'), 1_250_000);
+  assert.equal(parseDinarsToMillimes('12,5,3'), null);
+});
