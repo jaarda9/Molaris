@@ -148,3 +148,11 @@ test('demo seed: drugs by DCI without brands, one past prescription for pt_1, id
   assert.equal(history.length, 1);
   assert.equal(history[0].items.length, 2);
 });
+
+test("a child's weight is snapshotted on the prescription, an adult's is not", () => {
+  const { db, patients } = setup();
+  const child = issuePrescription(db, { ...patients.getPatientOrThrow('pt_1'), age: 7, weightKg: 24 }, { items: [paracetamol] });
+  const adult = issuePrescription(db, { ...patients.getPatientOrThrow('pt_1'), age: 40, weightKg: 80 }, { items: [paracetamol] });
+  assert.equal(child.status === 'issued' && child.prescription.patientWeightKg, 24);
+  assert.equal(adult.status === 'issued' && adult.prescription.patientWeightKg, null);
+});

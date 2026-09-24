@@ -612,11 +612,11 @@
   // ---------------------------------------------------------------------------
 
   const AR = {
-    title: 'وصفة طبية', number: 'رقم الوصفة', date: 'التاريخ', patient: 'المريض', age: 'العمر', years: 'سنة',
+    title: 'وصفة طبية', number: 'رقم الوصفة', date: 'التاريخ', patient: 'المريض', age: 'العمر', weight: 'الوزن', kg: 'كغ',
     duration: 'المدة', quantity: 'الكمية', notes: 'ملاحظة', signature: 'إمضاء وختم الطبيب'
   };
   const FR = {
-    title: 'Ordonnance', number: 'N°', date: 'Date', patient: 'Patient', age: 'Âge', years: 'ans',
+    title: 'Ordonnance', number: 'N°', date: 'Date', patient: 'Patient', age: 'Âge', years: 'ans', weight: 'Poids',
     duration: 'Durée', quantity: 'Quantité', notes: 'Remarque', signature: 'Signature et cachet du praticien'
   };
 
@@ -631,6 +631,17 @@
     if (n >= 3 && n <= 10) return `${n} ${day ? 'أيام' : 'أسابيع'}`;
     return `${n} ${day ? 'يومًا' : 'أسبوعًا'}`;
   }
+
+  // Arabic number agreement: 1 سنة واحدة, 2 سنتان, 3–10 سنوات, 11+ سنة.
+  function arabicAge(n) {
+    if (n === 1) return 'سنة واحدة';
+    if (n === 2) return 'سنتان';
+    return `${n} ${n >= 3 && n <= 10 ? 'سنوات' : 'سنة'}`;
+  }
+  // Children only (snapshotted at issue): paediatric doses are checked against the weight.
+  const frWeight = (rx) => rx.patientWeightKg ? ` &nbsp;·&nbsp; <strong>${FR.weight} :</strong> ${esc(formatKg(rx.patientWeightKg))} kg` : '';
+  const arWeight = (rx) => rx.patientWeightKg ? ` &nbsp;·&nbsp; <strong>${AR.weight}:</strong> ${esc(formatKg(rx.patientWeightKg))} ${AR.kg}` : '';
+  const formatKg = (kg) => String(Math.round(kg * 10) / 10).replace('.', ',');
 
   const ltr = (value) => `<bdi dir="ltr">${esc(value)}</bdi>`;
 
@@ -653,7 +664,7 @@
       </li>`).join('');
     return `
       <div class="rx-meta"><span><strong>${FR.number} :</strong> ${esc(rx.number)}</span><span><strong>${FR.date} :</strong> ${esc(Molaris.format.date(rx.issuedAt))}</span></div>
-      <div class="rx-patient"><strong>${FR.patient} :</strong> ${esc(rx.patientName || '')}${rx.patientAge ? ` &nbsp;·&nbsp; <strong>${FR.age} :</strong> ${esc(rx.patientAge)} ${FR.years}` : ''}</div>
+      <div class="rx-patient"><strong>${FR.patient} :</strong> ${esc(rx.patientName || '')}${rx.patientAge ? ` &nbsp;·&nbsp; <strong>${FR.age} :</strong> ${esc(rx.patientAge)} ${FR.years}` : ''}${frWeight(rx)}</div>
       ${cnamLineFr(rx)}
       <ol class="rx-lines">${lines}</ol>
       ${rx.notes ? `<p class="muted">${FR.notes} : ${esc(rx.notes)}</p>` : ''}
@@ -673,7 +684,7 @@
     return `
       <div dir="rtl" lang="ar" class="ar-block">
         <div class="rx-meta"><span><strong>${AR.number}:</strong> ${ltr(rx.number)}</span><span><strong>${AR.date}:</strong> ${ltr(Molaris.format.date(rx.issuedAt))}</span></div>
-        <div class="rx-patient"><strong>${AR.patient}:</strong> ${ltr(rx.patientName || '')}${rx.patientAge ? ` &nbsp;·&nbsp; <strong>${AR.age}:</strong> ${esc(rx.patientAge)} ${AR.years}` : ''}</div>
+        <div class="rx-patient"><strong>${AR.patient}:</strong> ${ltr(rx.patientName || '')}${rx.patientAge ? ` &nbsp;·&nbsp; <strong>${AR.age}:</strong> ${esc(arabicAge(rx.patientAge))}` : ''}${arWeight(rx)}</div>
         ${cnamLineAr(rx)}
         <ol class="rx-lines">${lines}</ol>
         ${rx.notes ? `<p class="muted">${AR.notes}: ${ltr(rx.notes)}</p>` : ''}

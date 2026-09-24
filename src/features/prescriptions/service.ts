@@ -7,7 +7,7 @@ import {
   type PrescriptionItemInput,
   type PrescriptionLanguage
 } from './repository.js';
-import { checkPrescriptionSafety, type PrescriptionSafetyAlert } from './safety.js';
+import { checkPrescriptionSafety, PEDIATRIC_AGE_LIMIT, type PrescriptionSafetyAlert } from './safety.js';
 
 export type PrescribingPatient = Pick<PatientRecord, 'id' | 'name' | 'age' | 'allergies' | 'medications' | 'cnamId' | 'cnamQuality'> & Partial<Pick<PatientRecord, 'weightKg'>>;
 
@@ -51,10 +51,12 @@ export function issuePrescription(db: DB, patient: PrescribingPatient, request: 
   const { alerts, hasCritical } = checkPrescriptionSafety(patient, request.items, request.uiLanguage ?? 'fr');
   if (hasCritical && request.acknowledgeCriticalAlerts !== true) return { status: 'blocked', alerts };
 
+  const isChild = Number.isFinite(patient.age) && patient.age < PEDIATRIC_AGE_LIMIT;
   const prescription = prescriptions.create({
     patientId: patient.id,
     patientName: patient.name,
     patientAge: Number.isFinite(patient.age) ? patient.age : null,
+    patientWeightKg: isChild && patient.weightKg && patient.weightKg > 0 ? patient.weightKg : null,
     patientCnamId: patient.cnamId ?? null,
     patientCnamQuality: patient.cnamQuality ?? null,
     language: request.language ?? 'fr',

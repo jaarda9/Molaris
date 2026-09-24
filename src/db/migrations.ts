@@ -252,5 +252,13 @@ export const MIGRATIONS: Array<{ name: string; sql: string }> = [
       ALTER TABLE prescriptions ADD COLUMN patient_cnam_id      TEXT;
       ALTER TABLE prescriptions ADD COLUMN patient_cnam_quality TEXT;
     `
+  },
+  {
+    name: 'prescriptions: child weight snapshot',
+    sql: `
+      -- A child's doses are weight-based: the weight at issue is printed on the ordonnance
+      -- so the pharmacist can check them. Snapshotted (kg) for patients under 15 only.
+      ALTER TABLE prescriptions ADD COLUMN patient_weight_kg REAL;
+    `
   }
 ];
