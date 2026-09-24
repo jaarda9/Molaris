@@ -146,3 +146,13 @@ test('a medication already on the list is not proposed again', () => {
   assert.equal(proposal, undefined);
   assert.match(reply, /figure déjà/);
 });
+
+test('a cheque payment asks for the cheque number, then carries it to the receipt', () => {
+  const { ctx } = setup();
+  const missing = runAssistantTools([{ name: 'record_payment', args: { patient: 'ACTIVE', amountDinars: 100, method: 'cheque' } }], ctx('x'));
+  assert.equal(missing.proposal, undefined);
+  assert.match(missing.reply, /numéro/);
+  const ok = runAssistantTools([{ name: 'record_payment', args: { patient: 'ACTIVE', amountDinars: 100, method: 'cheque', reference: '4521087' } }], ctx('x'));
+  assert.equal(ok.proposal!.request.body.reference, '4521087');
+  assert.match(ok.proposal!.summary, /chèque n° 4521087/);
+});

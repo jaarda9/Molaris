@@ -4,7 +4,7 @@ import { openDatabase, DB } from '../../db/connection.js';
 import { PatientRepository } from '../../repositories/patients.js';
 import { HttpError } from '../../routes/http.js';
 import {
-  isValidFdiTooth, lineTotal, localDate, PaymentRepository, ProcedureRepository, QuoteRepository
+  addDays, isValidFdiTooth, lineTotal, localDate, PaymentRepository, ProcedureRepository, QuoteRepository
 } from './repository.js';
 import { seedDemo } from './demo.js';
 
@@ -169,7 +169,7 @@ test('receipt and quote numbers are gap-free: failed inserts do not consume a nu
 
 test('daily takings: total and per method for one day, cancelled payments shown but not counted', () => {
   const { payments } = setup();
-  const day = new Date(2026, 8, 22, 18, 0);
+  const day = new Date(2026, 8, 22, 23, 59); // end of that day: every payment below is in the past
   payments.create({ patientId: 'pt_1', amountMillimes: 100_000, method: 'cash', paidAt: '2026-09-22T09:00' }, day);
   payments.create({ patientId: 'pt_2', amountMillimes: 25_500, method: 'cash', paidAt: '2026-09-22T23:59' }, day);
   payments.create({ patientId: 'pt_3', amountMillimes: 300_000, method: 'cheque', reference: '77', paidAt: '2026-09-22T10:00' }, day);
@@ -226,5 +226,42 @@ test('impossible dates and times are rejected (31 February, 25:99)', () => {
   assert.throws(() => quotes.create({ patientId: 'pt_1', validUntil: '2099-02-31', items: [] }), status(400));
   assert.throws(() => payments.create({ patientId: 'pt_1', amountMillimes: 10_000, method: 'cash', paidAt: '2026-02-30' }), status(400));
   assert.throws(() => payments.create({ patientId: 'pt_1', amountMillimes: 10_000, method: 'cash', paidAt: '2026-01-10T25:99' }), status(400));
-  assert.equal(payments.create({ patientId: 'pt_1', amountMillimes: 10_000, method: 'cash', paidAt: '2024-02-29T09:30' }).paidAt, '2024-02-29T09:30');
+  assert.equal(payments.create({ patientId: 'pt_1', amountMillimes: 10_000, method: 'cash', paidAt: '2024-02-29T09:30' }, new Date(2024, 2, 1, 10)).paidAt, '2024-02-29T09:30');
+});
+
+test('a payment cannot be dated before its quote was issued', () => {
+  const { quotes, payments } = setup();
+  const q = acceptedQuote(quotes);
+  const err = (() => { try { payments.create({ patientId: 'pt_1', quoteId: q.id, amountMillimes: 10_000, method: 'cash', paidAt: addDays(localDate(), -1) }); } catch (e) { return e as HttpError; } })();
+  assert.ok(err instanceof HttpError && err.status === 400);
+  assert.match(err!.message, /avant le devis/);
+});
+
+test('a payment cannot be dated later than now, even today', () => {
+  const { payments } = setup();
+  const now = new Date(2026, 8, 24, 10, 0);
+  assert.throws(() => payments.create({ patientId: 'pt_1', amountMillimes: 10_000, method: 'cash', paidAt: '2026-09-24T23:59' }, now), status(400));
+  assert.equal(payments.create({ patientId: 'pt_1', amountMillimes: 10_000, method: 'cash', paidAt: '2026-09-24T09:55' }, now).paidAt, '2026-09-24T09:55');
+});
+
+test('a payment more than a year old is refused (usually a mistyped year)', () => {
+  const { payments } = setup();
+  const now = new Date(2026, 8, 24, 10, 0);
+  assert.throws(() => payments.create({ patientId: 'pt_1', amountMillimes: 10_000, method: 'cash', paidAt: '2025-09-01' }, now), status(400));
+  assert.ok(payments.create({ patientId: 'pt_1', amountMillimes: 10_000, method: 'cash', paidAt: '2026-01-10' }, now));
+});
+
+test('a cheque needs its number', () => {
+  const { payments } = setup();
+  assert.throws(() => payments.create({ patientId: 'pt_1', amountMillimes: 50_000, method: 'cheque' }), status(400));
+  assert.equal(payments.create({ patientId: 'pt_1', amountMillimes: 50_000, method: 'cheque', reference: '4521087' }).reference, '4521087');
+});
+
+test('payment errors are in French for the clinic UI', () => {
+  const { quotes, payments } = setup();
+  const q = acceptedQuote(quotes, 'pt_1', 100_000);
+  const message = (fn: () => unknown) => { try { fn(); return ''; } catch (e) { return (e as Error).message; } };
+  assert.match(message(() => payments.create({ patientId: 'pt_1', quoteId: q.id, amountMillimes: 100_001, method: 'cash' })), /dépasse le reste à payer.*100,000 DT/);
+  const draft = quotes.create({ patientId: 'pt_1', items: [{ label: 'Détartrage', quantity: 1, unitPriceMillimes: 80_000 }] });
+  assert.match(message(() => payments.create({ patientId: 'pt_1', quoteId: draft.id, amountMillimes: 1_000, method: 'cash' })), /devis accepté/);
 });

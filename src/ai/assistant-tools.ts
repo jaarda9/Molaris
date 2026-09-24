@@ -156,7 +156,8 @@ export const ASSISTANT_TOOLS = [
         patient: patientParam,
         amountDinars: { type: 'number' },
         method: { type: 'string', enum: [...PAYMENT_METHODS], description: 'cash = espèces, cheque = chèque, card = carte, transfer = virement' },
-        quoteNumber: { type: 'string', description: 'Quote number such as DV-2026-0001, if the doctor named one' }
+        quoteNumber: { type: 'string', description: 'Quote number such as DV-2026-0001, if the doctor named one' },
+        reference: { type: 'string', description: 'Cheque number (required for a cheque) or transfer reference, if given' }
       },
       required: ['patient', 'amountDinars', 'method']
     }
@@ -407,6 +408,10 @@ function runTool(name: string, args: Record<string, unknown>, ctx: ToolContext):
       const amountMillimes = Math.round(Number(args.amountDinars) * 1000);
       if (!Number.isSafeInteger(amountMillimes) || amountMillimes <= 0) throw new ToolError(fr ? 'Montant non valide.' : 'Invalid amount.');
       const method = (PAYMENT_METHODS as readonly string[]).includes(str(args.method)) ? str(args.method) as PaymentMethod : 'cash';
+      const reference = str(args.reference);
+      if (method === 'cheque' && !reference) {
+        throw new ToolError(fr ? 'Pour un chèque, précisez son numéro (ex. « chèque n° 4521087 »).' : 'For a cheque, give its number (e.g. "cheque no. 4521087").');
+      }
       const open = new QuoteRepository(ctx.db).listForPatient(patient.id).filter(q => q.status === 'accepted' && q.remainingMillimes > 0);
       const named = str(args.quoteNumber).toUpperCase();
       const quote = named ? open.find(q => q.number.toUpperCase() === named) : (open.length === 1 ? open[0] : undefined);
@@ -417,11 +422,11 @@ function runTool(name: string, args: Record<string, unknown>, ctx: ToolContext):
           : `The amount exceeds what remains on ${quote.number} (${formatTnd(quote.remainingMillimes)}).`);
       }
       const summary = fr
-        ? `Enregistrer un **règlement de ${formatTnd(amountMillimes)}** (${METHOD_LABELS.fr[method]}) pour **${patient.name}**${quote ? ` sur le devis ${quote.number} (reste ensuite ${formatTnd(quote.remainingMillimes - amountMillimes)})` : ' (hors devis)'}. Un reçu sera numéroté.`
-        : `Record a **payment of ${formatTnd(amountMillimes)}** (${METHOD_LABELS.en[method]}) for **${patient.name}**${quote ? ` on quote ${quote.number} (then ${formatTnd(quote.remainingMillimes - amountMillimes)} left)` : ' (outside quotes)'}. A receipt number will be issued.`;
+        ? `Enregistrer un **règlement de ${formatTnd(amountMillimes)}** (${METHOD_LABELS.fr[method]}${reference ? ` n° ${reference}` : ''}) pour **${patient.name}**${quote ? ` sur le devis ${quote.number} (reste ensuite ${formatTnd(quote.remainingMillimes - amountMillimes)})` : ' (hors devis)'}. Un reçu sera numéroté.`
+        : `Record a **payment of ${formatTnd(amountMillimes)}** (${METHOD_LABELS.en[method]}${reference ? ` no. ${reference}` : ''}) for **${patient.name}**${quote ? ` on quote ${quote.number} (then ${formatTnd(quote.remainingMillimes - amountMillimes)} left)` : ' (outside quotes)'}. A receipt number will be issued.`;
       return {
         reply: summary,
-        proposal: { tool: name, patientId: patient.id, summary, request: { method: 'POST', url: '/api/payments', body: { patientId: patient.id, quoteId: quote?.id ?? null, amountMillimes, method } } }
+        proposal: { tool: name, patientId: patient.id, summary, request: { method: 'POST', url: '/api/payments', body: { patientId: patient.id, quoteId: quote?.id ?? null, amountMillimes, method, ...(reference ? { reference } : {}) } } }
       };
     }
 

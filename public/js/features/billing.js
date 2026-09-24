@@ -501,9 +501,15 @@
   async function openPaymentForm(quoteId) {
     const { quotes } = await Molaris.api.get(`/api/quotes?patientId=${encodeURIComponent(state.patientId)}`);
     const payable = quotes.filter(q => q.status === 'accepted' && q.remainingMillimes > 0);
+    // A single open quote is the one being paid: link it by default (an unlinked payment
+    // does not reduce what the patient owes). The amount is only prefilled when the doctor
+    // clicked "Enregistrer un règlement" on that quote.
+    const linkedId = quoteId || (payable.length === 1 ? payable[0].id : '');
     const quoteOptions = `<option value="">${esc(t('billing.noQuoteLink'))}</option>` + payable.map(q =>
-      `<option value="${esc(q.id)}" ${q.id === quoteId ? 'selected' : ''}>${esc(q.number)} — ${esc(t('billing.remaining'))} ${esc(tnd(q.remainingMillimes))}</option>`).join('');
+      `<option value="${esc(q.id)}" ${q.id === linkedId ? 'selected' : ''}>${esc(q.number)} — ${esc(t('billing.remaining'))} ${esc(tnd(q.remainingMillimes))}</option>`).join('');
     const preset = payable.find(q => q.id === quoteId);
+    const today = Molaris.format.isoDate();
+    const oneYearAgo = Molaris.format.isoDate(new Date(Date.now() - 365 * 86_400_000));
 
     const modal = Molaris.ui.modal({
       title: `${t('billing.newPayment')} — ${patientName()}`,
@@ -516,7 +522,7 @@
           </div>
           <div>
             <label class="${LABEL}" for="billing-pay-date">${esc(t('billing.col.date'))}</label>
-            <input id="billing-pay-date" name="paidAt" type="date" required class="${INPUT}" value="${esc(Molaris.format.isoDate())}" max="${esc(Molaris.format.isoDate())}">
+            <input id="billing-pay-date" name="paidAt" type="date" required class="${INPUT}" value="${esc(today)}" min="${esc(oneYearAgo)}" max="${esc(today)}">
           </div>
           <div>
             <label class="${LABEL}" for="billing-pay-method">${esc(t('billing.col.method'))}</label>
@@ -525,12 +531,13 @@
             </select>
           </div>
           <div>
-            <label class="${LABEL}" for="billing-pay-reference">${esc(t('billing.reference'))}</label>
+            <label class="${LABEL}" for="billing-pay-reference">${esc(t('billing.reference'))}<span id="billing-pay-ref-star" class="hidden text-rose-600"> *</span></label>
             <input id="billing-pay-reference" name="reference" class="${INPUT}" placeholder="${esc(t('billing.referenceHint'))}">
           </div>
           <div class="col-span-2">
             <label class="${LABEL}" for="billing-pay-quote">${esc(t('billing.linkedQuote'))}</label>
             <select id="billing-pay-quote" name="quoteId" class="${INPUT}">${quoteOptions}</select>
+            <p id="billing-pay-unlinked" class="hidden mt-1 text-[11px] text-amber-700 dark:text-amber-300">${esc(t('billing.unlinkedWarning'))}</p>
           </div>
           <div class="col-span-2">
             <label class="${LABEL}" for="billing-pay-notes">${esc(t('billing.notes'))}</label>
@@ -563,10 +570,30 @@
       hint.textContent = m ? `= ${tnd(m)}` : '';
     };
     amountEl.addEventListener('input', showAmount);
-    modal.element.querySelector('#billing-pay-quote').addEventListener('change', (e) => {
+    const quoteEl = modal.element.querySelector('#billing-pay-quote');
+    const dateEl = modal.element.querySelector('#billing-pay-date');
+    const methodEl = modal.element.querySelector('#billing-pay-method');
+    const referenceEl = modal.element.querySelector('#billing-pay-reference');
+    // Linked quote: warn when an open quote is left unlinked; no date before the quote.
+    const syncQuote = () => {
+      const q = payable.find(x => x.id === quoteEl.value);
+      modal.element.querySelector('#billing-pay-unlinked').classList.toggle('hidden', !!q || payable.length === 0);
+      dateEl.min = q && q.issuedAt > oneYearAgo ? q.issuedAt : oneYearAgo;
+    };
+    // A cheque is traced by its number.
+    const syncMethod = () => {
+      const cheque = methodEl.value === 'cheque';
+      referenceEl.required = cheque;
+      modal.element.querySelector('#billing-pay-ref-star').classList.toggle('hidden', !cheque);
+    };
+    quoteEl.addEventListener('change', (e) => {
       const q = payable.find(x => x.id === e.target.value);
       if (q && !amountEl.value) { amountEl.value = amountInput(q.remainingMillimes); showAmount(); }
+      syncQuote();
     });
+    methodEl.addEventListener('change', syncMethod);
+    syncQuote();
+    syncMethod();
     showAmount();
   }
 

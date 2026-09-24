@@ -3,6 +3,7 @@ import { nextDocumentNumber } from '../../db/counters.js';
 import { newId, nowIso } from '../../db/ids.js';
 import { HttpError, notFound } from '../../routes/http.js';
 import { amountInWordsFr } from './amount-words.js';
+import { formatTnd } from '../../domain/money.js';
 
 /** Sanity ceiling for any single amount: 1 000 000 DT. */
 export const MAX_AMOUNT_MILLIMES = 1_000_000_000;
@@ -34,6 +35,9 @@ export function isRealLocalDate(value: string): boolean {
     && date.getUTCHours() === h && date.getUTCMinutes() === mi;
 }
 
+/** 'YYYY-MM-DD' -> '04/09/2026'. */
+const frDate = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+
 export function addDays(isoDate: string, days: number): string {
   const [y, m, d] = isoDate.split('-').map(Number);
   return localDate(new Date(y, m - 1, d + days));
@@ -46,7 +50,7 @@ const blankToNull = (value: string | null | undefined) => {
 
 function assertAmount(millimes: number, what: string, { allowZero = false } = {}): void {
   if (!Number.isSafeInteger(millimes) || millimes < (allowZero ? 0 : 1) || millimes > MAX_AMOUNT_MILLIMES) {
-    throw new HttpError(400, `${what}: invalid amount`);
+    throw new HttpError(400, `${what} : montant non valide.`);
   }
 }
 
@@ -408,7 +412,7 @@ export class QuoteRepository {
   update(id: string, input: { validUntil?: string | null; notes?: string | null; items?: QuoteItemInput[] }): Quote {
     const current = this.get(id);
     if (!current) throw notFound('Quote');
-    if (current.status !== 'draft') throw new HttpError(409, 'Only a draft quote can be edited');
+    if (current.status !== 'draft') throw new HttpError(409, 'Seul un devis brouillon peut être modifié.');
     if (input.items) validateItems(input.items);
     const validUntil = input.validUntil === undefined ? current.validUntil : input.validUntil;
     if (validUntil && !isRealLocalDate(validUntil)) throw new HttpError(400, 'validUntil: not a real date');
@@ -432,7 +436,7 @@ export class QuoteRepository {
       throw new HttpError(409, `Cannot change a quote from ${current.status} to ${status}`);
     }
     if ((status === 'sent' || status === 'accepted') && current.items.length === 0) {
-      throw new HttpError(409, 'An empty quote cannot be sent or accepted');
+      throw new HttpError(409, 'Un devis sans acte ne peut pas être envoyé ni accepté.');
     }
     this.db.prepare('UPDATE quotes SET status = ?, updated_at = ? WHERE id = ?').run(status, nowIso(), id);
     return this.get(id)!;
@@ -584,8 +588,12 @@ export class PaymentRepository {
 
   /** Records a payment; the REC number is allocated in the same transaction (gap-free). */
   create(input: PaymentInput, now: Date = new Date()): Payment {
-    assertAmount(input.amountMillimes, 'amountMillimes');
-    if (!PAYMENT_METHODS.includes(input.method)) throw new HttpError(400, 'method: unknown payment method');
+    assertAmount(input.amountMillimes, 'Montant');
+    if (!PAYMENT_METHODS.includes(input.method)) throw new HttpError(400, 'Mode de paiement inconnu.');
+    // A cheque is traced by its number (printed on the receipt, needed if it bounces).
+    if (input.method === 'cheque' && !blankToNull(input.reference)) {
+      throw new HttpError(400, 'Indiquez le numéro du chèque.');
+    }
     assertPatient(this.db, input.patientId);
 
     let paidAt = input.paidAt || localDateTime(now);
@@ -593,19 +601,31 @@ export class PaymentRepository {
       paidAt = paidAt === localDate(now) ? localDateTime(now) : `${paidAt}T12:00`;
     }
     if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(paidAt) || !isRealLocalDate(paidAt)) {
-      throw new HttpError(400, 'paidAt: expected a real date, YYYY-MM-DD or YYYY-MM-DDTHH:MM');
+      throw new HttpError(400, 'Date de règlement non valide.');
     }
-    if (paidAt.slice(0, 10) > localDate(now)) throw new HttpError(400, 'paidAt: a payment cannot be dated in the future');
+    // Not later than now (a few minutes of clock drift tolerated)…
+    if (paidAt > localDateTime(new Date(now.getTime() + 5 * 60_000))) {
+      throw new HttpError(400, 'Un règlement ne peut pas être daté dans le futur.');
+    }
+    // …nor more than a year back: almost always a mistyped year.
+    if (paidAt.slice(0, 10) < addDays(localDate(now), -365)) {
+      throw new HttpError(400, 'Date de règlement de plus d’un an : vérifiez l’année.');
+    }
 
     const id = newId('pay');
     this.db.transaction(() => {
       if (input.quoteId) {
         const quote = new QuoteRepository(this.db).get(input.quoteId);
         if (!quote) throw notFound('Quote');
-        if (quote.patientId !== input.patientId) throw new HttpError(400, 'quoteId: the quote belongs to another patient');
-        if (quote.status !== 'accepted') throw new HttpError(409, 'Payments can only be recorded against an accepted quote');
+        if (quote.patientId !== input.patientId) throw new HttpError(400, 'Ce devis appartient à un autre patient.');
+        if (quote.status !== 'accepted') {
+          throw new HttpError(409, `Le devis ${quote.number} n’est pas accepté : un règlement ne peut être rattaché qu’à un devis accepté.`);
+        }
+        if (paidAt.slice(0, 10) < quote.issuedAt) {
+          throw new HttpError(400, `Ce règlement serait daté avant le devis ${quote.number} (émis le ${frDate(quote.issuedAt)}).`);
+        }
         if (input.amountMillimes > quote.remainingMillimes) {
-          throw new HttpError(409, `Amount exceeds what remains on quote ${quote.number}`);
+          throw new HttpError(409, `Le montant dépasse le reste à payer sur le devis ${quote.number} (${formatTnd(quote.remainingMillimes)}).`);
         }
       }
       const receiptNumber = nextDocumentNumber(this.db, 'REC', now);
@@ -623,9 +643,9 @@ export class PaymentRepository {
   cancel(id: string, reason: string): Payment {
     const current = this.get(id);
     if (!current) throw notFound('Payment');
-    if (current.cancelledAt) throw new HttpError(409, 'This payment is already cancelled');
+    if (current.cancelledAt) throw new HttpError(409, 'Ce règlement est déjà annulé.');
     const trimmed = (reason ?? '').trim();
-    if (trimmed.length < 3) throw new HttpError(400, 'reason: a cancellation reason is required');
+    if (trimmed.length < 3) throw new HttpError(400, 'Indiquez le motif de l’annulation.');
     this.db.prepare('UPDATE payments SET cancelled_at = ?, cancel_reason = ? WHERE id = ?').run(nowIso(), trimmed, id);
     return this.get(id)!;
   }

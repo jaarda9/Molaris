@@ -13,14 +13,14 @@ export const billingRouter = Router();
 // Schemas. Every amount is integer millimes (1 DT = 1000 millimes).
 // ---------------------------------------------------------------------------
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD');
-const millimes = z.number().int('amount must be whole millimes').min(0).max(MAX_AMOUNT_MILLIMES);
-const positiveMillimes = z.number().int('amount must be whole millimes').positive('amount must be greater than zero').max(MAX_AMOUNT_MILLIMES);
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date attendue au format AAAA-MM-JJ');
+const millimes = z.number().int('montant en millimes entiers').min(0).max(MAX_AMOUNT_MILLIMES);
+const positiveMillimes = z.number().int('montant en millimes entiers').positive('le montant doit être supérieur à zéro').max(MAX_AMOUNT_MILLIMES);
 const optionalText = (max: number) => z.string().trim().max(max).nullable().optional();
 
 const procedureSchema = z.object({
   code: optionalText(40),
-  labelFr: z.string().trim().min(1, 'required').max(200),
+  labelFr: z.string().trim().min(1, 'obligatoire').max(200),
   labelAr: optionalText(200),
   category: optionalText(80),
   defaultPriceMillimes: millimes,
@@ -31,7 +31,7 @@ const procedureSchema = z.object({
 
 const quoteItemSchema = z.object({
   procedureId: z.string().max(100).nullable().optional(),
-  label: z.string().trim().min(1, 'required').max(300),
+  label: z.string().trim().min(1, 'obligatoire').max(300),
   toothFdi: z.number().int().min(11).max(85).nullable().optional(),
   quantity: z.number().int().min(1).max(99),
   unitPriceMillimes: millimes,
@@ -57,7 +57,7 @@ const paymentSchema = z.object({
   amountMillimes: positiveMillimes,
   method: z.enum(PAYMENT_METHODS),
   reference: optionalText(80),
-  paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/, 'expected YYYY-MM-DD or YYYY-MM-DDTHH:MM').optional(),
+  paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/, 'date attendue au format AAAA-MM-JJ ou AAAA-MM-JJTHH:MM').optional(),
   notes: optionalText(500)
 }).strict();
 
@@ -146,7 +146,7 @@ billingRouter.post('/api/payments', route((req, res) => {
 }));
 
 billingRouter.post('/api/payments/:id/cancel', route((req, res) => {
-  const { reason } = parse(z.object({ reason: z.string().trim().min(3, 'a cancellation reason is required').max(500) }), req.body);
+  const { reason } = parse(z.object({ reason: z.string().trim().min(3, 'indiquez le motif de l’annulation').max(500) }), req.body);
   const payment = new PaymentRepository(getDb()).cancel(String(req.params.id), reason);
   res.json({ success: true, payment });
 }));
