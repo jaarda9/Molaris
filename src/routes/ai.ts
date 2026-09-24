@@ -49,13 +49,20 @@ function mimeTypeToExtension(mimeType: string): string {
 // --- Senior advisor chat + voice-command action engine ---------------------------
 
 aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
+  // Declared outside the try: a command that already ran must be reported even if the AI fails.
+  let actionResult: ReturnType<typeof executeMolarisAction> | null = null;
   try {
     const { message, toothId, conversationHistory = [], language = 'en' } = req.body;
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'Message text is required' });
     }
 
-    const actionResult = executeMolarisAction(message, language);
+    actionResult = executeMolarisAction(message, language);
+
+    // A timer needs no AI answer: reply at once (no quota used, works offline).
+    if (actionResult.executed && actionResult.actionType === 'START_TIMER') {
+      return res.json(actionOnlyReply(actionResult));
+    }
 
     const memory = loadMemory();
     const activePatient = patientDb.getActivePatient();
@@ -134,9 +141,26 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     console.error('Gemini chat error:', err);
+    if (actionResult?.executed) {
+      // The command (tooth update, patient switch…) is done: confirm it, and say the AI is unavailable.
+      const reply = actionOnlyReply(actionResult);
+      return res.json({ ...reply, reply: `${reply.reply}\n\n${aiErrorMessage(err, languageOf(req.body?.language))}` });
+    }
     sendAiError(res, err, req);
   }
 });
+
+function actionOnlyReply(action: ReturnType<typeof executeMolarisAction>) {
+  return {
+    reply: `⚡ ${action.summary}`,
+    action,
+    activePatient: patientDb.getActivePatient(),
+    safetyAlerts: [],
+    toothTargeted: null,
+    modelUsed: null,
+    timestamp: new Date().toISOString()
+  };
+}
 
 // --- Radiograph / intraoral photo second opinion -----------------------------------
 

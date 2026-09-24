@@ -427,7 +427,7 @@
   </aside>
 
   <div class="app-main">
-    <!-- TOP BAR: active patient, chairside timer, display settings -->
+    <!-- TOP BAR: active patient, display settings -->
     <header id="clinical-header" class="app-topbar">
       <button id="sidebar-toggle" type="button" class="icon-btn lg:hidden" data-i18n-title="header.menu" title="Menu" aria-controls="app-sidebar" aria-expanded="false">
         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg>
@@ -452,20 +452,6 @@
       <div class="flex-1"></div>
 
       <div class="topbar-tools">
-        <!-- Chairside Timer Widget -->
-        <div id="chairside-timer-widget" class="bg-teal-50 dark:bg-teal-950/60 px-3 py-1.5 rounded-lg border border-teal-200 dark:border-teal-800 flex items-center space-x-2">
-          <svg class="w-4 h-4 text-teal-600 dark:text-teal-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12 6 12 12 16 14"></polyline>
-          </svg>
-          <span id="timer-display" class="font-mono font-bold text-teal-700 dark:text-teal-300 text-sm">00:00</span>
-          <div class="flex items-center space-x-1">
-            <button id="timer-btn-15" class="px-1.5 py-0.5 rounded text-[11px] bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 border border-teal-300 dark:border-teal-700 hover:bg-teal-100 cursor-pointer" title="Acid Etch 15s">15s</button>
-            <button id="timer-btn-20" class="px-1.5 py-0.5 rounded text-[11px] bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 border border-teal-300 dark:border-teal-700 hover:bg-teal-100 cursor-pointer" title="Cure 20s">20s</button>
-            <button id="timer-btn-stop" class="px-1.5 py-0.5 rounded text-[11px] bg-rose-100 text-rose-700 border border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800 hidden cursor-pointer">Stop</button>
-          </div>
-        </div>
-        <span class="topbar-divider" aria-hidden="true"></span>
         <button id="voice-synthesis-btn" class="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer" title="Toggle Advisor Voice Readout">
             <svg id="voice-icon-on" class="w-4 h-4 text-teal-600 dark:text-teal-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>

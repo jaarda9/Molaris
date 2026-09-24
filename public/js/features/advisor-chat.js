@@ -76,14 +76,7 @@ function appendMessage(sender, text, action = null) {
       </div>
     `;
   } else {
-    const actionBadge = (action && action.executed) ? `
-      <div class="mb-2 p-2.5 rounded-xl bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 font-mono text-xs flex items-center space-x-2">
-        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-        <span class="font-bold">${escapeHtml(molarisT('chat.actionExecuted'))} [${escapeHtml(action.actionType)}]:</span>
-        <span class="text-cyan-100">${escapeHtml(action.summary)}</span>
-      </div>
-    ` : '';
-
+    // An executed command is confirmed by the reply itself ("⚡ …"), so no separate badge.
     msgDiv.innerHTML = `
       <div class="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
         M
@@ -93,7 +86,6 @@ function appendMessage(sender, text, action = null) {
           <span class="font-bold text-teal-700 dark:text-teal-400">${escapeHtml(molarisT('chat.welcomeSender'))}</span>
           <button onclick="navigator.clipboard.writeText(this.closest('.space-y-2').innerText)" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">${escapeHtml(molarisT('chat.copy'))}</button>
         </div>
-        ${actionBadge}
         <div class="markdown-content">${formatMarkdown(text)}</div>
       </div>
     `;
