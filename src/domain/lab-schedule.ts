@@ -31,3 +31,39 @@ export function labWarningsForAppointment(
         : `Travail de laboratoire ${what} pas encore revenu, sans date de retour : vérifiez avec le laboratoire avant ce rendez-vous.`;
     });
 }
+
+type LabDates = Pick<LabCase, 'status' | 'sentDate' | 'returnedDate' | 'seatedDate'>;
+const STEP_RANK: Record<LabCase['status'], number> = { planned: 0, sent: 1, in_lab: 1, remake: 1, returned: 2, seated: 3 };
+const STEPS = [['sentDate', 'de l’envoi'], ['returnedDate', 'du retour'], ['seatedDate', 'de la pose']] as const;
+
+/**
+ * Applies a status/date change to a lab case and returns the dates to save.
+ * - Moving the case along records the day it happened (sent, returned, seated).
+ * - Stepping back, or a remake (the work goes back to the lab), clears the later steps;
+ *   the remake's new sending gets today's date.
+ * - Dates cannot be in the future nor out of order. Throws an Error with a French message.
+ */
+export function applyLabProgress<T extends Partial<LabDates>>(current: LabDates, changes: T, today: string): T & Partial<LabDates> {
+  const out: Partial<LabDates> = { ...changes };
+  const status = changes.status;
+  if (status && status !== current.status) {
+    const rank = STEP_RANK[status];
+    STEPS.forEach(([field], i) => {
+      if (rank <= i && out[field] === undefined) out[field] = undefined;
+    });
+    const again = current.status === 'remake' && status === 'sent';
+    const field = status === 'sent' ? 'sentDate' : status === 'returned' ? 'returnedDate' : status === 'seated' ? 'seatedDate' : null;
+    if (field && changes[field] === undefined && (again || !current[field])) {
+      out[field] = today;
+    }
+  }
+  const merged = { ...current, ...out };
+  const known = STEPS.map(([field, label]) => [merged[field], label] as const).filter(([date]) => date) as Array<readonly [string, string]>;
+  for (const [date, label] of known) {
+    if (date > today) throw new Error(`La date ${label} ne peut pas être dans le futur.`);
+  }
+  for (let i = 1; i < known.length; i++) {
+    if (known[i][0] < known[i - 1][0]) throw new Error(`La date ${known[i][1]} précède celle ${known[i - 1][1]}.`);
+  }
+  return out as T & Partial<LabDates>;
+}

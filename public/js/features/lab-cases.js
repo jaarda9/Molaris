@@ -38,11 +38,15 @@ function renderLabCasesList() {
   const statusOrder = { planned: 0, sent: 1, in_lab: 2, returned: 3, seated: 4, remake: 5 };
   const sorted = [...cases].sort((a, b) => (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9));
 
+  // 'YYYY-MM-DD' shown as 24/09/2026 (parsed as a local day, not UTC midnight).
+  const labDay = (iso) => escapeHtml(`${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`);
+
   container.innerHTML = '';
   sorted.forEach(lc => {
     const now = new Date();
     let dueBadge = '';
-    if (lc.dueDate && lc.status !== 'seated') {
+    // Late only while the work is still expected back from the lab.
+    if (lc.dueDate && ['planned', 'sent', 'in_lab', 'remake'].includes(lc.status)) {
       const due = new Date(lc.dueDate);
       const diffDays = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
       if (diffDays < 0) {
@@ -65,7 +69,10 @@ function renderLabCasesList() {
         </div>
         <div class="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap gap-x-3">
           ${lc.labName ? `<span>${isFr ? 'Labo :' : 'Lab:'} ${escapeHtml(lc.labName)}</span>` : ''}
-          ${lc.dueDate ? `<span>${isFr ? 'Échéance :' : 'Due:'} ${new Date(lc.dueDate).toLocaleDateString(isFr ? 'fr-FR' : 'en-US')}</span>` : ''}
+          ${lc.dueDate ? `<span>${isFr ? 'Échéance :' : 'Due:'} ${labDay(lc.dueDate)}</span>` : ''}
+          ${lc.sentDate ? `<span>${isFr ? 'Envoyé le' : 'Sent'} ${labDay(lc.sentDate)}</span>` : ''}
+          ${lc.returnedDate ? `<span>${isFr ? 'Reçu le' : 'Back'} ${labDay(lc.returnedDate)}</span>` : ''}
+          ${lc.seatedDate ? `<span>${isFr ? 'Posé le' : 'Fitted'} ${labDay(lc.seatedDate)}</span>` : ''}
         </div>
         ${lc.notes ? `<p class="text-xs text-slate-500 dark:text-slate-400 italic">${escapeHtml(lc.notes)}</p>` : ''}
       </div>
@@ -100,8 +107,10 @@ function renderLabCasesList() {
           const data = await res.json();
           if (data.success) {
             playClinicalBeep(700, 'sine', 0.1);
-            await fetchLabCases();
+          } else {
+            alert(molarisT('common.saveError') + ' ' + (data.error || ''));
           }
+          await fetchLabCases();
         } catch (err) {
           alert(molarisT('common.networkError') + ' ' + err.message);
         }

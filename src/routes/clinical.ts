@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { patientDb, PatientRecord, findPatientTooth } from '../repositories/patients.js';
 import { primaryTeethVisibility } from '../domain/primary-teeth.js';
+import { applyLabProgress } from '../domain/lab-schedule.js';
 import { createDefaultPerioTeeth, type PerioChartSnapshot } from '../domain/clinical-records.js';
 import { checkDrugInteractions, checkAllergyConflict, SafetyAlert } from '../domain/clinical-safety.js';
 import { HttpError, languageOf, parse, route } from './http.js';
@@ -174,10 +175,18 @@ clinicalRouter.post('/api/lab-cases', route((req: Request, res: Response) => {
 
 clinicalRouter.put('/api/lab-cases/:id', route((req: Request, res: Response) => {
   const changes = parse(labCaseUpdateSchema, req.body);
-  if (!patientDb.getLabCasesForActivePatient().some(c => c.id === String(req.params.id))) {
-    throw new HttpError(404, 'Travail de laboratoire introuvable.');
+  const current = patientDb.getLabCasesForActivePatient().find(c => c.id === String(req.params.id));
+  if (!current) throw new HttpError(404, 'Travail de laboratoire introuvable.');
+
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  let progressed: typeof changes;
+  try {
+    progressed = applyLabProgress(current, changes, today);
+  } catch (err) {
+    throw new HttpError(400, (err as Error).message);
   }
-  res.json({ success: true, labCase: patientDb.updateLabCaseForActivePatient(String(req.params.id), changes) });
+  res.json({ success: true, labCase: patientDb.updateLabCaseForActivePatient(current.id, progressed) });
 }));
 
 clinicalRouter.delete('/api/lab-cases/:id', (req: Request, res: Response) => {
