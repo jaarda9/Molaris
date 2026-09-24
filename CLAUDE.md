@@ -72,7 +72,7 @@ data/                      molaris.db, backups/, images/ — git-ignored, NEVER 
 - Tests: `openDatabase(':memory:')` + the repository; never the real DB. Put them next to the
   code as `*.test.ts` — the runner finds them.
 - Demo data for client demos: export `seedDemo(db)` from `src/features/<name>/demo.ts`
-  (picked up by `npm run db:demo`). Demo patients are `pt_1`, `pt_2`, `pt_3`.
+  (picked up by `npm run db:demo`). Demo patients are `pt_1`, `pt_2`, `pt_3` (adults) and `pt_4` (a 7-year-old, mixed dentition).
 
 ## Frontend conventions (new code)
 

@@ -1,8 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { patientDb } from '../repositories/patients.js';
+import { z } from 'zod';
+import { patientDb, PatientRecord } from '../repositories/patients.js';
+import { primaryTeethVisibility } from '../domain/primary-teeth.js';
 import { createDefaultPerioTeeth } from '../domain/clinical-records.js';
 import { checkDrugInteractions, checkAllergyConflict, SafetyAlert } from '../domain/clinical-safety.js';
-import { languageOf } from './http.js';
+import { languageOf, parse, route } from './http.js';
 
 // Per-patient clinical chart: odontogram, medications, perio, treatment plan, lab cases.
 // These endpoints act on the *active* patient (legacy design); new features take an
@@ -29,6 +31,24 @@ clinicalRouter.post('/api/odontogram/reset', (req: Request, res: Response) => {
   const teeth = patientDb.resetOdontogramForActivePatient();
   res.json({ success: true, odontogram: teeth });
 });
+
+// Primary teeth (FDI 51–85) and whether the chart shows them for this patient.
+function primaryTeethPayload(patient: PatientRecord) {
+  const { visible, reason } = primaryTeethVisibility(patient.age, patient.primaryTeethMode, patient.primaryTeeth);
+  return { primaryTeeth: patient.primaryTeeth, mode: patient.primaryTeethMode, visible, reason, age: patient.age };
+}
+
+clinicalRouter.get('/api/odontogram/primary', (req: Request, res: Response) => {
+  res.json(primaryTeethPayload(patientDb.getActivePatient()));
+});
+
+const primaryModeSchema = z.object({ mode: z.enum(['auto', 'shown', 'hidden']) });
+
+clinicalRouter.put('/api/odontogram/primary', route((req: Request, res: Response) => {
+  const { mode } = parse(primaryModeSchema, req.body);
+  const patient = patientDb.setPrimaryTeethModeForActivePatient(mode);
+  res.json({ success: true, ...primaryTeethPayload(patient) });
+}));
 
 // --- Medications (also feed the drug-interaction / allergy safety checks) -----
 

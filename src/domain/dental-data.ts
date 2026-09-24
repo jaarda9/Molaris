@@ -1,10 +1,12 @@
 export interface ToothInfo {
-  id: number; // Universal 1-32
+  id: number; // Universal 1-32 for permanent teeth; the FDI number (51-85) for primary teeth
   fdi: number;
   name: string;
   arch: 'maxillary' | 'mandibular';
   type: 'molar' | 'premolar' | 'canine' | 'incisor';
-  status: 'sound' | 'caries' | 'restoration' | 'crown' | 'rct' | 'missing' | 'implant' | 'veneer';
+  status: 'sound' | 'caries' | 'restoration' | 'crown' | 'rct' | 'missing' | 'implant' | 'veneer' | 'unerupted';
+  /** Absent for permanent teeth (the legacy 32-tooth chart). */
+  dentition?: 'primary';
   notes?: string;
   surfaces?: {
     mesial?: boolean;

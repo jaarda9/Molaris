@@ -1,10 +1,11 @@
 // -----------------------------------------------------------------------------
-// Interactive 32-Tooth Odontogram Engine
+// Interactive Odontogram Engine (FDI chart: 32 permanent teeth + 20 primary teeth)
 // -----------------------------------------------------------------------------
 async function fetchOdontogram() {
   try {
-    const res = await fetch('/api/odontogram');
-    systemState.teethData = await res.json();
+    const [permanentRes, primaryRes] = await Promise.all([fetch('/api/odontogram'), fetch('/api/odontogram/primary')]);
+    systemState.teethData = await permanentRes.json();
+    systemState.primaryTeeth = await primaryRes.json();
     renderOdontogram();
   } catch (err) {
     console.error('Failed to load odontogram:', err);
@@ -23,7 +24,84 @@ function renderOdontogram() {
   const lower = systemState.teethData.filter(t => t.arch === 'mandibular').sort((a, b) => b.id - a.id);
   fillArchRow(maxGrid, upper, createToothCard);
   fillArchRow(manGrid, lower, createToothCard);
+  renderPrimaryTeeth();
 }
+
+// Primary teeth (ids = FDI 51–85): shown for children automatically, for adults only
+// when a baby tooth has a finding or the dentist asks for them (retained tooth).
+function renderPrimaryTeeth() {
+  const state = systemState.primaryTeeth;
+  const upperWrap = document.getElementById('primary-upper-wrap');
+  const lowerWrap = document.getElementById('primary-lower-wrap');
+  if (!state || !upperWrap || !lowerWrap) return;
+
+  upperWrap.classList.toggle('hidden', !state.visible);
+  lowerWrap.classList.toggle('hidden', !state.visible);
+  if (state.visible) {
+    const teeth = state.primaryTeeth || [];
+    const quadrant = (q, ascending) => teeth.filter(t => Math.floor(t.fdi / 10) === q)
+      .sort((a, b) => ascending ? a.fdi - b.fdi : b.fdi - a.fdi);
+    // 55→51 | 61→65 over 85→81 | 71→75, aligned under 15…11 | 21…25.
+    fillPrimaryArchRow(document.getElementById('primary-upper-grid'), quadrant(5, false), quadrant(6, true));
+    fillPrimaryArchRow(document.getElementById('primary-lower-grid'), quadrant(8, false), quadrant(7, true));
+  }
+  renderPrimaryTeethControl();
+}
+
+function fillPrimaryArchRow(grid, right, left) {
+  if (!grid) return;
+  grid.innerHTML = '';
+  const spacer = () => grid.appendChild(document.createElement('div'));
+  for (let i = 0; i < 3; i++) spacer();
+  right.forEach(t => grid.appendChild(createToothCard(t)));
+  const midline = document.createElement('div');
+  midline.className = 'arch-midline';
+  midline.setAttribute('aria-hidden', 'true');
+  grid.appendChild(midline);
+  left.forEach(t => grid.appendChild(createToothCard(t)));
+  for (let i = 0; i < 3; i++) spacer();
+}
+
+function renderPrimaryTeethControl() {
+  const state = systemState.primaryTeeth;
+  const toggle = document.getElementById('primary-teeth-toggle');
+  const reason = document.getElementById('primary-teeth-reason');
+  const autoLink = document.getElementById('primary-teeth-auto');
+  if (!state || !toggle || !reason || !autoLink) return;
+  toggle.textContent = molarisT(state.visible ? 'odonto.primaryHideBtn' : 'odonto.primaryShowBtn');
+  toggle.setAttribute('aria-pressed', String(state.visible));
+  reason.textContent = molarisT('odonto.primaryReason.' + state.reason).replace('{age}', state.age);
+  autoLink.classList.toggle('hidden', state.mode === 'auto');
+}
+
+async function setPrimaryTeethMode(mode) {
+  try {
+    const res = await fetch('/api/odontogram/primary', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || '');
+    systemState.primaryTeeth = data;
+    // A hidden primary tooth cannot stay selected.
+    if (!data.visible && systemState.selectedTooth && systemState.selectedTooth.dentition === 'primary') {
+      systemState.selectedTooth = null;
+      document.getElementById('tooth-detail-card')?.classList.add('hidden');
+      updateChatToothBanner(null);
+    }
+    renderOdontogram();
+  } catch (err) {
+    alert(molarisT('common.networkError') + ' ' + err.message);
+  }
+}
+
+document.getElementById('primary-teeth-toggle')?.addEventListener('click', () => {
+  const visible = !!(systemState.primaryTeeth && systemState.primaryTeeth.visible);
+  setPrimaryTeethMode(visible ? 'hidden' : 'shown');
+});
+document.getElementById('primary-teeth-auto')?.addEventListener('click', () => setPrimaryTeethMode('auto'));
+Molaris.events.on('language-changed', renderPrimaryTeethControl);
 
 // Lays out one arch as 8 teeth | midline | 8 teeth. Shared with the perio chart.
 function fillArchRow(grid, teeth, createCard) {
@@ -52,7 +130,7 @@ function createToothCard(tooth) {
   // The FDI number sits next to the occlusal plane, as on the paper chart.
   const number = `<span class="text-sm font-mono font-bold leading-none">${escapeHtml(String(tooth.fdi))}</span>`;
   const icon = `<svg class="tooth-svg w-6 h-6 mx-auto opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${getToothSvgPath(tooth.type)}</svg>`;
-  const status = `<span class="text-[9px] uppercase tracking-wide font-semibold opacity-70 truncate w-full">${escapeHtml(getTranslatedToothStatus(tooth.status, isFr))}</span>`;
+  const status = `<span class="text-[9px] font-semibold opacity-75 truncate w-full">${escapeHtml(getTranslatedToothStatus(tooth.status, isFr))}</span>`;
   card.innerHTML = tooth.arch === 'maxillary' ? status + icon + number : number + icon + status;
 
   card.addEventListener('click', () => {
@@ -154,6 +232,12 @@ document.querySelectorAll('.status-choice-btn').forEach(btn => {
           status: newStatus
         })
       });
+      if (systemState.selectedTooth.dentition === 'primary') {
+        // A finding on a baby tooth can change why/whether the primary teeth are shown.
+        const id = systemState.selectedTooth.id;
+        systemState.primaryTeeth = await (await fetch('/api/odontogram/primary')).json();
+        systemState.selectedTooth = systemState.primaryTeeth.primaryTeeth.find(t => t.id === id) || systemState.selectedTooth;
+      }
       selectTooth(systemState.selectedTooth);
     } catch (e) {
       console.error(e);

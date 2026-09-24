@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { ToothInfo, DEFAULT_TEETH } from '../domain/dental-data.js';
+import { createPrimaryTeeth, isPrimaryToothId, isUntouchedPrimaryChart, PrimaryTeethMode } from '../domain/primary-teeth.js';
 import {
   Medication,
   PerioChartSnapshot,
@@ -39,6 +40,10 @@ export interface PatientRecord {
   prophylaxisRequired: boolean;
   prophylaxisReason?: string;
   teeth: ToothInfo[];
+  /** Primary teeth FDI 51–85 (ids = FDI numbers), kept apart from the 32 permanent teeth. */
+  primaryTeeth: ToothInfo[];
+  /** Whether the odontogram shows the primary teeth: automatic (by age/findings) or the dentist's choice. */
+  primaryTeethMode: PrimaryTeethMode;
   medications: Medication[];
   perioCharts: PerioChartSnapshot[];
   treatmentPlan: TreatmentPlanItem[];
@@ -87,6 +92,12 @@ export interface DentalDatabase {
 const LEGACY_JSON_FILE = path.join(DATA_DIR, 'patients-db.json');
 const ACTIVE_PATIENT_KEY = 'activePatientId';
 
+/** Looks a tooth up by internal id: Universal 1–32 (permanent) or FDI 51–85 (primary). */
+export function findPatientTooth(patient: PatientRecord, toothId: number): ToothInfo | undefined {
+  const list = isPrimaryToothId(toothId) ? patient.primaryTeeth : patient.teeth;
+  return list.find(t => t.id === toothId);
+}
+
 function createPatientTeeth(modifications?: Array<{ id: number; status: ToothInfo['status']; notes?: string }>): ToothInfo[] {
   const teeth: ToothInfo[] = JSON.parse(JSON.stringify(DEFAULT_TEETH));
   modifications?.forEach(mod => {
@@ -99,7 +110,7 @@ function createPatientTeeth(modifications?: Array<{ id: number; status: ToothInf
   return teeth;
 }
 
-type ClinicalDefaultFields = 'medications' | 'perioCharts' | 'treatmentPlan' | 'consents' | 'images' | 'labCases' | 'recall' | 'isPregnantOrNursing' | 'prophylaxisRequired' | 'prophylaxisReason';
+type ClinicalDefaultFields = 'primaryTeeth' | 'primaryTeethMode' | 'medications' | 'perioCharts' | 'treatmentPlan' | 'consents' | 'images' | 'labCases' | 'recall' | 'isPregnantOrNursing' | 'prophylaxisRequired' | 'prophylaxisReason';
 type PatientSeed = Omit<PatientRecord, ClinicalDefaultFields> & Partial<Pick<PatientRecord, ClinicalDefaultFields>>;
 
 // Backfills fields added after a record was first written, so older records
@@ -107,6 +118,8 @@ type PatientSeed = Omit<PatientRecord, ClinicalDefaultFields> & Partial<Pick<Pat
 function withClinicalDefaults(patient: PatientSeed): PatientRecord {
   return {
     ...patient,
+    primaryTeeth: patient.primaryTeeth ?? createPrimaryTeeth(Number(patient.age) || 0),
+    primaryTeethMode: patient.primaryTeethMode ?? 'auto',
     isPregnantOrNursing: patient.isPregnantOrNursing ?? false,
     prophylaxisRequired: patient.prophylaxisRequired ?? false,
     prophylaxisReason: patient.prophylaxisReason,
@@ -237,6 +250,54 @@ function buildSeedPatients(): PatientRecord[] {
       soapNotes: [],
       consultHistory: [],
       createdAt: '2026-09-01T11:15:00.000Z',
+      updatedAt: now
+    },
+    {
+      id: 'pt_4',
+      chartId: 'PT-2026-0112',
+      name: 'Lina Ben Youssef',
+      phone: '+216 55 214 380',
+      cnamId: 'DEMO-0000112',
+      cnamQuality: 'enfant',
+      age: 7,
+      gender: 'Female',
+      weightKg: 24,
+      asaStatus: 'ASA I',
+      cardiacRisk: false,
+      medicalAlerts: 'Aucun antécédent médical.',
+      allergies: 'Aucune allergie connue',
+      chiefComplaint: 'Douleur au sucré en bas à gauche ; contrôle de l’éruption des incisives',
+      deliveredCarpules: 0.0,
+      selectedDrugId: 'arti_100k',
+      // Mixed dentition at 7: first permanent molars and lower central incisors are out,
+      // upper central incisors are erupting, the other permanent teeth are not.
+      teeth: createPatientTeeth([
+        ...[
+          1, 2, 4, 5, 6, 7, 10, 11, 12, 13, 15, 16,
+          17, 18, 20, 21, 22, 23, 26, 27, 28, 29, 31, 32
+        ].map(id => ({ id, status: 'unerupted' as const })),
+        { id: 8, status: 'sound', notes: 'En cours d’éruption.' },
+        { id: 9, status: 'sound', notes: 'En cours d’éruption.' }
+      ]),
+      primaryTeeth: (() => {
+        const teeth = createPrimaryTeeth(7);
+        const set = (fdi: number, status: ToothInfo['status'], notes?: string) => {
+          const tooth = teeth.find(t => t.id === fdi)!;
+          tooth.status = status;
+          if (notes) tooth.notes = notes;
+        };
+        set(51, 'missing', 'Exfoliée.');
+        set(61, 'missing', 'Exfoliée.');
+        set(71, 'missing', 'Exfoliée.');
+        set(81, 'missing', 'Exfoliée.');
+        set(75, 'caries', 'Carie occluso-distale, sensibilité au sucré.');
+        set(84, 'restoration', 'Verre ionomère.');
+        return teeth;
+      })(),
+      anesthesiaLog: [],
+      soapNotes: [],
+      consultHistory: [],
+      createdAt: '2026-09-10T09:00:00.000Z',
       updatedAt: now
     }
   ];
@@ -424,6 +485,10 @@ export class PatientRepository {
     if (!current) throw new Error(`Patient '${id}' not found`);
     const { id: _ignoredId, createdAt: _ignoredCreated, ...allowed } = updates;
     const updated: PatientRecord = { ...current, ...allowed, id: current.id, createdAt: current.createdAt, updatedAt: nowIso() };
+    // An age correction (e.g. 35 -> 7) re-derives the primary teeth while nothing was recorded on them.
+    if (updated.age !== current.age && !allowed.primaryTeeth && isUntouchedPrimaryChart(current.primaryTeeth, current.age)) {
+      updated.primaryTeeth = createPrimaryTeeth(updated.age);
+    }
     this.save(updated);
     return updated;
   }
@@ -450,7 +515,7 @@ export class PatientRepository {
 
   public updateToothForActivePatient(toothId: number, updates: Partial<ToothInfo>): ToothInfo {
     const patient = this.getActivePatient();
-    const tooth = patient.teeth.find(t => t.id === Number(toothId));
+    const tooth = findPatientTooth(patient, Number(toothId));
     if (!tooth) throw new Error(`Tooth #${toothId} not found for patient ${patient.name}`);
     if (updates.status !== undefined) tooth.status = updates.status;
     if (updates.notes !== undefined) tooth.notes = updates.notes;
@@ -462,8 +527,16 @@ export class PatientRepository {
   public resetOdontogramForActivePatient(): ToothInfo[] {
     const patient = this.getActivePatient();
     patient.teeth = createPatientTeeth();
+    patient.primaryTeeth = createPrimaryTeeth(patient.age);
     this.touch(patient);
     return patient.teeth;
+  }
+
+  public setPrimaryTeethModeForActivePatient(mode: PrimaryTeethMode): PatientRecord {
+    const patient = this.getActivePatient();
+    patient.primaryTeethMode = mode;
+    this.touch(patient);
+    return patient;
   }
 
   // --- Anesthesia & SOAP ------------------------------------------------------

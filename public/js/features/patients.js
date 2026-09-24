@@ -78,7 +78,7 @@ function renderPatientsGrid(filterText = '') {
     card.id = `patient-card-${patient.id}`;
 
     // Calculate metrics
-    const teethWithFindings = (patient.odontogram || []).filter(t => t.status && t.status !== 'sound').length;
+    const teethWithFindings = (patient.odontogram || []).filter(t => t.status && t.status !== 'sound' && t.status !== 'unerupted').length;
     const totalCarpulesGiven = (patient.anesthesiaLog || []).reduce((sum, item) => sum + (Number(item.carpules) || 0), 0);
     const soapCount = (patient.soapNotes || []).length;
 

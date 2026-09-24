@@ -80,6 +80,9 @@
     .arch-occlusal { height: 2px; background-color: #64748b; margin: 0.25rem 0; }
     .dark .arch-midline, .dark .arch-occlusal { background-color: #94a3b8; }
     .arch-upper .tooth-svg { transform: scaleY(-1); }
+    .arch-primary .tooth-card { min-height: 64px; }
+    .arch-primary .tooth-card .tooth-svg { width: 1.1rem; height: 1.1rem; }
+    .arch-primary-label { font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: #94a3b8; text-align: center; }
 
     /* Status indicators */
     .status-sound { background-color: #f8fafc; border-color: #cbd5e1; color: #334155; }
@@ -89,6 +92,7 @@
     .status-rct { background-color: #faf5ff; border-color: #c084fc; color: #7e22ce; }
     .status-missing { background-color: #f1f5f9; border-color: #94a3b8; color: #64748b; border-style: dashed; }
     .status-implant { background-color: #f0fdfa; border-color: #2dd4bf; color: #0f766e; }
+    .status-unerupted { background-color: #ffffff; border-color: #cbd5e1; color: #94a3b8; border-style: dotted; }
     
     .dark .status-sound { background-color: #1e293b; border-color: #334155; color: #e2e8f0; }
     .dark .status-caries { background-color: #450a0a; border-color: #dc2626; color: #fca5a5; }
@@ -97,6 +101,7 @@
     .dark .status-rct { background-color: #3b0764; border-color: #9333ea; color: #e9d5ff; }
     .dark .status-missing { background-color: #0f172a; border-color: #475569; color: #64748b; border-style: dashed; }
     .dark .status-implant { background-color: #042f2e; border-color: #0d9488; color: #99f6e4; }
+    .dark .status-unerupted { background-color: #0f172a; border-color: #334155; color: #64748b; border-style: dotted; }
 
     /* Treatment plan priority chips */
     .priority-urgent { background-color: #fef2f2; border-color: #f87171; color: #b91c1c; }
@@ -328,7 +333,7 @@
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M7 3C5 3 3 5 3 8C3 12 4.5 16 7 21C7.8 22 9 22 9.5 21C10.5 19 11 17 12 17C13 17 13.5 19 14.5 21C15 22 16.2 22 17 21C19.5 16 21 12 21 8C21 5 19 3 17 3C15 3 14 4.5 12 4.5C10 4.5 9 3 7 3Z"/>
         </svg>
-        <span data-i18n="nav.odontogram">32-Tooth Odontogram</span>
+        <span data-i18n="nav.odontogram">Odontogram</span>
       </button>
 
       <button id="nav-tab-anesthesia" class="nav-tab px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2 whitespace-nowrap cursor-pointer">
@@ -613,13 +618,21 @@
         <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
           <div>
             <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span data-i18n="odonto.title">Interactive 32-Tooth Clinical Odontogram</span>
+              <span data-i18n="odonto.title">Interactive Clinical Odontogram</span>
               <span class="text-xs font-mono font-normal bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded" data-i18n="odonto.activeChart">Active Chart</span>
             </h2>
             <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="odonto.subtitle">Click any tooth to examine, log restorations/caries/endo, or direct-consult M.O.L.A.R.I.S Senior Advisor.</p>
           </div>
 
-          <div class="flex items-center space-x-3">
+          <div class="flex items-center gap-3 flex-wrap justify-end">
+            <!-- Primary teeth: automatic by age/findings, or forced per patient -->
+            <div id="primary-teeth-control" class="flex flex-col items-end gap-0.5">
+              <button id="primary-teeth-toggle" type="button" class="px-3 py-1.5 rounded-lg border border-teal-300 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-200 hover:bg-teal-100 dark:hover:bg-teal-900 text-xs font-semibold"></button>
+              <div class="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400">
+                <span id="primary-teeth-reason"></span>
+                <button id="primary-teeth-auto" type="button" class="hidden underline text-teal-700 dark:text-teal-400 hover:text-teal-900" data-i18n="odonto.primaryAutoLink">Back to automatic</button>
+              </div>
+            </div>
             <button id="reset-odontogram-btn" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs text-slate-600 dark:text-slate-300" data-i18n="odonto.resetBtn">
               Reset Chart
             </button>
@@ -636,6 +649,7 @@
           <span class="px-2 py-0.5 rounded status-rct border text-[11px] font-medium" data-i18n="odonto.legendRct">Endo (RCT)</span>
           <span class="px-2 py-0.5 rounded status-implant border text-[11px] font-medium" data-i18n="odonto.legendImplant">Implant</span>
           <span class="px-2 py-0.5 rounded status-missing border text-[11px] font-medium" data-i18n="odonto.legendMissing">Missing/Extract</span>
+          <span class="px-2 py-0.5 rounded status-unerupted border text-[11px] font-medium" data-i18n="odonto.legendUnerupted">Unerupted</span>
         </div>
 
         <!-- FDI dental chart as used in Tunisia: patient's right on the left of the screen.
@@ -650,7 +664,16 @@
             <div id="maxillary-teeth-grid" class="arch-row arch-upper">
               <!-- Rendered by JS -->
             </div>
+            <!-- Primary teeth (55→51 | 61→65 and 85→81 | 71→75), under their permanent successors -->
+            <div id="primary-upper-wrap" class="hidden space-y-1 pt-1">
+              <div class="arch-primary-label" data-i18n="odonto.primaryRowUpper">Primary teeth · upper</div>
+              <div id="primary-upper-grid" class="arch-row arch-upper arch-primary"></div>
+            </div>
             <div class="arch-occlusal" aria-hidden="true"></div>
+            <div id="primary-lower-wrap" class="hidden space-y-1 pb-1">
+              <div id="primary-lower-grid" class="arch-row arch-lower arch-primary"></div>
+              <div class="arch-primary-label" data-i18n="odonto.primaryRowLower">Primary teeth · lower</div>
+            </div>
             <div id="mandibular-teeth-grid" class="arch-row arch-lower">
               <!-- Rendered by JS -->
             </div>
@@ -699,6 +722,7 @@
               <button class="status-choice-btn px-2.5 py-1 rounded-lg text-xs font-medium border" data-status="rct">Endodontic RCT</button>
               <button class="status-choice-btn px-2.5 py-1 rounded-lg text-xs font-medium border" data-status="implant">Implant</button>
               <button class="status-choice-btn px-2.5 py-1 rounded-lg text-xs font-medium border" data-status="missing">Missing / Extracted</button>
+              <button class="status-choice-btn px-2.5 py-1 rounded-lg text-xs font-medium border" data-status="unerupted">Unerupted</button>
             </div>
           </div>
 

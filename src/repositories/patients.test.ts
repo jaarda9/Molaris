@@ -13,7 +13,7 @@ function freshRepo() {
 
 test('a fresh database is seeded with the demo patients and an active patient', () => {
   const { repo } = freshRepo();
-  assert.equal(repo.getAllPatients().length, 3);
+  assert.equal(repo.getAllPatients().length, 4);
   assert.equal(repo.getActivePatient().id, 'pt_1');
 });
 
@@ -71,4 +71,48 @@ test('legacy patients-db.json is imported once and kept as a .migrated backup', 
   assert.deepEqual(repo.getPatientById('old_1')!.medications, [], 'newer fields are backfilled');
   assert.ok(!fs.existsSync(legacy));
   assert.ok(fs.existsSync(`${legacy}.migrated`));
+});
+
+test('primary teeth: stored apart from the 32 permanent teeth and updated by FDI number', () => {
+  const { db, repo } = freshRepo();
+  repo.setActivePatient('pt_1');
+  const tooth = repo.updateToothForActivePatient(53, { status: 'sound', notes: 'Canine temporaire persistante.' });
+  assert.equal(tooth.fdi, 53);
+  assert.equal(repo.getActivePatient().teeth.length, 32);
+
+  const reloaded = new PatientRepository(db, { legacyJsonFile: null }).getPatientById('pt_1')!;
+  assert.equal(reloaded.primaryTeeth.find(t => t.id === 53)!.notes, 'Canine temporaire persistante.');
+});
+
+test('primary teeth: the visibility mode is saved on the chart', () => {
+  const { db, repo } = freshRepo();
+  repo.setActivePatient('pt_2');
+  repo.setPrimaryTeethModeForActivePatient('shown');
+  assert.equal(new PatientRepository(db, { legacyJsonFile: null }).getPatientById('pt_2')!.primaryTeethMode, 'shown');
+});
+
+test('primary teeth: records written before the feature are backfilled for the patient age', () => {
+  const { db } = freshRepo();
+  const row = db.prepare('SELECT data FROM patients WHERE id = ?').get('pt_1') as { data: string };
+  const legacy = JSON.parse(row.data);
+  delete legacy.primaryTeeth;
+  delete legacy.primaryTeethMode;
+  db.prepare('UPDATE patients SET data = ? WHERE id = ?').run(JSON.stringify(legacy), 'pt_1');
+
+  const patient = new PatientRepository(db, { legacyJsonFile: null }).getPatientById('pt_1')!;
+  assert.equal(patient.primaryTeeth.length, 20);
+  assert.ok(patient.primaryTeeth.every(t => t.status === 'missing')); // adult: shed
+  assert.equal(patient.primaryTeethMode, 'auto');
+});
+
+test('primary teeth: correcting the age re-derives them only while nothing was recorded', () => {
+  const { repo } = freshRepo();
+  const created = repo.createPatient({ name: 'Enfant Test', age: 35 });
+  const corrected = repo.updatePatient(created.id, { age: 6 });
+  assert.ok(corrected.primaryTeeth.every(t => t.status === 'sound'));
+
+  repo.updateToothForActivePatient(75, { status: 'caries' });
+  const older = repo.updatePatient(created.id, { age: 30 });
+  assert.equal(older.primaryTeeth.find(t => t.id === 75)!.status, 'caries');
+  assert.equal(older.primaryTeeth.find(t => t.id === 51)!.status, 'sound');
 });

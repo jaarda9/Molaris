@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { patientDb } from '../repositories/patients.js';
+import { patientDb, findPatientTooth } from '../repositories/patients.js';
 import { loadMemory } from '../repositories/preferences.js';
 import { callGeminiWithResilience, aiErrorMessage, AiUnavailableError } from '../ai/gemini.js';
 import { MOLARIS_SYSTEM_PROMPT } from '../ai/system-prompt.js';
@@ -59,7 +59,7 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
 
     const memory = loadMemory();
     const activePatient = patientDb.getActivePatient();
-    const tooth = toothId ? activePatient.teeth.find(t => t.id === Number(toothId)) : null;
+    const tooth = toothId ? findPatientTooth(activePatient, Number(toothId)) : null;
 
     // No doctor or clinic name either: the model has no use for any identity.
     let contextPrompt = `### CURRENT CLINICAL OPERATORY CONTEXT\n`;
@@ -154,7 +154,7 @@ aiRouter.post('/api/analyze-image', aiLimiter, upload.single('image'), async (re
     const mimeType = req.file.mimetype || 'image/jpeg';
     const activePatient = patientDb.getActivePatient();
     // toothId is the internal (Universal) id; the model is only given the FDI number.
-    const focusTooth = toothNumber ? activePatient.teeth.find(t => t.id === Number(toothNumber)) : null;
+    const focusTooth = toothNumber ? findPatientTooth(activePatient, Number(toothNumber)) : null;
 
     let visionPrompt = `
 Read this dental radiograph or intraoral image as a decision-support aid for the treating dentist (Tunisia).
@@ -248,7 +248,7 @@ aiRouter.post('/api/generate-soap', aiLimiter, async (req: Request, res: Respons
     const { procedure, toothId, details, anesthesiaUsed, materialsUsed, language = 'en' } = req.body;
     const memory = loadMemory();
     const activePatient = patientDb.getActivePatient();
-    const tooth = toothId ? activePatient.teeth.find(t => t.id === Number(toothId)) : null;
+    const tooth = toothId ? findPatientTooth(activePatient, Number(toothId)) : null;
 
     let soapPrompt = '';
     if (language === 'fr') {

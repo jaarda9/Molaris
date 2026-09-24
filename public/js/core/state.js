@@ -8,6 +8,7 @@ function getTranslatedToothStatus(status, isFr) {
     case 'rct': return 'Endo';
     case 'implant': return 'Implant';
     case 'missing': return 'Absente';
+    case 'unerupted': return 'Non érupté';
     default: return status;
   }
 }

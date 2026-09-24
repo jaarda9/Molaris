@@ -27,7 +27,7 @@ window.MOLARIS_TRANSLATIONS = {
     // Navigation Tabs
     "nav.advisor": "Senior Advisor Chat",
     "nav.patients": "Patient Records & DB",
-    "nav.odontogram": "32-Tooth Odontogram",
+    "nav.odontogram": "Odontogram",
     "nav.anesthesia": "LA Carpule & Dosing Calc",
     "nav.vision": "X-Ray & Vision Diagnostics",
     "nav.protocols": "Chairside Protocols",
@@ -90,7 +90,7 @@ window.MOLARIS_TRANSLATIONS = {
     "chat.cleared": "Conversation cleared. M.O.L.A.R.I.S is ready for your next question.",
 
     // Odontogram
-    "odonto.title": "Interactive 32-Tooth Clinical Odontogram",
+    "odonto.title": "Interactive Clinical Odontogram",
     "odonto.activeChart": "Active Chart",
     "odonto.subtitle": "Click any tooth to examine, log restorations/caries/endo, or direct-consult M.O.L.A.R.I.S Senior Advisor.",
     "odonto.universalSystem": "Universal (#1-32)",
@@ -394,7 +394,7 @@ window.MOLARIS_TRANSLATIONS = {
     "odonto.mandibularArchShort": "Mandible",
     "odonto.patientRight": "Patient's right",
     "odonto.patientLeft": "Patient's left",
-    "odonto.resetConfirm": "Reset all 32 teeth to sound?",
+    "odonto.resetConfirm": "Reset the whole chart (permanent and primary teeth) to sound?",
     "patients.localDbBadge": "Local database (this PC)",
     "patients.cardiacRiskLabel": "Cardiac risk",
     "patients.cardiacRiskHint": "Caps adrenaline at 0.04 mg",
@@ -416,7 +416,22 @@ window.MOLARIS_TRANSLATIONS = {
     "la.carpulesUnit": "carpules",
     "common.networkError": "Connection error with the local server:",
     "common.saveError": "Could not save:",
-    "prefs.saved": "Preferences saved. The advisor will now follow these practice standards."
+    "prefs.saved": "Preferences saved. The advisor will now follow these practice standards.",
+    "odonto.statusUnerupted": "Unerupted",
+    "odonto.legendUnerupted": "Unerupted",
+    "odonto.primaryTeeth": "Primary teeth",
+    "odonto.primaryShown": "shown",
+    "odonto.primaryHidden": "hidden",
+    "odonto.primaryShowBtn": "Show primary teeth",
+    "odonto.primaryHideBtn": "Hide primary teeth",
+    "odonto.primaryAutoLink": "Back to automatic",
+    "odonto.primaryReason.child": "Automatic: patient aged {age}",
+    "odonto.primaryReason.recorded": "Automatic: a primary tooth has a finding",
+    "odonto.primaryReason.adult": "Hidden by default for adults",
+    "odonto.primaryReason.shown": "Shown for this patient",
+    "odonto.primaryReason.hidden": "Hidden for this patient",
+    "odonto.primaryRowUpper": "Primary teeth · upper",
+    "odonto.primaryRowLower": "Primary teeth · lower"
   },
 
   fr: {
@@ -441,7 +456,7 @@ window.MOLARIS_TRANSLATIONS = {
     // Navigation Tabs
     "nav.advisor": "Conseiller Senior (Chat)",
     "nav.patients": "Dossiers Patients & BDD",
-    "nav.odontogram": "Odontogramme 32 Dents",
+    "nav.odontogram": "Odontogramme",
     "nav.anesthesia": "Calculateur d'Anesthésie AL",
     "nav.vision": "Radio & Diagnostic Visuel",
     "nav.protocols": "Protocoles au Fauteuil",
@@ -504,7 +519,7 @@ window.MOLARIS_TRANSLATIONS = {
     "chat.cleared": "Conversation effacée. M.O.L.A.R.I.S est prêt pour votre prochaine question.",
 
     // Odontogram
-    "odonto.title": "Odontogramme Clinique Interactif 32 Dents",
+    "odonto.title": "Odontogramme clinique interactif",
     "odonto.activeChart": "Dossier Actif",
     "odonto.subtitle": "Cliquez sur une dent pour l'examiner, enregistrer caries/soins/endo, ou consulter le Conseiller Senior.",
     "odonto.universalSystem": "Universel (#1-32)",
@@ -808,7 +823,7 @@ window.MOLARIS_TRANSLATIONS = {
     "odonto.mandibularArchShort": "Mandibule",
     "odonto.patientRight": "Droite du patient",
     "odonto.patientLeft": "Gauche du patient",
-    "odonto.resetConfirm": "Remettre les 32 dents à l’état « saine » ?",
+    "odonto.resetConfirm": "Réinitialiser tout le schéma (dents permanentes et temporaires) ?",
     "patients.localDbBadge": "Base de données locale (ce PC)",
     "patients.cardiacRiskLabel": "Risque cardiaque",
     "patients.cardiacRiskHint": "Plafonne l’adrénaline à 0,04 mg",
@@ -830,7 +845,22 @@ window.MOLARIS_TRANSLATIONS = {
     "la.carpulesUnit": "carpules",
     "common.networkError": "Erreur de connexion avec le serveur local :",
     "common.saveError": "Enregistrement impossible :",
-    "prefs.saved": "Préférences enregistrées. Le conseiller suivra désormais ces standards de pratique."
+    "prefs.saved": "Préférences enregistrées. Le conseiller suivra désormais ces standards de pratique.",
+    "odonto.statusUnerupted": "Non érupté",
+    "odonto.legendUnerupted": "Non érupté",
+    "odonto.primaryTeeth": "Dents temporaires",
+    "odonto.primaryShown": "affichées",
+    "odonto.primaryHidden": "masquées",
+    "odonto.primaryShowBtn": "Afficher les dents temporaires",
+    "odonto.primaryHideBtn": "Masquer les dents temporaires",
+    "odonto.primaryAutoLink": "Revenir en automatique",
+    "odonto.primaryReason.child": "Automatique : patient de {age} ans",
+    "odonto.primaryReason.recorded": "Automatique : une dent temporaire est renseignée",
+    "odonto.primaryReason.adult": "Masquées par défaut chez l’adulte",
+    "odonto.primaryReason.shown": "Affichées pour ce patient",
+    "odonto.primaryReason.hidden": "Masquées pour ce patient",
+    "odonto.primaryRowUpper": "Dents temporaires · haut",
+    "odonto.primaryRowLower": "Dents temporaires · bas"
   }
 };
 
@@ -867,7 +897,28 @@ window.MOLARIS_FRENCH_TEETH = {
   29: { fdi: 45, name: "2ème Prémolaire Inférieure Droite", arch: "Mandibulaire", type: "Prémolaire" },
   30: { fdi: 46, name: "1ère Molaire Inférieure Droite", arch: "Mandibulaire", type: "Molaire" },
   31: { fdi: 47, name: "2ème Molaire Inférieure Droite", arch: "Mandibulaire", type: "Molaire" },
-  32: { fdi: 48, name: "3ème Molaire Inférieure Droite (Dent de sagesse)", arch: "Mandibulaire", type: "Molaire" }
+  32: { fdi: 48, name: "3ème Molaire Inférieure Droite (Dent de sagesse)", arch: "Mandibulaire", type: "Molaire" },
+  // Primary teeth: the internal id is the FDI number (51-85).
+  51: { fdi: 51, name: "Incisive centrale temporaire supérieure droite", arch: "Maxillaire", type: "Incisive temporaire" },
+  52: { fdi: 52, name: "Incisive latérale temporaire supérieure droite", arch: "Maxillaire", type: "Incisive temporaire" },
+  53: { fdi: 53, name: "Canine temporaire supérieure droite", arch: "Maxillaire", type: "Canine temporaire" },
+  54: { fdi: 54, name: "1ère molaire temporaire supérieure droite", arch: "Maxillaire", type: "Molaire temporaire" },
+  55: { fdi: 55, name: "2ème molaire temporaire supérieure droite", arch: "Maxillaire", type: "Molaire temporaire" },
+  61: { fdi: 61, name: "Incisive centrale temporaire supérieure gauche", arch: "Maxillaire", type: "Incisive temporaire" },
+  62: { fdi: 62, name: "Incisive latérale temporaire supérieure gauche", arch: "Maxillaire", type: "Incisive temporaire" },
+  63: { fdi: 63, name: "Canine temporaire supérieure gauche", arch: "Maxillaire", type: "Canine temporaire" },
+  64: { fdi: 64, name: "1ère molaire temporaire supérieure gauche", arch: "Maxillaire", type: "Molaire temporaire" },
+  65: { fdi: 65, name: "2ème molaire temporaire supérieure gauche", arch: "Maxillaire", type: "Molaire temporaire" },
+  71: { fdi: 71, name: "Incisive centrale temporaire inférieure gauche", arch: "Mandibulaire", type: "Incisive temporaire" },
+  72: { fdi: 72, name: "Incisive latérale temporaire inférieure gauche", arch: "Mandibulaire", type: "Incisive temporaire" },
+  73: { fdi: 73, name: "Canine temporaire inférieure gauche", arch: "Mandibulaire", type: "Canine temporaire" },
+  74: { fdi: 74, name: "1ère molaire temporaire inférieure gauche", arch: "Mandibulaire", type: "Molaire temporaire" },
+  75: { fdi: 75, name: "2ème molaire temporaire inférieure gauche", arch: "Mandibulaire", type: "Molaire temporaire" },
+  81: { fdi: 81, name: "Incisive centrale temporaire inférieure droite", arch: "Mandibulaire", type: "Incisive temporaire" },
+  82: { fdi: 82, name: "Incisive latérale temporaire inférieure droite", arch: "Mandibulaire", type: "Incisive temporaire" },
+  83: { fdi: 83, name: "Canine temporaire inférieure droite", arch: "Mandibulaire", type: "Canine temporaire" },
+  84: { fdi: 84, name: "1ère molaire temporaire inférieure droite", arch: "Mandibulaire", type: "Molaire temporaire" },
+  85: { fdi: 85, name: "2ème molaire temporaire inférieure droite", arch: "Mandibulaire", type: "Molaire temporaire" }
 };
 
 // French Playbooks translations
@@ -1074,6 +1125,7 @@ window.applyMolarisLanguage = function(lang) {
     else if (st === 'rct') btn.textContent = t('odonto.statusRct');
     else if (st === 'implant') btn.textContent = t('odonto.statusImplant');
     else if (st === 'missing') btn.textContent = t('odonto.statusMissing');
+    else if (st === 'unerupted') btn.textContent = t('odonto.statusUnerupted');
   });
 
   // Surface buttons

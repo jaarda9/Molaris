@@ -1,5 +1,6 @@
 import { patientDb, PatientRecord } from '../repositories/patients.js';
 import { checkDrugInteractions } from '../domain/clinical-safety.js';
+import { isPrimaryToothId } from '../domain/primary-teeth.js';
 
 export interface ActionResult {
   executed: boolean;
@@ -92,12 +93,13 @@ export function executeMolarisAction(commandText: string, language: string = 'en
     const rawToothNum = parseInt(toothMatch[1], 10);
     let toothId: number | null = null;
 
-    toothId = fdiToUniversal(rawToothNum);
+    // Primary teeth keep their FDI number (51-85) as internal id.
+    toothId = isPrimaryToothId(rawToothNum) ? rawToothNum : fdiToUniversal(rawToothNum);
     if (!toothId && rawToothNum >= 1 && rawToothNum <= 32) {
       toothId = rawToothNum;
     }
 
-    if (toothId && toothId >= 1 && toothId <= 32) {
+    if (toothId && ((toothId >= 1 && toothId <= 32) || isPrimaryToothId(toothId))) {
       let statusRaw = toothMatch[2].toLowerCase();
       let mappedStatus: any = 'sound';
       if (statusRaw.includes('carie') || statusRaw.includes('decay') || statusRaw.includes('cavity')) mappedStatus = 'caries';
