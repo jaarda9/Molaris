@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initChairsideTimer();
   initSpeechSynthesis();
   initSpeechRecognition();
+  initVoicePicker();
   initQuickPrompts();
   initAnesthesiaCalculator();
   initVisionUploader();

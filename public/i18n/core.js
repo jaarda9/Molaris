@@ -450,7 +450,14 @@ window.MOLARIS_TRANSLATIONS = {
     "assistant.done.tooth": "Odontogram updated.",
     "assistant.done.medication": "Medication added.",
     "assistant.done.switch": "Chart opened.",
-    "assistant.done.generic": "Done."
+    "assistant.done.generic": "Done.",
+    "voice.title": "Advisor voice",
+    "voice.subtitle": "The voice that reads the advisor’s answers aloud (speaker button at the top). Remembered on this PC.",
+    "voice.preview": "Listen",
+    "voice.natural": "natural",
+    "voice.none": "No voice available in this browser",
+    "voice.hint": "For a natural, human-sounding voice, open the app in Microsoft Edge (free “Natural” voices, internet required) or Chrome.",
+    "voice.sample": "Hello Doctor. I can read your appointments, prepare a quote or remind you of a dosage. Tell me what you need."
   },
 
   fr: {
@@ -898,7 +905,14 @@ window.MOLARIS_TRANSLATIONS = {
     "assistant.done.tooth": "Odontogramme mis à jour.",
     "assistant.done.medication": "Médicament ajouté.",
     "assistant.done.switch": "Dossier ouvert.",
-    "assistant.done.generic": "Fait."
+    "assistant.done.generic": "Fait.",
+    "voice.title": "Voix du conseiller",
+    "voice.subtitle": "La voix qui lit à haute voix les réponses du conseiller (bouton haut-parleur en haut). Mémorisée sur ce PC.",
+    "voice.preview": "Écouter",
+    "voice.natural": "naturelle",
+    "voice.none": "Aucune voix disponible dans ce navigateur",
+    "voice.hint": "Pour une voix naturelle, au rendu humain, ouvrez l’application dans Microsoft Edge (voix « naturelles » gratuites, connexion internet requise) ou Chrome.",
+    "voice.sample": "Bonjour Docteur. Je peux lire vos rendez-vous, préparer un devis ou vous rappeler une posologie. Dites-moi ce dont vous avez besoin."
   }
 };
 
