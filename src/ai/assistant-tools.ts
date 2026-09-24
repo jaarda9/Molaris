@@ -53,11 +53,12 @@ export interface PatientRefs {
 /**
  * Replaces patient names in the message by codes. Full names always match; a first or
  * last name alone matches only when exactly one patient has it ("Fatma" -> P1).
+ * Pass the refs of earlier messages to keep the same code for the same patient.
  */
-export function tokenizePatients(message: string, patients: PatientRecord[], activeId: string): PatientRefs {
-  const refs: Record<string, string> = { [ACTIVE_REF]: activeId };
+export function tokenizePatients(message: string, patients: PatientRecord[], activeId: string, known?: Record<string, string>): PatientRefs {
+  const refs: Record<string, string> = { ...known, [ACTIVE_REF]: activeId };
   let text = message;
-  let next = 1;
+  let next = Object.keys(refs).filter(code => /^P\d+$/.test(code)).length + 1;
   const codeFor = (id: string) => {
     const existing = Object.entries(refs).find(([code, pid]) => pid === id && code !== ACTIVE_REF);
     if (existing) return existing[0];
@@ -316,19 +317,25 @@ function balanceReply(ctx: ToolContext, patient: PatientRecord): string {
     ? `- ${q.number} du ${frDate(q.issuedAt)} : ${formatTnd(q.totalMillimes)}, réglé ${formatTnd(q.paidMillimes)}, **reste ${formatTnd(q.remainingMillimes)}**`
     : `- ${q.number} of ${frDate(q.issuedAt)}: ${formatTnd(q.totalMillimes)}, paid ${formatTnd(q.paidMillimes)}, **remaining ${formatTnd(q.remainingMillimes)}**`);
   const drafts = new QuoteRepository(ctx.db).listForPatient(patient.id).filter(q => q.status === 'draft' || q.status === 'sent');
+  // Newest first, cancelled ones left out: answers « quand a-t-il payé ? ».
+  const sep = fr ? ' : ' : ': ';
+  const payments = new PaymentRepository(ctx.db).listForPatient(patient.id).filter(p => !p.cancelledAt).slice(0, 3)
+    .map(p => `- ${frDate(p.paidAt)}${sep}${formatTnd(p.amountMillimes)} (${METHOD_LABELS[ctx.lang][p.method]}${p.reference ? ` n° ${p.reference}` : ''}) — ${p.receiptNumber}${p.quoteNumber ? ` · ${p.quoteNumber}` : ''}`);
   if (fr) {
     return [
       `**${patient.name}** — reste à payer : **${formatTnd(b.balanceDueMillimes)}**`,
       ...(quoteLines.length ? quoteLines : ['- Aucun devis accepté.']),
       b.paidOutsideQuotesMillimes ? `- Règlements hors devis : ${formatTnd(b.paidOutsideQuotesMillimes)}` : '',
-      drafts.length ? `- Devis en attente d’acceptation : ${drafts.map(q => `${q.number} (${formatTnd(q.totalMillimes)})`).join(', ')}` : ''
+      drafts.length ? `- Devis en attente d’acceptation : ${drafts.map(q => `${q.number} (${formatTnd(q.totalMillimes)})`).join(', ')}` : '',
+      payments.length ? `Derniers règlements :\n${payments.join('\n')}` : 'Aucun règlement enregistré.'
     ].filter(Boolean).join('\n');
   }
   return [
     `**${patient.name}** — balance due: **${formatTnd(b.balanceDueMillimes)}**`,
     ...(quoteLines.length ? quoteLines : ['- No accepted quote.']),
     b.paidOutsideQuotesMillimes ? `- Payments outside quotes: ${formatTnd(b.paidOutsideQuotesMillimes)}` : '',
-    drafts.length ? `- Quotes awaiting acceptance: ${drafts.map(q => `${q.number} (${formatTnd(q.totalMillimes)})`).join(', ')}` : ''
+    drafts.length ? `- Quotes awaiting acceptance: ${drafts.map(q => `${q.number} (${formatTnd(q.totalMillimes)})`).join(', ')}` : '',
+    payments.length ? `Latest payments:\n${payments.join('\n')}` : 'No payment recorded.'
   ].filter(Boolean).join('\n');
 }
 
@@ -542,6 +549,7 @@ export function toolInstructions(lang: Lang, now: Date = new Date()): string {
   return `\n### PRACTICE DATA & ACTIONS (tools)\n` +
     `- Today is ${days[now.getDay()]} ${localDate(now)} (clinic time, Tunisia). Resolve "demain", "lundi prochain"… to YYYY-MM-DD yourself.\n` +
     `- Patients are referred to by codes (ACTIVE = the open chart; P1, P2… = patients named by the doctor). Never ask for or write a name.\n` +
+    `- A pronoun or follow-up (il, elle, son, sa, « et ses paiements ? ») means the patient of the previous exchange, even when it is not ACTIVE.\n` +
     `- When the doctor asks for practice data (balance/solde, devis, paiements, recette, rendez-vous, allergies, traitements) or asks you to do something (créer un devis, encaisser, prendre rendez-vous, noter une dent, ajouter un médicament, ouvrir un dossier), CALL THE MATCHING TOOL instead of answering in text. Never invent figures.\n` +
     `- For clinical questions, answer normally without tools.\n`;
 }

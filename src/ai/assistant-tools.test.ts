@@ -53,6 +53,8 @@ test('balance question: exact amounts from the billing data', () => {
   assert.match(reply, /Mohamed Ben Salah/);
   assert.match(reply, /reste à payer : \*\*300,000 DT\*\*/);
   assert.match(reply, /DV-2026-0001/);
+  // The last payments answer « quand a-t-il payé ? » without another tool.
+  assert.match(reply, /Derniers règlements :\n- \d{2}\/\d{2}\/\d{4} : [\d ]+,\d{3} DT/);
 });
 
 test('patient summary lists allergies, medications and balance', () => {

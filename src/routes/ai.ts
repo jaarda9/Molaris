@@ -17,6 +17,9 @@ import { detectImageType } from '../domain/image-type.js';
 import { HttpError, languageOf, parse, route } from './http.js';
 import { z } from 'zod';
 import { toothId as toothIdSchema } from './clinical-validation.js';
+import { historyForModel } from '../ai/chat-history.js';
+
+const MAX_QUESTION_CHARS = 4000;
 
 export const aiRouter = Router();
 
@@ -64,6 +67,9 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'Message text is required' });
     }
+    if (message.length > MAX_QUESTION_CHARS) {
+      return res.status(400).json({ error: `Message trop long (${MAX_QUESTION_CHARS} caractères au maximum).` });
+    }
 
     actionResult = executeMolarisAction(message, language);
 
@@ -80,7 +86,9 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     const lang = languageOf(language);
     // Patient names in the message become codes (P1…) before anything is sent to the model.
     const patients = patientDb.getAllPatients();
-    const { text: safeMessage, refs } = tokenizePatients(message, patients, activePatient.id);
+    // The recent conversation first, so a patient keeps the same code (P1) in it and in the question.
+    const history = historyForModel(activePatient.consultHistory, patients, activePatient.id);
+    const { text: safeMessage, refs } = tokenizePatients(message, patients, activePatient.id, history.refs);
     const offerTools = !actionResult.executed;
 
     // No doctor or clinic name either: the model has no use for any identity.
@@ -118,6 +126,9 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     }
 
     if (offerTools) contextPrompt += toolInstructions(lang);
+    if (history.lastDiscussed && refs[history.lastDiscussed] !== activePatient.id) {
+      contextPrompt += `- Patient of the previous exchange: ${history.lastDiscussed}. A follow-up without a name (il, elle, son, sa…) is about ${history.lastDiscussed}, not ACTIVE.\n`;
+    }
 
     if (language === 'fr') {
       contextPrompt += `\n### DIRECTIVE DE LANGUE OBLIGATOIRE (FRANÇAIS):\n` +
@@ -131,11 +142,7 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
       contextPrompt += `\n### LANGUAGE DIRECTIVE: answer entirely in English (drugs by INN/generic name, FDI tooth numbering).\n`;
     }
 
-    const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
-    // Context: the last exchanges of this patient's saved conversation (names are redacted on the way out).
-    activePatient.consultHistory.slice(-8).forEach(entry => {
-      contents.push({ role: entry.role === 'user' ? 'user' : 'model', parts: [{ text: entry.content }] });
-    });
+    const contents = history.turns;
     contents.push({ role: 'user', parts: [{ text: `${contextPrompt}\nDoctor asks: ${safeMessage}` }] });
 
     const result = await callGeminiWithResilience({
