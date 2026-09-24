@@ -161,7 +161,22 @@
 
   async function renderQuotes(content) {
     if (!state.patientId) { content.innerHTML = ''; return; }
-    const { quotes } = await Molaris.api.get(`/api/quotes?patientId=${encodeURIComponent(state.patientId)}`);
+    const [{ quotes }, { acts }] = await Promise.all([
+      Molaris.api.get(`/api/quotes?patientId=${encodeURIComponent(state.patientId)}`),
+      Molaris.api.get(`/api/patients/${encodeURIComponent(state.patientId)}/unbilled-acts`)
+    ]);
+    state.unbilledActs = acts;
+    // Finished work that is on no quote: easy to forget to bill.
+    const unbilled = acts.length ? `
+      <div class="rounded-2xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-4 space-y-2">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p class="text-xs font-semibold text-amber-900 dark:text-amber-200">${esc(t('billing.unbilled.title').replace('{n}', acts.length))}</p>
+          <button type="button" data-action="quote-from-unbilled" class="${BTN}">${esc(t('billing.unbilled.createQuote'))}</button>
+        </div>
+        <ul class="text-xs text-amber-900 dark:text-amber-200 list-disc pl-5">
+          ${acts.map(a => `<li>${esc(a.catalogLabel || a.procedure)}${a.toothFdi ? ` · ${esc(t('billing.col.toothFdi'))} ${esc(a.toothFdi)}` : ''}${a.unitPriceMillimes ? ` · ${esc(tnd(a.unitPriceMillimes))}` : ''}</li>`).join('')}
+        </ul>
+      </div>` : '';
 
     const cards = quotes.map(q => {
       const actions = [];
@@ -237,8 +252,22 @@
           <button type="button" data-action="new-quote" class="${BTN}">+ ${esc(t('billing.newQuote'))}</button>
           ${isActivePatient() ? `<button type="button" data-action="quote-from-plan" class="${BTN2}">${esc(t('billing.fromPlan'))}</button>` : ''}
         </div>
+        ${unbilled}
         ${cards || `<div class="${CARD}"><p class="text-center py-8 text-slate-400 text-xs">${esc(t('billing.noQuotes'))}</p></div>`}
       </div>`;
+  }
+
+  /** A new draft quote prefilled with the finished, not-yet-billed acts. */
+  async function quoteFromUnbilled() {
+    const acts = state.unbilledActs || [];
+    if (!acts.length) return;
+    await openQuoteEditor(null, acts.map(a => ({
+      procedureId: a.procedureId,
+      label: a.catalogLabel || a.procedure,
+      toothFdi: a.toothFdi,
+      quantity: 1,
+      unitPriceMillimes: a.unitPriceMillimes
+    })));
   }
 
   /** Opens the quote editor. `quote` = existing draft, or null with optional prefilled `items`. */
@@ -810,6 +839,7 @@
       case 'use-active': state.patientId = Molaris.patients.active()?.id || state.patientId; return refresh();
       case 'new-quote': return openQuoteEditor(null);
       case 'quote-from-plan': return quoteFromPlan();
+      case 'quote-from-unbilled': return quoteFromUnbilled();
       case 'edit-quote': return openQuoteEditor((await Molaris.api.get(`/api/quotes/${encodeURIComponent(id)}`)).quote);
       case 'quote-status': {
         const status = btn.dataset.status;

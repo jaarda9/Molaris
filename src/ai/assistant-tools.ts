@@ -8,6 +8,8 @@ import {
   type PaymentMethod
 } from '../features/billing/repository.js';
 import { AppointmentRepository, getAgendaSettings, addMinutes, isValidLocalDateTime } from '../features/agenda/repository.js';
+import { labWarningsForAppointment } from '../domain/lab-schedule.js';
+import { planToothToFdi } from '../features/billing/unbilled.js';
 
 /*
  * Practice-data tools for the AI assistant (Gemini function calling).
@@ -455,9 +457,12 @@ function runTool(name: string, args: Record<string, unknown>, ctx: ToolContext):
         : outsideHours
           ? (fr ? `\n⚠️ En dehors des horaires d’ouverture (${hours.start}–${hours.end}).` : `\n⚠️ Outside opening hours (${hours.start}–${hours.end}).`)
           : '';
+      // Fitting booked before the lab work is back.
+      const labCaution = labWarningsForAppointment(patient.labCases ?? [], { startAt, reason }, id => planToothToFdi(id) ?? id)
+        .map(w => `\n⚠️ ${w}`).join('');
       const summary = (fr
         ? `Prendre rendez-vous pour **${patient.name}** le **${frDate(date)} à ${time}** (${duration} min${chair ? `, ${chair}` : ''}${reason ? `, ${reason}` : ''}).`
-        : `Book **${patient.name}** on **${frDate(date)} at ${time}** (${duration} min${chair ? `, ${chair}` : ''}${reason ? `, ${reason}` : ''}).`) + caution;
+        : `Book **${patient.name}** on **${frDate(date)} at ${time}** (${duration} min${chair ? `, ${chair}` : ''}${reason ? `, ${reason}` : ''}).`) + caution + labCaution;
       return {
         reply: summary,
         proposal: { tool: name, patientId: patient.id, summary, request: { method: 'POST', url: '/api/appointments', body: { patientId: patient.id, startAt, durationMinutes: duration, chair, reason } } }

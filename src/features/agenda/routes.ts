@@ -7,6 +7,18 @@ import {
   APPOINTMENT_STATUSES, AppointmentRepository, getAgendaSettings, isValidLocalDateTime, reminderBlockReason, setAgendaSettings
 } from './repository.js';
 import { buildReminderMessage, buildWhatsAppLink, normalizePhone } from './reminder.js';
+import { patientDb } from '../../repositories/patients.js';
+import { labWarningsForAppointment } from '../../domain/lab-schedule.js';
+import { planToothToFdi } from '../billing/unbilled.js';
+import type { Appointment } from './repository.js';
+
+/** Non-blocking warnings shown after saving (e.g. fitting booked before the lab work is back). */
+function warningsFor(appointment: Appointment): string[] {
+  if (!appointment.patientId || appointment.status === 'cancelled' || appointment.status === 'no_show') return [];
+  const patient = patientDb.getPatientById(appointment.patientId);
+  if (!patient) return [];
+  return labWarningsForAppointment(patient.labCases ?? [], appointment, id => planToothToFdi(id) ?? id);
+}
 
 export const agendaRouter = Router();
 
@@ -39,12 +51,14 @@ agendaRouter.get('/api/appointments', route((req, res) => {
 
 agendaRouter.post('/api/appointments', route((req, res) => {
   const input = parse(createSchema, req.body);
-  res.status(201).json({ success: true, appointment: repo().create(input) });
+  const appointment = repo().create(input);
+  res.status(201).json({ success: true, appointment, warnings: warningsFor(appointment) });
 }));
 
 agendaRouter.put('/api/appointments/:id', route((req, res) => {
   const changes = parse(updateSchema, req.body);
-  res.json({ success: true, appointment: repo().update(req.params.id, changes) });
+  const appointment = repo().update(req.params.id, changes);
+  res.json({ success: true, appointment, warnings: warningsFor(appointment) });
 }));
 
 agendaRouter.delete('/api/appointments/:id', route((req, res) => {

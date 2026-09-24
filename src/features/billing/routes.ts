@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { getDb } from '../../db/connection.js';
 import { notFound, parse, route } from '../../routes/http.js';
+import { patientDb } from '../../repositories/patients.js';
+import { findUnbilledActs } from './unbilled.js';
 import {
   localDate, MAX_AMOUNT_MILLIMES, PAYMENT_METHODS, PaymentRepository, ProcedureRepository,
   QUOTE_STATUSES, QuoteRepository
@@ -149,6 +151,15 @@ billingRouter.post('/api/payments/:id/cancel', route((req, res) => {
   const { reason } = parse(z.object({ reason: z.string().trim().min(3, 'indiquez le motif de l’annulation').max(500) }), req.body);
   const payment = new PaymentRepository(getDb()).cancel(String(req.params.id), reason);
   res.json({ success: true, payment });
+}));
+
+// Acts marked done in the treatment plan that are on no live quote (so not billed yet).
+billingRouter.get('/api/patients/:id/unbilled-acts', route((req, res) => {
+  const patient = patientDb.getPatientById(String(req.params.id));
+  if (!patient) throw notFound('Patient');
+  const db = getDb();
+  const acts = findUnbilledActs(patient.treatmentPlan, new QuoteRepository(db).listForPatient(patient.id), new ProcedureRepository(db).list());
+  res.json({ acts });
 }));
 
 billingRouter.get('/api/patients/:id/balance', route((req, res) => {

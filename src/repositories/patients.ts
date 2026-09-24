@@ -17,6 +17,7 @@ import { DB, DATA_DIR, getDb } from '../db/connection.js';
 import { nextDocumentNumber } from '../db/counters.js';
 import { newId, nowIso } from '../db/ids.js';
 import { ageOn } from '../domain/age.js';
+import { scopedPatientId } from './patient-scope.js';
 
 export interface PatientRecord {
   id: string;
@@ -428,7 +429,13 @@ export class PatientRepository {
     return [...this.patients.values()].map(withCurrentAge);
   }
 
+  /**
+   * The patient of the current request (the one its page shows, see patient-scope.ts),
+   * else the clinic-wide active patient.
+   */
   public getActivePatient(): PatientRecord {
+    const scoped = scopedPatientId();
+    if (scoped && this.patients.has(scoped)) return withCurrentAge(this.patients.get(scoped)!);
     this.ensureActivePatient();
     return withCurrentAge(this.patients.get(this.activePatientId)!);
   }

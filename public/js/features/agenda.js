@@ -773,11 +773,13 @@
           Object.assign(body, { patientId: form.get('patientId'), patientLabel: null, ...(isEdit && !existing.patientId ? { patientPhone: null } : {}) });
         }
         // A 409 (slot taken) throws here: the modal shows the message and stays open.
-        const { appointment } = isEdit
+        const { appointment, warnings = [] } = isEdit
           ? await Molaris.api.put(`/api/appointments/${existing.id}`, body)
           : await Molaris.api.post('/api/appointments', body);
         close();
         Molaris.ui.toast(t(isEdit ? 'agenda.toast.updated' : 'agenda.toast.created'));
+        // Saved, but worth knowing (e.g. the lab work is not back before this fitting).
+        if (warnings.length) alert(`⚠️ ${warnings.join('\n\n⚠️ ')}`);
         // Jump to the booked day so the secretary sees the result.
         state.date = dateOf(appointment.startAt);
         await refresh();

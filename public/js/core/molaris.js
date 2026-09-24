@@ -19,19 +19,18 @@ Molaris.events = {
 };
 
 // ---------------------------------------------------------------------------
-// Wrong-patient guard. Every API write carries the patient this page is showing
-// (X-Molaris-Patient). If another tab or PC switched the active patient, the server
-// refuses writes to the legacy "active patient" endpoints with 409 ACTIVE_PATIENT_CHANGED;
-// the page then reloads on the right patient instead of charting on the wrong one.
+// Patient scope. Every API request carries the patient this page shows
+// (X-Molaris-Patient): the server reads and writes THAT chart, so two tabs or two PCs
+// can work on different patients. If the chart was deleted elsewhere, the server answers
+// 409 ACTIVE_PATIENT_CHANGED and the page reloads.
 // ---------------------------------------------------------------------------
 (function guardActivePatientWrites() {
   const nativeFetch = window.fetch.bind(window);
   let reloading = false;
   window.fetch = async (input, init = {}) => {
     const url = typeof input === 'string' ? input : input.url;
-    const method = String(init.method || (typeof input === 'string' ? 'GET' : input.method) || 'GET').toUpperCase();
     const activeId = window.systemState && systemState.activePatient && systemState.activePatient.id;
-    if (method !== 'GET' && activeId && url.startsWith('/api/')) {
+    if (activeId && url.startsWith('/api/')) {
       const headers = new Headers(init.headers || {});
       headers.set('X-Molaris-Patient', activeId);
       init = { ...init, headers };

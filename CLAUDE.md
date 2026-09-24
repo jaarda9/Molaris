@@ -29,7 +29,8 @@ src/db/                    connection + migrations, settings, document counters,
 src/domain/                pure logic, unit-tested (safety checks, dosing, money, AI redaction)
 src/ai/                    Gemini client (with patient redaction), system prompt, voice commands
 src/repositories/          patients (legacy per-patient JSON document), doctor preferences
-src/routes/                legacy routes acting on the *active* patient
+src/routes/                legacy routes acting on the *active* patient = the patient the calling page
+                           shows (X-Molaris-Patient header, see src/repositories/patient-scope.ts)
 src/features/<name>/       new features: repository.ts, routes.ts, demo.ts, *.test.ts
 scripts/                   test runner, demo-database reset
 public/index.html          page shell: nav tabs + one <section id="view-X"> per tab

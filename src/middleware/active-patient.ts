@@ -1,37 +1,26 @@
 import type { NextFunction, Request, Response } from 'express';
+import { patientScope } from '../repositories/patient-scope.js';
 
 /**
- * Legacy endpoints that write to the *active* patient (odontogram, medications, perio,
- * treatment plan, lab cases, anesthesia log, AI notes/commands). The browser sends the
- * patient it is showing in X-Molaris-Patient; if another tab or PC switched the active
- * patient meanwhile, the write is refused instead of landing in the wrong chart.
+ * Every API request from a page carries the patient that page shows (X-Molaris-Patient).
+ * The request is then scoped to that patient: the legacy "active patient" endpoints
+ * (odontogram, medications, perio, treatment plan, lab cases, anesthesia, SOAP, chat…)
+ * read and write THAT chart, even if another tab or PC opened another patient meanwhile.
+ * A chart that no longer exists (deleted elsewhere) gets a 409 so the page reloads.
  */
-const GUARDED_PATHS = [
-  /^\/api\/odontogram(\/|$)/,
-  /^\/api\/medications(\/|$)/,
-  /^\/api\/perio-charts(\/|$)/,
-  /^\/api\/treatment-plan(\/|$)/,
-  /^\/api\/lab-cases(\/|$)/,
-  /^\/api\/anesthesia\/log$/,
-  /^\/api\/chat(\/history)?$/,
-  /^\/api\/generate-soap$/,
-  /^\/api\/soap\/notes(\/|$)/,
-  /^\/api\/analyze-image$/
-];
-
 export const ACTIVE_PATIENT_HEADER = 'x-molaris-patient';
 
-export function guardActivePatient(activePatientId: () => string) {
+export function scopeToPagePatient(patientExists: (id: string) => boolean) {
   return (req: Request, res: Response, next: NextFunction): void => {
-    if (req.method === 'GET' || !GUARDED_PATHS.some(p => p.test(req.path))) return next();
-    const expected = req.get(ACTIVE_PATIENT_HEADER);
-    if (expected && expected !== activePatientId()) {
+    const patientId = req.get(ACTIVE_PATIENT_HEADER);
+    if (!patientId || !req.path.startsWith('/api/')) return next();
+    if (!patientExists(patientId)) {
       res.status(409).json({
         code: 'ACTIVE_PATIENT_CHANGED',
-        error: 'Le dossier ouvert a changé (autre onglet ou autre poste). Rien n’a été enregistré : la page va se recharger sur le dossier actif.'
+        error: 'Ce dossier n’existe plus (supprimé depuis un autre poste). Rien n’a été enregistré : la page va se recharger.'
       });
       return;
     }
-    next();
+    patientScope.run(patientId, () => next());
   };
 }
