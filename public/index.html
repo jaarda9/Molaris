@@ -20,7 +20,7 @@
     // each theme redefines (see :root / .dark below), so every screen, including the
     // markup built in JS, follows the theme without touching its classes.
     //   Light = "cozy clinic": warm cream surfaces, sage-teal accent, soft warm shadows.
-    //   Dark  = "refined dark": deep navy slate, glowing teal accent.
+    //   Dark  = "refined dark": neutral graphite, glowing teal accent.
     tailwind.config = {
       darkMode: 'class',
       theme: {
@@ -65,18 +65,18 @@
     }
     .dark {
       color-scheme: dark;
-      /* Deep navy slate */
-      --slate-50: 248 250 252;  --slate-100: 236 241 247; --slate-200: 218 226 236;
-      --slate-300: 191 202 216; --slate-400: 145 158 176; --slate-500: 106 119 137;
-      --slate-600: 74 86 104;   --slate-700: 50 62 80;    --slate-800: 31 41 57;
-      --slate-900: 19 27 40;    --slate-950: 10 15 24;
+      /* Neutral graphite (no blue cast) */
+      --slate-50: 248 248 249;  --slate-100: 239 240 241; --slate-200: 225 227 229;
+      --slate-300: 198 201 205; --slate-400: 156 160 166; --slate-500: 112 116 123;
+      --slate-600: 78 82 88;    --slate-700: 54 57 62;    --slate-800: 37 39 43;
+      --slate-900: 25 27 30;    --slate-950: 15 16 18;
       /* Glowing teal */
       --teal-50: 236 253 248;   --teal-100: 204 249 236;  --teal-200: 153 240 219;
       --teal-300: 94 226 197;   --teal-400: 45 212 191;   --teal-500: 20 184 166;
       --teal-600: 13 148 136;   --teal-700: 15 118 110;   --teal-800: 17 94 89;
       --teal-900: 19 78 74;     --teal-950: 4 47 46;
       --shadow: 0 0 0;
-      --page-bg: 10 15 24;
+      --page-bg: 15 16 18;
     }
     /* Custom operatory aesthetics */
     body {
@@ -197,8 +197,7 @@
     }
     .dark .app-body {
       background-image:
-        radial-gradient(1100px 600px at 0% -10%, rgb(45 212 191 / 0.07), transparent 60%),
-        radial-gradient(900px 500px at 110% 0%, rgb(56 189 248 / 0.05), transparent 60%);
+        radial-gradient(1100px 600px at 0% -10%, rgb(45 212 191 / 0.06), transparent 60%);
     }
     :root { --sidebar-w: 248px; }
 
