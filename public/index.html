@@ -161,11 +161,11 @@
           <div class="flex items-center space-x-2">
             <h1 id="brand-title" class="font-bold text-lg tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
               <span>M.O.L.A.R.I.S</span>
-              <span id="system-badge" class="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 uppercase">Senior Advisor</span>
+              <span id="system-badge" class="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 uppercase" data-i18n="brand.badge">Decision support</span>
             </h1>
           </div>
-          <p id="brand-subtitle" class="text-xs text-slate-500 dark:text-slate-400">
-            Medical &amp; Odontological Lifeline Assistant for Real-time Interventions
+          <p id="brand-subtitle" class="text-xs text-slate-500 dark:text-slate-400" data-i18n="brand.subtitle">
+            Clinical decision-support assistant for the dental practice
           </p>
         </div>
       </div>
@@ -607,8 +607,8 @@
           <div class="flex items-center space-x-3">
             <!-- Numbering system toggle -->
             <div class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700 text-xs">
-              <button id="btn-numbering-universal" class="px-2.5 py-1 rounded-md font-semibold bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-sm">Universal (#1-32)</button>
-              <button id="btn-numbering-fdi" class="px-2.5 py-1 rounded-md font-medium text-slate-600 dark:text-slate-400">FDI (11-48)</button>
+              <button id="btn-numbering-universal" class="px-2.5 py-1 rounded-md font-medium text-slate-600 dark:text-slate-400">Universal (#1-32)</button>
+              <button id="btn-numbering-fdi" class="px-2.5 py-1 rounded-md font-semibold bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-sm">FDI (11-48)</button>
             </div>
 
             <button id="reset-odontogram-btn" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs text-slate-600 dark:text-slate-300">
@@ -662,7 +662,7 @@
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center space-x-3">
               <span id="detail-tooth-number" class="w-10 h-10 rounded-xl bg-teal-600 text-white font-bold font-mono text-lg flex items-center justify-center shadow-sm">
-                #30
+                46
               </span>
               <div>
                 <h3 id="detail-tooth-name" class="font-bold text-slate-900 dark:text-white text-sm">Mandibular Right 1st Molar</h3>
@@ -739,7 +739,7 @@
           <div class="border-b border-slate-200 dark:border-slate-800 pb-3">
             <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <span data-i18n="la.title">Local Anesthetic Maximum Dose &amp; Carpule Calculator</span>
-              <span class="text-[10px] font-mono bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 px-2 py-0.5 rounded font-bold" data-i18n="la.badge">ADA / Malamed Standards</span>
+              <span class="text-[10px] font-mono bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 px-2 py-0.5 rounded font-bold" data-i18n="la.badge">Indicative calculation: check the SmPC</span>
             </h2>
             <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="la.subtitle">Determine safe cartridge limits based on patient body weight and vasoconstrictor cardiac threshold.</p>
           </div>
@@ -759,7 +759,7 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Patient Weight (<span id="weight-unit-label">kg</span>):
+                <span data-i18n="la.form.weight">Patient weight</span> (kg)
               </label>
               <div class="flex items-center space-x-2">
                 <input type="number" id="calc-weight-input" value="70" min="10" max="180" class="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-mono font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500">
@@ -772,8 +772,8 @@
               <label class="flex items-center space-x-2 cursor-pointer bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
                 <input type="checkbox" id="calc-cardiac-toggle" class="w-4 h-4 text-teal-600 rounded border-slate-300 dark:border-slate-600 focus:ring-teal-500">
                 <div>
-                  <div class="text-xs font-bold text-slate-800 dark:text-slate-200">Cardiac Risk / ASA III+</div>
-                  <div class="text-[11px] text-slate-500 dark:text-slate-400">Strict 0.04mg Epinephrine Limit</div>
+                  <div class="text-xs font-bold text-slate-800 dark:text-slate-200" data-i18n="la.form.cardiac">Cardiac Risk / ASA III+</div>
+                  <div class="text-[11px] text-slate-500 dark:text-slate-400" data-i18n="la.cardiacSub">Strict 0.04mg Epinephrine Limit</div>
                 </div>
               </label>
             </div>
@@ -782,8 +782,8 @@
           <!-- Administered Carpules Tracker -->
           <div class="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
             <div>
-              <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Carpules Delivered so far:</span>
-              <p class="text-[11px] text-slate-400">Keep track as you infiltrate during the appointment</p>
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-300" data-i18n="la.form.delivered">Carpules delivered so far</span>
+              <p class="text-[11px] text-slate-400" data-i18n="la.form.deliveredHint">Keep track as you inject during the appointment</p>
             </div>
             <div class="flex items-center space-x-2">
               <button id="btn-carpule-minus" class="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold flex items-center justify-center hover:bg-slate-300">-</button>
@@ -795,21 +795,21 @@
           <!-- Live Computation Card -->
           <div id="calc-result-box" class="p-4 rounded-xl bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 space-y-3">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-teal-900 dark:text-teal-200 uppercase tracking-wide">Calculated Safe Limit:</span>
+              <span class="text-xs font-bold text-teal-900 dark:text-teal-200 uppercase tracking-wide" data-i18n="la.result.title">Calculated safe limit</span>
               <span id="calc-limiting-factor" class="text-[11px] font-mono text-teal-700 dark:text-teal-400 font-medium">Factor: Mg/Kg Body Weight</span>
             </div>
 
             <div class="grid grid-cols-3 gap-2 text-center">
               <div class="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-teal-100 dark:border-teal-900">
-                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Safe Max Carpules</div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium" data-i18n="la.result.maxCarpules">Safe max carpules</div>
                 <div id="calc-res-max-carpules" class="text-xl font-mono font-black text-teal-600 dark:text-teal-400">7.3</div>
               </div>
               <div class="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-teal-100 dark:border-teal-900">
-                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Max Anesthetic (mg)</div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium" data-i18n="la.result.maxMg">Max anesthetic (mg)</div>
                 <div id="calc-res-max-mg" class="text-xl font-mono font-black text-slate-800 dark:text-slate-100">490 mg</div>
               </div>
               <div class="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-teal-100 dark:border-teal-900">
-                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Remaining Safe</div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium" data-i18n="la.result.remaining">Remaining (carpules)</div>
                 <div id="calc-res-remaining" class="text-xl font-mono font-black text-emerald-600 dark:text-emerald-400">7.3</div>
               </div>
             </div>
@@ -826,43 +826,39 @@
         <!-- Clinical Guidelines & Pharmacology Reference (5 cols) -->
         <div class="lg:col-span-5 space-y-4">
           
-          <!-- Antibiotic Prophylaxis Table -->
-          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-3">
-            <h3 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
-              <svg class="w-4 h-4 text-teal-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"></path>
-                <path d="m8.5 8.5 7 7"></path>
-              </svg>
-              <span>AHA Antibiotic Prophylaxis (Single Pre-op Dose)</span>
-            </h3>
-            
-            <div class="space-y-2 text-xs">
-              <div class="p-2 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
-                <div class="font-bold text-slate-800 dark:text-slate-200">Standard Adult (Oral):</div>
-                <div class="text-teal-700 dark:text-teal-300 font-mono font-semibold">Amoxicillin 2.0 g (four 500mg capsules)</div>
-                <div class="text-[11px] text-slate-500">Take 30 to 60 minutes before dental procedure. (Child: 50 mg/kg)</div>
-              </div>
-
-              <div class="p-2 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
-                <div class="font-bold text-slate-800 dark:text-slate-200">Penicillin Allergy (Oral):</div>
-                <div class="text-teal-700 dark:text-teal-300 font-mono font-semibold">Cephalexin 2.0 g OR Azithromycin 500 mg</div>
-                <div class="text-[11px] text-slate-500"><em>Note:</em> Clindamycin is no longer recommended by AHA due to C. difficile risk.</div>
-              </div>
+          <!-- Endocarditis prophylaxis (ESC 2023 + Tunisian Sfax consensus; see docs/medical/revue-contenu-clinique.md) -->
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-3 text-xs">
+            <h3 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide" data-i18n="la.prophy.title">Infective endocarditis: antibiotic prophylaxis</h3>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400" data-i18n="la.prophy.sources"></p>
+            <div class="p-2.5 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-1">
+              <div class="font-bold text-slate-800 dark:text-slate-200" data-i18n="la.prophy.highRiskTitle"></div>
+              <ul class="list-disc list-inside space-y-0.5 text-slate-600 dark:text-slate-300">
+                <li data-i18n="la.prophy.highRisk1"></li><li data-i18n="la.prophy.highRisk2"></li><li data-i18n="la.prophy.highRisk3"></li><li data-i18n="la.prophy.highRisk4"></li>
+              </ul>
             </div>
+            <div class="p-2.5 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
+              <div class="font-bold text-slate-800 dark:text-slate-200" data-i18n="la.prophy.adultTitle"></div>
+              <div class="text-teal-700 dark:text-teal-300 font-semibold" data-i18n="la.prophy.adultDose"></div>
+            </div>
+            <div class="p-2.5 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-1">
+              <div class="font-bold text-slate-800 dark:text-slate-200" data-i18n="la.prophy.allergyTitle"></div>
+              <div class="text-teal-700 dark:text-teal-300 font-semibold" data-i18n="la.prophy.allergyDose"></div>
+              <div class="text-[11px] text-slate-500" data-i18n="la.prophy.clindaNote"></div>
+            </div>
+            <p class="text-[11px] text-amber-700 dark:text-amber-400" data-i18n="la.prophy.validate"></p>
           </div>
 
-          <!-- Non-Opioid Multimodal Analgesic Protocol -->
-          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-3">
-            <h3 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
-              <span>ADA Post-Op Analgesic Protocol</span>
-            </h3>
-            <div class="p-3 rounded-xl bg-teal-50/50 dark:bg-teal-950/40 border border-teal-100 dark:border-teal-900 text-xs space-y-1.5">
-              <div class="font-semibold text-slate-800 dark:text-slate-100">Mild to Moderate Post-op Pain:</div>
-              <p class="text-slate-600 dark:text-slate-300 font-mono">Ibuprofen 400 mg q4-6h prn</p>
-              <div class="font-semibold text-slate-800 dark:text-slate-100 pt-1">Severe Post-op Pain (Staggered Synergistic Combo):</div>
-              <p class="text-teal-800 dark:text-teal-200 font-mono font-bold">Ibuprofen 600 mg + Acetaminophen 1000 mg every 6 hours</p>
-              <p class="text-[11px] text-slate-500">Superior to codeine/opioid combinations with fewer adverse events (Cochrane review).</p>
+          <!-- Non-opioid post-operative analgesia -->
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-3 text-xs">
+            <h3 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide" data-i18n="la.analgesia.title">Post-operative pain (non-opioid)</h3>
+            <div class="p-3 rounded-xl bg-teal-50/50 dark:bg-teal-950/40 border border-teal-100 dark:border-teal-900 space-y-1.5">
+              <div class="font-semibold text-slate-800 dark:text-slate-100" data-i18n="la.analgesia.mildTitle"></div>
+              <p class="text-slate-600 dark:text-slate-300" data-i18n="la.analgesia.mild"></p>
+              <div class="font-semibold text-slate-800 dark:text-slate-100 pt-1" data-i18n="la.analgesia.severeTitle"></div>
+              <p class="text-teal-800 dark:text-teal-200 font-semibold" data-i18n="la.analgesia.severe"></p>
+              <p class="text-[11px] text-slate-500" data-i18n="la.analgesia.contra"></p>
             </div>
+            <p class="text-[11px] text-amber-700 dark:text-amber-400" data-i18n="la.analgesia.validate"></p>
           </div>
 
         </div>
@@ -1319,7 +1315,7 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Full Patient Name *</label>
-              <input type="text" id="form-patient-name" required placeholder="e.g. Eleanor Davis" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
+              <input type="text" id="form-patient-name" required data-i18n-placeholder="patients.namePlaceholder" placeholder="e.g. Amira Jlassi" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white">
             </div>
             <div>
               <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="patients.chartIdLabel">Chart ID</label>
@@ -1392,7 +1388,7 @@
 
           <div>
             <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Chief Complaint *</label>
-            <textarea id="form-patient-complaint" rows="2" required placeholder="e.g. Sensitivity to cold on lower right molar #30 when chewing" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white"></textarea>
+            <textarea id="form-patient-complaint" rows="2" required data-i18n-placeholder="patients.complaintPlaceholder" placeholder="e.g. Sensitivity to cold on tooth 46 when chewing" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white"></textarea>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1649,6 +1645,7 @@
   <script src="/js/core/molaris.js"></script>
   <script src="/js/core/utils.js"></script>
   <script src="/i18n/settings.js"></script>
+  <script src="/i18n/anesthesia.js"></script>
   <script src="/i18n/agenda.js"></script>
   <script src="/i18n/billing.js"></script>
   <script src="/i18n/prescriptions.js"></script>

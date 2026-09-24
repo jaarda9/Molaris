@@ -42,7 +42,11 @@ const PROPHYLAXIS_KEYWORDS = [
   'unrepaired congenital heart disease', 'congenital heart disease',
   'cardiac transplant', 'heart transplant',
   'prothese valvulaire', 'valve cardiaque', 'valve mecanique', 'valve prothetique',
-  'endocardite', 'cardiopathie congenitale', 'transplantation cardiaque', 'greffe cardiaque'
+  'endocardite', 'cardiopathie congenitale', 'transplantation cardiaque', 'greffe cardiaque',
+  // ESC 2023: transcatheter valves, valve repair material, ventricular assist devices.
+  'tavi', 'plastie valvulaire', 'valve repair', 'assistance ventriculaire', 'ventricular assist',
+  // Tunisian consensus (Sfax 2016) also rates regurgitant rheumatic valve disease as high risk.
+  'rhumatism', 'rheumatic', 'insuffisance aortique', 'insuffisance mitrale', 'aortic regurgitation', 'mitral regurgitation'
 ];
 
 /** Lowercases and strips diacritics: "Pénicilline" -> "penicilline". */
@@ -75,7 +79,7 @@ export function checkDrugInteractions(
     alerts.push({
       severity: 'critical',
       message: isFr
-        ? 'Le patient est sous anticoagulant/antiagrégant et une exposition aux AINS (actuelle ou prévue) augmente le risque hémorragique. Privilégier le paracétamol pour l\'analgésie et confirmer avec le prescripteur avant tout acte invasif.'
+        ? 'Le patient est sous anticoagulant/antiagrégant et une exposition aux AINS (actuelle ou prévue) augmente le risque hémorragique. Privilégier le paracétamol pour l\'analgésie (en respectant sa dose maximale journalière) et confirmer avec le prescripteur avant tout acte invasif.'
         : 'Patient is on an anticoagulant/antiplatelet and NSAID use (current or planned) increases bleeding risk. Consider acetaminophen for analgesia and confirm with the prescriber before invasive procedures.'
     });
   }
@@ -93,7 +97,7 @@ export function checkDrugInteractions(
     alerts.push({
       severity: 'warning',
       message: isFr
-        ? 'Le patient est sous IMAO. Les anesthésiques contenant un vasoconstricteur comportent un risque théorique de crise hypertensive — utiliser la dose minimale efficace d\'épinéphrine et surveiller les constantes.'
+        ? 'Le patient est sous IMAO. Les anesthésiques contenant un vasoconstricteur comportent un risque théorique de crise hypertensive — utiliser la dose minimale efficace d\'adrénaline et surveiller les constantes.'
         : 'Patient is on an MAOI. Vasoconstrictor-containing anesthetics carry a theoretical hypertensive crisis risk — use the minimum effective epinephrine dose and monitor vitals.'
     });
   }
@@ -111,16 +115,16 @@ export function checkAllergyConflict(allergies: string, drugName: string, langua
     return {
       severity: 'critical',
       message: language === 'fr'
-        ? `Le patient a une allergie documentée à la pénicilline — ${drugName} est contre-indiqué. Envisager la clindamycine ou l'azithromycine à la place.`
-        : `Patient has a documented penicillin allergy — ${drugName} is contraindicated. Consider clindamycin or azithromycin instead.`
+        ? `Allergie documentée aux pénicillines : ${drugName} est contre-indiqué. Choisir une alternative selon le type d'allergie et les recommandations en vigueur, et vérifier sa disponibilité en Tunisie.`
+        : `Documented penicillin allergy: ${drugName} is contraindicated. Choose an alternative according to the type of allergy and current guidance, and check its availability in Tunisia.`
     };
   }
   return null;
 }
 
 /**
- * Flags medical-history phrases associated with AHA antibiotic prophylaxis
- * guidance. This is a prompt for the clinician to review, not an automatic
+ * Flags medical-history phrases that may put the patient at high risk of infective
+ * endocarditis (ESC 2023; Tunisian consensus, Sfax 2016). This is a prompt for the clinician to review, not an automatic
  * determination — prophylaxis decisions require professional judgment.
  */
 export function suggestProphylaxisReview(medicalAlerts: string): string[] {

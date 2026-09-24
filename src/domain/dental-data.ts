@@ -67,51 +67,54 @@ export interface AnestheticDrug {
   absoluteMaxMg: number;
 }
 
+// Names by DCI (no brand: the practice's local brand is its own choice). Presentations and
+// maximum doses follow common international references and still need checking against the
+// Tunisian market and SmPC (docs/medical/revue-contenu-clinique.md §3.2, ⚠️ pharmacist).
 export const ANESTHETICS: AnestheticDrug[] = [
   {
     id: 'lido_100k',
-    name: 'Lidocaine 2% with 1:100k Epinephrine',
+    name: 'Lidocaïne 2 % adrénalinée 1/100 000',
     concentration: 2,
     mgPerMl: 20,
     cartridgeVolume: 1.8,
     mgPerCartridge: 36,
-    vasoconstrictor: 'Epi 1:100,000 (0.018mg/carpule)',
+    vasoconstrictor: 'Adrénaline 1/100 000 (0,018 mg/cartouche)',
     epiRatio: '1:100,000',
     maxDoseMgKg: 7.0, // With epi
     absoluteMaxMg: 500,
   },
   {
     id: 'arti_100k',
-    name: 'Articaine 4% with 1:100k Epinephrine (Septocaine)',
+    name: 'Articaïne 4 % adrénalinée 1/100 000',
     concentration: 4,
     mgPerMl: 40,
     cartridgeVolume: 1.7,
     mgPerCartridge: 68,
-    vasoconstrictor: 'Epi 1:100,000 (0.017mg/carpule)',
+    vasoconstrictor: 'Adrénaline 1/100 000 (0,017 mg/cartouche)',
     epiRatio: '1:100,000',
     maxDoseMgKg: 7.0,
     absoluteMaxMg: 500,
   },
   {
     id: 'mepi_plain',
-    name: 'Mepivacaine 3% Plain (Carbocaine - No Epi)',
+    name: 'Mépivacaïne 3 % sans vasoconstricteur',
     concentration: 3,
     mgPerMl: 30,
     cartridgeVolume: 1.8,
     mgPerCartridge: 54,
-    vasoconstrictor: 'None (Plain)',
+    vasoconstrictor: 'Aucun',
     epiRatio: 'None',
     maxDoseMgKg: 6.6,
     absoluteMaxMg: 400,
   },
   {
     id: 'bupi_200k',
-    name: 'Bupivacaine 0.5% with 1:200k Epinephrine (Marcaine)',
+    name: 'Bupivacaïne 0,5 % adrénalinée 1/200 000',
     concentration: 0.5,
     mgPerMl: 5,
     cartridgeVolume: 1.8,
     mgPerCartridge: 9,
-    vasoconstrictor: 'Epi 1:200,000 (0.009mg/carpule)',
+    vasoconstrictor: 'Adrénaline 1/200 000 (0,009 mg/cartouche)',
     epiRatio: '1:200,000',
     maxDoseMgKg: 2.0,
     absoluteMaxMg: 90,

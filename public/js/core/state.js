@@ -17,7 +17,7 @@ let systemState = window.systemState = {
   language: localStorage.getItem('molaris_lang') || 'fr',
   activeTab: 'advisor',
   voiceEnabled: true,
-  numberingSystem: 'universal', // 'universal' | 'fdi'
+  numberingSystem: 'fdi', // 'fdi' (used in Tunisia, and on the CNAM forms) | 'universal'
   selectedTooth: null,
   teethData: [],
   patients: [],

@@ -109,3 +109,13 @@ test('FR: adrenaline-containing anesthetic + MAOI is flagged', () => {
   const alerts = checkDrugInteractions([{ name: 'Phénelzine', active: true }], ['Articaïne 4% adrénalinée 1/100 000']);
   assert.ok(alerts.some(a => a.severity === 'warning'));
 });
+
+test('penicillin allergy alert no longer suggests clindamycin by default', () => {
+  assert.doesNotMatch(checkAllergyConflict('Pénicilline (urticaire)', 'Amoxicilline 1 g', 'fr')!.message, /clindamycin/i);
+  assert.doesNotMatch(checkAllergyConflict('Penicillin', 'Amoxicillin 1 g', 'en')!.message, /clindamycin/i);
+});
+
+test('Tunisian high-risk group: regurgitant rheumatic valve disease triggers a prophylaxis review', () => {
+  assert.ok(suggestProphylaxisReview('Valvulopathie rhumatismale, insuffisance mitrale modérée').length > 0);
+  assert.ok(suggestProphylaxisReview('TAVI posé en 2024').length > 0);
+});

@@ -17,8 +17,8 @@ export function computePatientSafetyAlerts(
     alerts.push({
       severity: 'info',
       message: language === 'fr'
-        ? `Antécédents médicaux mentionnant « ${reason} » — vérifier les recommandations de prophylaxie antibiotique avant tout acte invasif.`
-        : `Medical history mentions "${reason}" — review antibiotic prophylaxis guidance before invasive procedures.`
+        ? `Antécédents médicaux mentionnant « ${reason} » — vérifier la classe de risque d'endocardite (ESC 2023, consensus tunisien de Sfax 2016) avant tout acte invasif.`
+        : `Medical history mentions "${reason}" — check the endocarditis risk class (ESC 2023, Tunisian Sfax consensus 2016) before invasive procedures.`
     });
   }
 

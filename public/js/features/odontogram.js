@@ -90,7 +90,7 @@ function selectTooth(tooth) {
   const archText = isFr ? (tooth.arch === 'maxillary' ? 'MAXILLAIRE' : 'MANDIBULAIRE') : tooth.arch.toUpperCase();
   const typeText = isFr && frTooth ? frTooth.type.toUpperCase() : tooth.type.toUpperCase();
 
-  numberEl.textContent = `#${tooth.id}`;
+  numberEl.textContent = systemState.numberingSystem === 'universal' ? `#${tooth.id}` : String(tooth.fdi);
   nameEl.textContent = toothName;
   fdiEl.textContent = isFr
     ? `Notation FDI : ${tooth.fdi} • Arcade : ${archText} • Type : ${typeText}`
@@ -129,7 +129,7 @@ function updateChatToothBanner(tooth) {
     const frTooth = window.MOLARIS_FRENCH_TEETH && window.MOLARIS_FRENCH_TEETH[tooth.id];
     const toothName = isFr && frTooth ? frTooth.name : tooth.name;
     const statusName = getTranslatedToothStatus(tooth.status, isFr);
-    nameSpan.textContent = isFr ? `Dent #${tooth.id} (${toothName})` : `Tooth #${tooth.id} (${tooth.name})`;
+    nameSpan.textContent = isFr ? `Dent ${tooth.fdi} (${toothName})` : `Tooth ${tooth.fdi} (${tooth.name})`;
     statusSpan.textContent = `[${statusName.toUpperCase()}]`;
   } else {
     banner.classList.add('hidden');
@@ -223,7 +223,10 @@ if (consultToothAdvisorBtn) {
     if (!systemState.selectedTooth) return;
     // Switch to advisor tab
     document.getElementById('nav-tab-advisor')?.click();
-    chatInput.value = `Doctor consultation regarding Tooth #${systemState.selectedTooth.id} (${systemState.selectedTooth.name}) with current status [${systemState.selectedTooth.status}]. What is the best evidence-based treatment plan?`;
+    const t = systemState.selectedTooth;
+    chatInput.value = systemState.language === 'fr'
+      ? `Avis sur la dent ${t.fdi} (statut actuel : ${getTranslatedToothStatus(t.status, true)}). Quel plan de traitement fondé sur les preuves proposez-vous ?`
+      : `Advice on tooth ${t.fdi} (current status: ${t.status}). What evidence-based treatment plan do you suggest?`;
     chatInput.focus();
   });
 }

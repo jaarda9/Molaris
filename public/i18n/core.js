@@ -8,8 +8,10 @@ window.MOLARIS_TRANSLATIONS = {
   en: {
     // Brand & Header
     "brand.title": "M.O.L.A.R.I.S",
-    "brand.subtitle": "Medical & Odontological Lifeline Assistant for Real-time Interventions",
-    "brand.badge": "Senior Advisor",
+    "brand.subtitle": "Clinical decision-support assistant for the dental practice",
+    "brand.badge": "Decision support",
+    "patients.namePlaceholder": "e.g. Amira Jlassi",
+    "patients.complaintPlaceholder": "e.g. Sensitivity to cold on tooth 46 when chewing",
     "patient.activeBadge": "ACTIVE CHART",
     "patient.cardiacAlert": "Cardiac Risk (Epi Capped 0.04mg)",
     "patient.standardEpi": "Standard Epi",
@@ -129,7 +131,7 @@ window.MOLARIS_TRANSLATIONS = {
 
     // Anesthesia Calculator
     "la.title": "Local Anesthetic Maximum Dose & Carpule Calculator",
-    "la.badge": "ADA / Malamed Standards",
+    "la.badge": "Indicative calculation: check the SmPC",
     "la.subtitle": "Determine safe cartridge limits based on patient body weight and vasoconstrictor cardiac threshold.",
     "la.selectDrug": "Select Local Anesthetic Agent:",
     "la.weightLabel": "Patient Body Weight (kg):",
@@ -146,19 +148,6 @@ window.MOLARIS_TRANSLATIONS = {
     "la.resultRemaining": "Remaining Safe",
     "la.resultLimiting": "Limiting Factor",
     "la.cardiacWarning": "Epinephrine restricted to 0.04mg for cardiac safety.",
-    "la.ahaTitle": "AHA Antibiotic Prophylaxis (Single Pre-op Dose)",
-    "la.ahaAdult": "Standard Adult (Oral):",
-    "la.ahaAdultDose": "Amoxicillin 2.0 g (four 500mg capsules)",
-    "la.ahaAdultTime": "Take 30 to 60 minutes before dental procedure. (Child: 50 mg/kg)",
-    "la.ahaAllergy": "Penicillin Allergy (Oral):",
-    "la.ahaAllergyDose": "Cephalexin 2.0 g OR Azithromycin 500 mg",
-    "la.ahaNote": "Note: Clindamycin is no longer recommended by AHA due to C. difficile risk.",
-    "la.adaAnalgesicTitle": "ADA Post-Op Analgesic Protocol",
-    "la.adaMild": "Mild to Moderate Post-op Pain:",
-    "la.adaMildDose": "Ibuprofen 400 mg q4-6h prn",
-    "la.adaSevere": "Severe Post-op Pain (Staggered Synergistic Combo):",
-    "la.adaSevereDose": "Ibuprofen 600 mg + Acetaminophen 1000 mg every 6 hours",
-    "la.adaSevereNote": "Superior to codeine/opioid combinations with fewer adverse events (Cochrane review).",
 
     // Vision Diagnostics
     "vision.title": "Radiograph & Intraoral Vision Analysis",
@@ -398,8 +387,10 @@ window.MOLARIS_TRANSLATIONS = {
   fr: {
     // Brand & Header
     "brand.title": "M.O.L.A.R.I.S",
-    "brand.subtitle": "Assistant Odontologique Médical & Décisionnel pour Interventions au Fauteuil",
-    "brand.badge": "Conseiller Senior",
+    "brand.subtitle": "Assistant clinique d'aide à la décision pour le cabinet dentaire",
+    "brand.badge": "Aide à la décision",
+    "patients.namePlaceholder": "ex. Amira Jlassi",
+    "patients.complaintPlaceholder": "ex. Sensibilité au froid sur la 46 à la mastication",
     "patient.activeBadge": "DOSSIER ACTIF",
     "patient.cardiacAlert": "Risque Cardiaque (Épi Max 0,04mg)",
     "patient.standardEpi": "Épi Standard",
@@ -519,7 +510,7 @@ window.MOLARIS_TRANSLATIONS = {
 
     // Anesthesia Calculator
     "la.title": "Calculateur de Dose Maximale d'Anesthésique & Carpules",
-    "la.badge": "Normes ADA / Malamed",
+    "la.badge": "Calcul indicatif : vérifier le RCP",
     "la.subtitle": "Déterminez le seuil de sécurité en carpules selon le poids corporel et le seuil vasoconstricteur cardiaque.",
     "la.selectDrug": "Sélectionner la Molécule Anesthésique :",
     "la.weightLabel": "Poids Corporel du Patient (kg) :",
@@ -536,19 +527,6 @@ window.MOLARIS_TRANSLATIONS = {
     "la.resultRemaining": "Carpules Restantes",
     "la.resultLimiting": "Facteur Limitant",
     "la.cardiacWarning": "Adrénaline plafonnée à 0,04 mg pour sécurité cardiovasculaire.",
-    "la.ahaTitle": "Prophylaxie Antibiotique AHA (Dose Unique Pré-Op)",
-    "la.ahaAdult": "Adulte Standard (Voie Orale) :",
-    "la.ahaAdultDose": "Amoxicilline 2,0 g (quatre gélules de 500 mg)",
-    "la.ahaAdultTime": "À prendre 30 à 60 minutes avant l'acte. (Enfant : 50 mg/kg)",
-    "la.ahaAllergy": "Allergie aux Pénicillines (Voie Orale) :",
-    "la.ahaAllergyDose": "Céphalexine 2,0 g OU Azithromycine 500 mg",
-    "la.ahaNote": "Remarque : La Clindamycine n'est plus recommandée en raison du risque de colite à C. difficile.",
-    "la.adaAnalgesicTitle": "Protocole Antalgique Post-Opératoire ADA",
-    "la.adaMild": "Douleur Légère à Modérée :",
-    "la.adaMildDose": "Ibuprofène 400 mg toutes les 4-6h au besoin",
-    "la.adaSevere": "Douleur Sévère (Association Synergique Décalée) :",
-    "la.adaSevereDose": "Ibuprofène 600 mg + Paracétamol 1000 mg toutes les 6 heures",
-    "la.adaSevereNote": "Efficacité supérieure aux opioïdes/codéine avec moins d'effets secondaires (revue Cochrane).",
 
     // Vision Diagnostics
     "vision.title": "Analyse Radiologique & Vision Intra-Orale",
@@ -1059,31 +1037,6 @@ window.applyMolarisLanguage = function(lang) {
     else if (txt.includes('Patient Body Weight') || txt.includes('Poids Corporel')) lbl.textContent = t('la.weightLabel');
     else if (txt.includes('Carpules Delivered') || txt.includes('Carpules Déjà Injectées')) lbl.textContent = t('la.deliveredLabel');
   });
-
-  // AHA & ADA cards in anesthesia tab
-  const ahaCard = document.querySelector('#view-anesthesia .border-amber-200');
-  if (ahaCard) {
-    const ahaH4 = ahaCard.querySelector('h4');
-    if (ahaH4) ahaH4.textContent = t('la.ahaTitle');
-    const pNotes = ahaCard.querySelectorAll('p');
-    if (pNotes.length >= 3) {
-      pNotes[0].innerHTML = `<strong>${t('la.ahaAdult')}</strong> ${t('la.ahaAdultDose')} - ${t('la.ahaAdultTime')}`;
-      pNotes[1].innerHTML = `<strong>${t('la.ahaAllergy')}</strong> ${t('la.ahaAllergyDose')}`;
-      pNotes[2].textContent = t('la.ahaNote');
-    }
-  }
-
-  const adaCard = document.querySelector('#view-anesthesia .border-blue-200');
-  if (adaCard) {
-    const adaH4 = adaCard.querySelector('h4');
-    if (adaH4) adaH4.textContent = t('la.adaAnalgesicTitle');
-    const pNotes = adaCard.querySelectorAll('p');
-    if (pNotes.length >= 3) {
-      pNotes[0].innerHTML = `<strong>${t('la.adaMild')}</strong> ${t('la.adaMildDose')}`;
-      pNotes[1].innerHTML = `<strong>${t('la.adaSevere')}</strong> ${t('la.adaSevereDose')}`;
-      pNotes[2].textContent = t('la.adaSevereNote');
-    }
-  }
 
   // 7. Vision Tab
   const vSub = document.querySelector('#view-vision p');

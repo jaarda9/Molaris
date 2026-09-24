@@ -11,10 +11,14 @@ function populateToothSelect(selectEl) {
     ? systemState.teethData
     : Array.from({ length: 32 }, (_, i) => ({ id: i + 1, name: '' }));
 
+  const isFr = systemState.language === 'fr';
   teeth.slice().sort((a, b) => a.id - b.id).forEach(t => {
     const opt = document.createElement('option');
     opt.value = String(t.id);
-    opt.textContent = t.name ? `#${t.id} — ${t.name}` : `#${t.id}`;
+    const frTooth = isFr && window.MOLARIS_FRENCH_TEETH && window.MOLARIS_FRENCH_TEETH[t.id];
+    const name = frTooth ? frTooth.name : t.name;
+    // Label in FDI numbering (used in Tunisia); the value stays the internal id.
+    opt.textContent = t.fdi ? `${t.fdi}${name ? ` — ${name}` : ''}` : `#${t.id}`;
     selectEl.appendChild(opt);
   });
 }

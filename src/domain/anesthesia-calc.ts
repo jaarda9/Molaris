@@ -60,13 +60,13 @@ export function calculateAnestheticDose(input: AnestheticDoseInput): AnestheticD
   const isExceeded = carpules > safeMaxCarpules;
 
   const limitingFactor = safeMaxCarpules === maxCarpulesByEpi
-    ? (language === 'fr' ? 'Épinéphrine (Plafond cardiovasculaire max 0,04 mg)' : 'Epinephrine (Cardiac threshold)')
+    ? (language === 'fr' ? 'Adrénaline (plafond cardiovasculaire 0,04 mg)' : 'Epinephrine (Cardiac threshold)')
     : (language === 'fr' ? 'Toxicité du principe actif (Limite mg/kg)' : 'Anesthetic agent toxicity (Mg/kg limit)');
 
   const warning = isExceeded
     ? (language === 'fr' ? 'DANGER : Dose maximale recommandée dépassée. Surveillez le patient pour tout signe de toxicité systémique (LAST) et tachycardie.' : 'DANGER: Maximum recommended dose exceeded. Monitor patient for Local Anesthetic Systemic Toxicity (LAST) and tachycardia.')
     : isCardiacRisk && safeMaxCarpules <= 2.2
-    ? (language === 'fr' ? 'NOTE : Alerte cardiaque active. Épinéphrine plafonnée à 0,04 mg (~2 cartouches dosées à 1:100 000).' : 'NOTE: Patient has cardiac alerts. Epinephrine restricted to 0.04mg (~2 cartridges of 1:100k).')
+    ? (language === 'fr' ? 'NOTE : Alerte cardiaque active. Adrénaline plafonnée à 0,04 mg (~2 cartouches dosées à 1:100 000).' : 'NOTE: Patient has cardiac alerts. Epinephrine restricted to 0.04mg (~2 cartridges of 1:100k).')
     : null;
 
   return {
