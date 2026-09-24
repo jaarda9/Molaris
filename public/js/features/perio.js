@@ -87,6 +87,14 @@ function renderPerioGrid() {
 }
 
 function createPerioToothCard(entry) {
+  if (entry.absent) {
+    // Extracted or unerupted: keeps its place in the arch, but is not charted.
+    const placeholder = document.createElement('div');
+    placeholder.className = 'p-2 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center min-h-[72px] text-slate-300 dark:text-slate-600';
+    placeholder.title = molarisT('perio.absentTitle');
+    placeholder.innerHTML = `<span class="text-[10px] font-mono font-bold">${escapeHtml(String(fdiForToothId(entry.toothId)))}</span><span class="text-sm">—</span>`;
+    return placeholder;
+  }
   const sites = Object.values(entry.sites);
   const maxDepth = Math.max(...sites.map(s => s.pocketDepth));
   const anyBleeding = sites.some(s => s.bleeding);

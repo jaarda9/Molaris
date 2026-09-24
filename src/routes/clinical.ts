@@ -104,21 +104,33 @@ clinicalRouter.get('/api/perio-charts', (req: Request, res: Response) => {
   res.json({ charts: patientDb.getPerioChartsForActivePatient() });
 });
 
+/** Teeth that cannot be probed today: extracted or not erupted (per the odontogram). */
+function absentToothIds(): Set<number> {
+  return new Set(patientDb.getActivePatient().teeth.filter(t => t.status === 'missing' || t.status === 'unerupted').map(t => t.id));
+}
+
 clinicalRouter.get('/api/perio-charts/latest', (req: Request, res: Response) => {
   const latest = patientDb.getLatestPerioChartForActivePatient();
-  if (latest) {
-    res.json({ chart: latest, isNew: false });
-  } else {
-    res.json({
-      chart: { id: '', date: new Date().toISOString(), teeth: createDefaultPerioTeeth(), notes: '' },
-      isNew: true
-    });
-  }
+  const absent = absentToothIds();
+  // Always the full arch (the grid is positional); a tooth absent from the saved chart
+  // starts from the defaults, and absent teeth are flagged so they are not charted.
+  const teeth = createDefaultPerioTeeth().map(base => ({
+    ...(latest?.teeth.find(t => t.toothId === base.toothId) ?? base),
+    absent: absent.has(base.toothId)
+  }));
+  res.json({
+    chart: latest ? { ...latest, teeth } : { id: '', date: new Date().toISOString(), teeth, notes: '' },
+    isNew: !latest
+  });
 });
 
 clinicalRouter.post('/api/perio-charts', route((req: Request, res: Response) => {
   const { teeth, notes } = parse(perioChartSchema, req.body);
-  res.status(201).json({ success: true, chart: patientDb.savePerioChartForActivePatient(teeth as PerioChartSnapshot['teeth'], notes) });
+  // No measurement is recorded for an extracted or unerupted tooth.
+  const absent = absentToothIds();
+  const charted = teeth.filter(t => !absent.has(t.toothId));
+  if (!charted.length) throw new HttpError(400, 'Aucune dent à sonder sur ce relevé.');
+  res.status(201).json({ success: true, chart: patientDb.savePerioChartForActivePatient(charted as PerioChartSnapshot['teeth'], notes) });
 }));
 
 // --- Treatment plan -------------------------------------------------------------
