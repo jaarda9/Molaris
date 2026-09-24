@@ -1,4 +1,4 @@
-import { patientDb, PatientRecord } from '../repositories/patients.js';
+import { patientDb } from '../repositories/patients.js';
 import { checkDrugInteractions } from '../domain/clinical-safety.js';
 import { isPrimaryToothId } from '../domain/primary-teeth.js';
 
@@ -29,35 +29,8 @@ export function executeMolarisAction(commandText: string, language: string = 'en
   const lower = text.toLowerCase();
   const isFr = language === 'fr';
 
-  // 1. Switch Patient Action (English & French)
-  // e.g. "switch patient to Eleanor Davis", "changer de patient pour Lucas Chen", "ouvrir dossier Eleanor"
-  const switchMatch = lower.match(/(?:switch|change|open|select|changer|basculer|ouvrir|sélectionner)\s+(?:patient|chart|record|dossier)?\s*(?:to|pour|sur|de)?\s*([a-z0-9\s\-]+)/i);
-  if (switchMatch && (
-    lower.includes('patient') ||
-    lower.includes('chart') ||
-    lower.includes('dossier') ||
-    lower.includes('switch to') ||
-    lower.includes('changer pour') ||
-    lower.includes('basculer sur') ||
-    lower.includes('open chart')
-  )) {
-    const query = switchMatch[1].replace(/patient|chart|record|dossier/gi, '').trim();
-    if (query) {
-      const patient = patientDb.getPatientByNameOrQuery(query);
-      if (patient) {
-        patientDb.setActivePatient(patient.id);
-        const summary = isFr
-          ? `Dossier actif basculé sur **${patient.name}** (${patient.chartId}, ASA ${patient.asaStatus}, ${patient.weightKg}kg).`
-          : `Switched active chart to **${patient.name}** (${patient.chartId}, ${patient.asaStatus}, ${patient.weightKg}kg).`;
-        return {
-          executed: true,
-          actionType: 'SWITCH_PATIENT',
-          summary,
-          data: { patientId: patient.id, patient }
-        };
-      }
-    }
-  }
+  // 1. Switching patient is not a keyword command any more: a false match would open the wrong
+  //    chart. The AI proposes it (tool switch_patient) and the doctor confirms.
 
   // 2. Start Chairside Timer Action (English & French)
   // e.g. "start 15s etch timer", "lancer minuteur 20s", "chronomètre 30 secondes", "start cure timer 20 seconds"
@@ -197,7 +170,7 @@ export function executeMolarisAction(commandText: string, language: string = 'en
     };
   }
 
-  if (lower.includes('open radiograph') || lower.includes('launch imaging') || lower.includes('open x-ray') || lower.includes('ouvrir radiographie') || lower.includes('vision')) {
+  if (lower.includes('open radiograph') || lower.includes('launch imaging') || lower.includes('open x-ray') || lower.includes('ouvrir radiographie') || lower.includes('ouvre la radio') || lower.includes('ouvrir la radio')) {
     return {
       executed: true,
       actionType: 'LAUNCH_APP',
@@ -244,7 +217,7 @@ export function executeMolarisAction(commandText: string, language: string = 'en
   }
 
   // 7. Audio Mute / Unmute / Sound Control
-  if (lower.includes('mute sound') || lower.includes('mute volume') || lower.includes('couper le son') || lower.includes('silence')) {
+  if (lower.includes('mute sound') || lower.includes('mute volume') || lower.includes('couper le son') || lower.includes('coupe le son')) {
     return {
       executed: true,
       actionType: 'AUDIO_MUTE',

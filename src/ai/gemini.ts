@@ -28,7 +28,14 @@ export interface GenerateResilientOptions {
   preferredModel?: string;
 }
 
-export async function callGeminiWithResilience(options: GenerateResilientOptions): Promise<{ text: string; modelUsed: string }> {
+export interface GeminiResult {
+  text: string;
+  modelUsed: string;
+  /** Tool calls requested by the model (when config.tools was given). */
+  functionCalls: Array<{ name: string; args: Record<string, unknown> }>;
+}
+
+export async function callGeminiWithResilience(options: GenerateResilientOptions): Promise<GeminiResult> {
   const ai = getGemini();
   // Single choke point: no patient name or chart ID may leave the clinic, whatever
   // path it took into the prompt (templates, chat history, action summaries).
@@ -43,7 +50,12 @@ export async function callGeminiWithResilience(options: GenerateResilientOptions
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const response = await ai.models.generateContent({ model, contents: options.contents, config: options.config });
-        return { text: response.text || '', modelUsed: model };
+        const functionCalls = (response.functionCalls || [])
+          .filter(call => call.name)
+          .map(call => ({ name: call.name!, args: (call.args || {}) as Record<string, unknown> }));
+        // .text is empty (and warns) when the answer is only a tool call.
+        const text = functionCalls.length ? '' : (response.text || '');
+        return { text, modelUsed: model, functionCalls };
       } catch (err: any) {
         const msg = err?.message || String(err);
         const kind = classifyAiError(msg);

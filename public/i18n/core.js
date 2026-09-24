@@ -436,7 +436,21 @@ window.MOLARIS_TRANSLATIONS = {
     "odonto.primaryReason.shown": "Shown for this patient",
     "odonto.primaryReason.hidden": "Hidden for this patient",
     "odonto.primaryRowUpper": "Primary teeth · upper",
-    "odonto.primaryRowLower": "Primary teeth · lower"
+    "odonto.primaryRowLower": "Primary teeth · lower",
+    "assistant.confirmPrompt": "Confirm this action?",
+    "assistant.confirm": "Confirm",
+    "assistant.cancel": "Cancel",
+    "assistant.cancelled": "Cancelled: nothing was saved.",
+    "assistant.failed": "Not done:",
+    "assistant.notAllowed": "This action is not allowed from the chat.",
+    "assistant.patientChanged": "Another chart is open now: re-ask the assistant for this patient.",
+    "assistant.done.quote": "Draft quote {n} created (see Billing).",
+    "assistant.done.payment": "Payment recorded: receipt {n} (printable from Billing).",
+    "assistant.done.appointment": "Appointment booked: {d}.",
+    "assistant.done.tooth": "Odontogram updated.",
+    "assistant.done.medication": "Medication added.",
+    "assistant.done.switch": "Chart opened.",
+    "assistant.done.generic": "Done."
   },
 
   fr: {
@@ -870,7 +884,21 @@ window.MOLARIS_TRANSLATIONS = {
     "odonto.primaryReason.shown": "Affichées pour ce patient",
     "odonto.primaryReason.hidden": "Masquées pour ce patient",
     "odonto.primaryRowUpper": "Dents temporaires · haut",
-    "odonto.primaryRowLower": "Dents temporaires · bas"
+    "odonto.primaryRowLower": "Dents temporaires · bas",
+    "assistant.confirmPrompt": "Confirmer cette action ?",
+    "assistant.confirm": "Confirmer",
+    "assistant.cancel": "Annuler",
+    "assistant.cancelled": "Annulé : rien n’a été enregistré.",
+    "assistant.failed": "Non effectué :",
+    "assistant.notAllowed": "Cette action n’est pas autorisée depuis la conversation.",
+    "assistant.patientChanged": "Un autre dossier est ouvert : redemandez au conseiller pour ce patient.",
+    "assistant.done.quote": "Devis brouillon {n} créé (voir Facturation).",
+    "assistant.done.payment": "Règlement enregistré : reçu {n} (imprimable depuis Facturation).",
+    "assistant.done.appointment": "Rendez-vous enregistré : {d}.",
+    "assistant.done.tooth": "Odontogramme mis à jour.",
+    "assistant.done.medication": "Médicament ajouté.",
+    "assistant.done.switch": "Dossier ouvert.",
+    "assistant.done.generic": "Fait."
   }
 };
 

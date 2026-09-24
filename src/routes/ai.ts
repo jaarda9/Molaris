@@ -8,8 +8,9 @@ import { loadMemory } from '../repositories/preferences.js';
 import { callGeminiWithResilience, aiErrorMessage, AiUnavailableError } from '../ai/gemini.js';
 import { MOLARIS_SYSTEM_PROMPT } from '../ai/system-prompt.js';
 import { executeMolarisAction } from '../ai/voice-actions.js';
+import { ASSISTANT_TOOLS, detokenize, runAssistantTools, tokenizePatients, toolInstructions, type Proposal } from '../ai/assistant-tools.js';
 import { computePatientSafetyAlerts } from '../domain/patient-safety.js';
-import { DATA_DIR } from '../db/connection.js';
+import { DATA_DIR, getDb } from '../db/connection.js';
 import { languageOf } from './http.js';
 
 export const aiRouter = Router();
@@ -67,6 +68,11 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     const memory = loadMemory();
     const activePatient = patientDb.getActivePatient();
     const tooth = toothId ? findPatientTooth(activePatient, Number(toothId)) : null;
+    const lang = languageOf(language);
+    // Patient names in the message become codes (P1…) before anything is sent to the model.
+    const patients = patientDb.getAllPatients();
+    const { text: safeMessage, refs } = tokenizePatients(message, patients, activePatient.id);
+    const offerTools = !actionResult.executed;
 
     // No doctor or clinic name either: the model has no use for any identity.
     let contextPrompt = `### CURRENT CLINICAL OPERATORY CONTEXT\n`;
@@ -79,6 +85,8 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     contextPrompt += `- Chief Complaint: "${activePatient.chiefComplaint}"\n`;
     contextPrompt += `- Medical Alerts: ${activePatient.medicalAlerts}\n`;
     contextPrompt += `- Allergies: ${activePatient.allergies}\n`;
+    const activeMeds = activePatient.medications.filter(m => m.active).map(m => [m.name, m.dosage, m.frequency].filter(Boolean).join(' '));
+    contextPrompt += `- Current Medications: ${activeMeds.length ? activeMeds.join('; ') : 'none recorded'}\n`;
     contextPrompt += `- Local Anesthesia Delivered Today: ${activePatient.deliveredCarpules} carpules\n`;
 
     if (tooth) {
@@ -99,6 +107,8 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
       });
     }
 
+    if (offerTools) contextPrompt += toolInstructions(lang);
+
     if (language === 'fr') {
       contextPrompt += `\n### DIRECTIVE DE LANGUE OBLIGATOIRE (FRANÇAIS):\n` +
         `- Vous DEVEZ répondre ENTIÈREMENT en français médical et odontologique professionnel, précis et chaleureux.\n` +
@@ -115,13 +125,26 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     conversationHistory.slice(-8).forEach((entry: { role: string; content: string }) => {
       contents.push({ role: entry.role === 'user' ? 'user' : 'model', parts: [{ text: entry.content }] });
     });
-    contents.push({ role: 'user', parts: [{ text: `${contextPrompt}\nDoctor asks: ${message}` }] });
+    contents.push({ role: 'user', parts: [{ text: `${contextPrompt}\nDoctor asks: ${safeMessage}` }] });
 
     const result = await callGeminiWithResilience({
       preferredModel: 'gemini-3.8-flash',
       contents,
-      config: { systemInstruction: MOLARIS_SYSTEM_PROMPT, temperature: 0.35, maxOutputTokens: 1500 }
+      config: {
+        systemInstruction: MOLARIS_SYSTEM_PROMPT, temperature: 0.35, maxOutputTokens: 1500,
+        ...(offerTools ? { tools: [{ functionDeclarations: ASSISTANT_TOOLS }] } : {})
+      }
     });
+
+    // Tool calls: reads are answered from the local data, writes come back as a proposal to confirm.
+    let proposal: Proposal | undefined;
+    if (result.functionCalls.length) {
+      const outcome = runAssistantTools(result.functionCalls, { db: getDb(), patients, activeId: activePatient.id, refs, lang });
+      proposal = outcome.proposal;
+      result.text = outcome.reply;
+    } else {
+      result.text = detokenize(result.text, refs, patients);
+    }
 
     let replyText = result.text || (language === 'fr' ? 'J\'ai examiné le cas, Docteur. Pourriez-vous préciser la présentation clinique ?' : 'I reviewed the case, Doctor. Could you clarify the clinical presentation?');
     if (actionResult.executed && !replyText.includes(actionResult.summary || '')) {
@@ -133,6 +156,7 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     res.json({
       reply: replyText,
       action: actionResult,
+      proposal,
       activePatient: patientDb.getActivePatient(),
       safetyAlerts,
       toothTargeted: tooth ? tooth.id : null,
