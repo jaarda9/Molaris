@@ -74,3 +74,9 @@ test('a prescription for a child warns that default doses are adult doses', () =
 test('no child warning for an adult', () => {
   assert.equal(checkPrescriptionSafety(patient('', { age: 30, weightKg: 70 }), [{ drugLabel: 'Amoxicilline' }]).alerts.length, 0);
 });
+
+test('the same drug on two lines blocks (double dose)', () => {
+  const r = checkPrescriptionSafety(patient(''), [{ drugLabel: 'Amoxicilline', strength: '1 g' }, { drugLabel: 'amoxicilline', strength: '1 g' }]);
+  assert.equal(r.hasCritical, true);
+  assert.ok(r.alerts.some(a => a.source === 'duplicate' && /Amoxicilline/.test(a.message)));
+});

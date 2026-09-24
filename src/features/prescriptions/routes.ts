@@ -81,7 +81,7 @@ function sendIssueResult(res: Response, run: () => IssueResult): void {
   }
   if (result.status === 'blocked') {
     res.status(409).json({
-      error: 'Critical safety alert: confirm the prescription explicitly to issue it',
+      error: 'Alerte de sécurité critique : confirmez explicitement la prescription pour l’émettre.',
       requiresOverride: true,
       alerts: result.alerts
     });

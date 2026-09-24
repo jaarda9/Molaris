@@ -3,7 +3,8 @@ import { patientDb } from '../repositories/patients.js';
 import { ANESTHETICS, QUICK_PROTOCOLS } from '../domain/dental-data.js';
 import { calculateAnestheticDose } from '../domain/anesthesia-calc.js';
 import { checkDrugInteractions } from '../domain/clinical-safety.js';
-import { languageOf } from './http.js';
+import { HttpError, languageOf, parse } from './http.js';
+import { anesthesiaCalcSchema, anesthesiaLogSchema } from './clinical-validation.js';
 
 export const anesthesiaRouter = Router();
 
@@ -14,7 +15,7 @@ anesthesiaRouter.get('/api/anesthetics', (req: Request, res: Response) => {
 anesthesiaRouter.post('/api/calc-la', (req: Request, res: Response) => {
   try {
     const activePatient = patientDb.getActivePatient();
-    const { drugId, weightKg, isCardiacRisk, carpulesGiven, language = 'en' } = req.body;
+    const { drugId, weightKg, isCardiacRisk, carpulesGiven, language = 'en' } = parse(anesthesiaCalcSchema, req.body);
     const drug = ANESTHETICS.find(a => a.id === drugId) || ANESTHETICS[0];
 
     res.json(calculateAnestheticDose({
@@ -25,15 +26,17 @@ anesthesiaRouter.post('/api/calc-la', (req: Request, res: Response) => {
       language
     }));
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    // Validation errors (HttpError) keep their 400; anything else is a server error.
+    res.status(err instanceof HttpError ? err.status : 500).json({ error: err.message });
   }
 });
 
 anesthesiaRouter.post('/api/anesthesia/log', (req: Request, res: Response) => {
   try {
-    const { drugId, carpules, site, notes, language } = req.body;
+    // 0 used to be logged as 1 carpule and negative values lowered the day's total.
+    const { drugId, carpules, site, notes, language } = parse(anesthesiaLogSchema, req.body);
     const drug = ANESTHETICS.find(a => a.id === drugId) || ANESTHETICS[0];
-    const carp = Number(carpules) || 1.0;
+    const carp = carpules;
 
     let epiPerCartridge = 0;
     if (drug.epiRatio === '1:100,000') epiPerCartridge = drug.cartridgeVolume * 0.01;
@@ -52,6 +55,7 @@ anesthesiaRouter.post('/api/anesthesia/log', (req: Request, res: Response) => {
     const safetyAlerts = checkDrugInteractions(result.patient.medications, [drug.name], languageOf(language));
     res.json({ success: true, patient: result.patient, entry: result.entry, safetyAlerts });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    // Validation errors (HttpError) keep their 400; anything else is a server error.
+    res.status(err instanceof HttpError ? err.status : 500).json({ error: err.message });
   }
 });

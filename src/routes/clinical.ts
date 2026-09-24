@@ -1,10 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { patientDb, PatientRecord } from '../repositories/patients.js';
+import { patientDb, PatientRecord, findPatientTooth } from '../repositories/patients.js';
 import { primaryTeethVisibility } from '../domain/primary-teeth.js';
-import { createDefaultPerioTeeth } from '../domain/clinical-records.js';
+import { createDefaultPerioTeeth, type PerioChartSnapshot } from '../domain/clinical-records.js';
 import { checkDrugInteractions, checkAllergyConflict, SafetyAlert } from '../domain/clinical-safety.js';
-import { languageOf, parse, route } from './http.js';
+import { HttpError, languageOf, parse, route } from './http.js';
+import {
+  labCaseCreateSchema, labCaseUpdateSchema, perioChartSchema, toothUpdateSchema, treatmentCreateSchema, treatmentUpdateSchema
+} from './clinical-validation.js';
 
 // Per-patient clinical chart: odontogram, medications, perio, treatment plan, lab cases.
 // These endpoints act on the *active* patient (legacy design); new features take an
@@ -17,15 +20,12 @@ clinicalRouter.get('/api/odontogram', (req: Request, res: Response) => {
   res.json(patientDb.getActivePatient().teeth);
 });
 
-clinicalRouter.post('/api/odontogram', (req: Request, res: Response) => {
-  try {
-    const { toothId, status, notes, surfaces } = req.body;
-    const tooth = patientDb.updateToothForActivePatient(Number(toothId), { status, notes, surfaces });
-    res.json({ success: true, tooth, activePatientId: patientDb.getActivePatient().id });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+clinicalRouter.post('/api/odontogram', route((req: Request, res: Response) => {
+  const { toothId, status, notes, surfaces } = parse(toothUpdateSchema, req.body);
+  if (!findPatientTooth(patientDb.getActivePatient(), toothId)) throw new HttpError(404, `Dent ${toothId} introuvable dans ce dossier.`);
+  const tooth = patientDb.updateToothForActivePatient(toothId, { status, notes, surfaces });
+  res.json({ success: true, tooth, activePatientId: patientDb.getActivePatient().id });
+}));
 
 clinicalRouter.post('/api/odontogram/reset', (req: Request, res: Response) => {
   const teeth = patientDb.resetOdontogramForActivePatient();
@@ -118,17 +118,10 @@ clinicalRouter.get('/api/perio-charts/latest', (req: Request, res: Response) => 
   }
 });
 
-clinicalRouter.post('/api/perio-charts', (req: Request, res: Response) => {
-  try {
-    const { teeth, notes } = req.body;
-    if (!Array.isArray(teeth) || teeth.length === 0) {
-      return res.status(400).json({ error: 'A full teeth array is required to save a perio chart snapshot' });
-    }
-    res.status(201).json({ success: true, chart: patientDb.savePerioChartForActivePatient(teeth, notes) });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+clinicalRouter.post('/api/perio-charts', route((req: Request, res: Response) => {
+  const { teeth, notes } = parse(perioChartSchema, req.body);
+  res.status(201).json({ success: true, chart: patientDb.savePerioChartForActivePatient(teeth as PerioChartSnapshot['teeth'], notes) });
+}));
 
 // --- Treatment plan -------------------------------------------------------------
 
@@ -136,33 +129,19 @@ clinicalRouter.get('/api/treatment-plan', (req: Request, res: Response) => {
   res.json({ items: patientDb.getTreatmentPlanForActivePatient() });
 });
 
-clinicalRouter.post('/api/treatment-plan', (req: Request, res: Response) => {
-  try {
-    const { toothId, procedure, cdtCode, priority, estimatedCost, notes } = req.body;
-    if (!procedure || typeof procedure !== 'string') {
-      return res.status(400).json({ error: 'Procedure description is required' });
-    }
-    const item = patientDb.addTreatmentPlanItemForActivePatient({
-      toothId: toothId !== undefined && toothId !== '' ? Number(toothId) : undefined,
-      procedure,
-      cdtCode,
-      priority: priority || 'routine',
-      estimatedCost: estimatedCost !== undefined && estimatedCost !== '' ? Number(estimatedCost) : undefined,
-      notes
-    });
-    res.status(201).json({ success: true, item });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+clinicalRouter.post('/api/treatment-plan', route((req: Request, res: Response) => {
+  const input = parse(treatmentCreateSchema, req.body);
+  const item = patientDb.addTreatmentPlanItemForActivePatient({ ...input, priority: input.priority ?? 'routine' });
+  res.status(201).json({ success: true, item });
+}));
 
-clinicalRouter.put('/api/treatment-plan/:id', (req: Request, res: Response) => {
-  try {
-    res.json({ success: true, item: patientDb.updateTreatmentPlanItemForActivePatient(String(req.params.id), req.body) });
-  } catch (err: any) {
-    res.status(404).json({ error: err.message });
+clinicalRouter.put('/api/treatment-plan/:id', route((req: Request, res: Response) => {
+  const changes = parse(treatmentUpdateSchema, req.body);
+  if (!patientDb.getTreatmentPlanForActivePatient().some(i => i.id === String(req.params.id))) {
+    throw new HttpError(404, 'Acte du plan de traitement introuvable.');
   }
-});
+  res.json({ success: true, item: patientDb.updateTreatmentPlanItemForActivePatient(String(req.params.id), changes) });
+}));
 
 clinicalRouter.delete('/api/treatment-plan/:id', (req: Request, res: Response) => {
   try {
@@ -178,29 +157,18 @@ clinicalRouter.get('/api/lab-cases', (req: Request, res: Response) => {
   res.json({ cases: patientDb.getLabCasesForActivePatient() });
 });
 
-clinicalRouter.post('/api/lab-cases', (req: Request, res: Response) => {
-  try {
-    const { toothId, caseType, material, shade, marginDesign, occlusalNotes, labName, dueDate, notes } = req.body;
-    if (!caseType || typeof caseType !== 'string') {
-      return res.status(400).json({ error: 'Case type is required' });
-    }
-    const labCase = patientDb.addLabCaseForActivePatient({
-      toothId: toothId !== undefined && toothId !== '' ? Number(toothId) : undefined,
-      caseType, material, shade, marginDesign, occlusalNotes, labName, dueDate, notes
-    });
-    res.status(201).json({ success: true, labCase });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+clinicalRouter.post('/api/lab-cases', route((req: Request, res: Response) => {
+  const labCase = patientDb.addLabCaseForActivePatient(parse(labCaseCreateSchema, req.body));
+  res.status(201).json({ success: true, labCase });
+}));
 
-clinicalRouter.put('/api/lab-cases/:id', (req: Request, res: Response) => {
-  try {
-    res.json({ success: true, labCase: patientDb.updateLabCaseForActivePatient(String(req.params.id), req.body) });
-  } catch (err: any) {
-    res.status(404).json({ error: err.message });
+clinicalRouter.put('/api/lab-cases/:id', route((req: Request, res: Response) => {
+  const changes = parse(labCaseUpdateSchema, req.body);
+  if (!patientDb.getLabCasesForActivePatient().some(c => c.id === String(req.params.id))) {
+    throw new HttpError(404, 'Travail de laboratoire introuvable.');
   }
-});
+  res.json({ success: true, labCase: patientDb.updateLabCaseForActivePatient(String(req.params.id), changes) });
+}));
 
 clinicalRouter.delete('/api/lab-cases/:id', (req: Request, res: Response) => {
   try {

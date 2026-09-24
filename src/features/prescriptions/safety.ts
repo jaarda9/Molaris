@@ -62,6 +62,24 @@ export function checkPrescriptionSafety(
     }
   }
 
+  // The same drug on two lines doubles the dose (often a line added twice by mistake).
+  const byDrug = new Map<string, string>();
+  for (const line of lines) {
+    const key = line.drugLabel.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim();
+    if (!key) continue;
+    if (byDrug.has(key)) {
+      alerts.push({
+        severity: 'critical',
+        source: 'duplicate',
+        message: language === 'fr'
+          ? `${byDrug.get(key)} figure deux fois sur l'ordonnance : la dose serait doublée. Supprimez la ligne en double.`
+          : `${byDrug.get(key)} appears twice on the prescription: the dose would be doubled. Remove the duplicate line.`
+      });
+      break;
+    }
+    byDrug.set(key, line.drugLabel);
+  }
+
   const nsaids = planned.filter(isNsaid);
   if (nsaids.length >= 2) {
     alerts.push({

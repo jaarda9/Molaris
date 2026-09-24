@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { openDatabase } from '../../db/connection.js';
 import { HttpError } from '../../routes/http.js';
 import {
-  addMinutes, AppointmentRepository, getAgendaSettings, isValidLocalDateTime, setAgendaSettings
+  addMinutes, AppointmentRepository, getAgendaSettings, isValidLocalDateTime, reminderBlockReason, setAgendaSettings
 } from './repository.js';
 import { buildReminderMessage, buildWhatsAppLink, normalizePhone } from './reminder.js';
 import { seedDemo } from './demo.js';
@@ -238,4 +238,35 @@ test('moving an appointment onto another booking of the same patient is refused'
   repo.create({ patientId: 'pt_3', startAt: '2026-10-05T14:00', durationMinutes: 30, chair: 'Fauteuil 1' });
   const other = repo.create({ patientId: 'pt_3', startAt: '2026-10-05T16:00', durationMinutes: 30, chair: 'Fauteuil 2' });
   assertHttpError(() => repo.update(other.id, { startAt: '2026-10-05T14:10' }), 409, /déjà un rendez-vous/);
+});
+
+test('an appointment that has not happened yet cannot be marked arrived, done or no-show', () => {
+  const { repo } = setup();
+  const future = repo.create({ patientId: 'pt_1', startAt: '2099-03-10T10:00', durationMinutes: 30, chair: 'Fauteuil 1' });
+  for (const status of ['arrived', 'in_progress', 'completed', 'no_show'] as const) {
+    assertHttpError(() => repo.setStatus(future.id, status), 409, /pas encore eu lieu/);
+  }
+  assert.equal(repo.setStatus(future.id, 'confirmed').status, 'confirmed');
+  assert.equal(repo.setStatus(future.id, 'cancelled').status, 'cancelled');
+  const past = repo.create({ patientId: 'pt_1', startAt: '2020-03-10T10:00', durationMinutes: 30, chair: 'Fauteuil 1' });
+  assert.equal(repo.setStatus(past.id, 'completed').status, 'completed');
+});
+
+test('a visit that took place cannot be deleted (cancel it instead); a planned one can', () => {
+  const { repo } = setup();
+  const done = repo.create({ patientId: 'pt_1', startAt: '2020-03-10T10:00', durationMinutes: 30, chair: 'Fauteuil 1' });
+  repo.setStatus(done.id, 'completed');
+  assertHttpError(() => repo.delete(done.id), 409, /a eu lieu/);
+  const planned = repo.create({ patientId: 'pt_2', startAt: '2099-03-10T10:00', durationMinutes: 30, chair: 'Fauteuil 1' });
+  repo.delete(planned.id);
+  assert.equal(repo.get(planned.id), undefined);
+});
+
+test('no reminder for a cancelled, missed, finished or past appointment', () => {
+  const now = '2026-09-24T12:00';
+  const base = { startAt: '2026-09-25T10:00', status: 'scheduled' } as const;
+  assert.equal(reminderBlockReason({ ...base }, now), null);
+  assert.match(reminderBlockReason({ ...base, status: 'cancelled' }, now)!, /annulé/);
+  assert.match(reminderBlockReason({ ...base, status: 'no_show' }, now)!, /annulé|absent|terminé/);
+  assert.match(reminderBlockReason({ startAt: '2026-09-21T10:00', status: 'scheduled' }, now)!, /passé/);
 });

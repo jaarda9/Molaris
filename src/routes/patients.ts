@@ -1,8 +1,16 @@
 import { Router, Request, Response } from 'express';
-import { patientDb } from '../repositories/patients.js';
+import { patientDb, type PatientRecord } from '../repositories/patients.js';
 import { loadMemory } from '../repositories/preferences.js';
 import { computePatientSafetyAlerts } from '../domain/patient-safety.js';
-import { languageOf } from './http.js';
+import { HttpError, languageOf, parse, route } from './http.js';
+import { patientCreateSchema, patientUpdateSchema } from './clinical-validation.js';
+
+/** A chart number identifies one patient: refuse a duplicate with a clear message. */
+function assertChartIdFree(chartId: string | undefined, exceptPatientId?: string): void {
+  if (!chartId) return;
+  const other = patientDb.getAllPatients().find(p => p.chartId.toLowerCase() === chartId.toLowerCase() && p.id !== exceptPatientId);
+  if (other) throw new HttpError(409, `Le numéro de dossier ${chartId} est déjà attribué à ${other.name}.`);
+}
 
 export const patientsRouter = Router();
 
@@ -47,23 +55,21 @@ patientsRouter.post('/api/patients/select', (req: Request, res: Response) => {
   }
 });
 
-patientsRouter.post('/api/patients', (req: Request, res: Response) => {
-  try {
-    const newPatient = patientDb.createPatient(req.body);
-    res.status(201).json({ success: true, patient: newPatient });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+patientsRouter.post('/api/patients', route((req: Request, res: Response) => {
+  const input = parse(patientCreateSchema, req.body);
+  assertChartIdFree(input.chartId);
+  const newPatient = patientDb.createPatient(input as Partial<PatientRecord>);
+  res.status(201).json({ success: true, patient: newPatient });
+}));
 
-patientsRouter.put('/api/patients/:id', (req: Request, res: Response) => {
-  try {
-    const updated = patientDb.updatePatient(String(req.params.id), req.body);
-    res.json({ success: true, patient: updated });
-  } catch (err: any) {
-    res.status(404).json({ error: err.message });
-  }
-});
+patientsRouter.put('/api/patients/:id', route((req: Request, res: Response) => {
+  const id = String(req.params.id);
+  if (!patientDb.getPatientById(id)) throw new HttpError(404, 'Patient introuvable.');
+  const changes = parse(patientUpdateSchema, req.body);
+  assertChartIdFree(changes.chartId, id);
+  const updated = patientDb.updatePatient(id, changes as Partial<PatientRecord>);
+  res.json({ success: true, patient: updated });
+}));
 
 patientsRouter.delete('/api/patients/:id', (req: Request, res: Response) => {
   try {

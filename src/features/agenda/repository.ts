@@ -9,6 +9,25 @@ export type AppointmentStatus = typeof APPOINTMENT_STATUSES[number];
 
 /** Cancelled and no-show appointments free their slot. */
 const NON_BLOCKING: AppointmentStatus[] = ['cancelled', 'no_show'];
+/** Statuses that describe a visit on its day (never a future appointment; never deleted). */
+const HAPPENED: AppointmentStatus[] = ['arrived', 'in_progress', 'completed', 'no_show'];
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+/** Clinic-local 'YYYY-MM-DD' (the server runs on the clinic PC). */
+function localToday(d: Date = new Date()): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+/**
+ * Why a WhatsApp reminder must not be sent, or null if it can: the appointment is
+ * cancelled / missed / finished, or already past. `nowLocal` is 'YYYY-MM-DDTHH:MM'.
+ */
+export function reminderBlockReason(appointment: Pick<Appointment, 'startAt' | 'status'>, nowLocal: string): string | null {
+  if (appointment.status === 'cancelled') return 'Ce rendez-vous est annulé : pas de rappel.';
+  if (appointment.status === 'no_show' || appointment.status === 'completed') return 'Ce rendez-vous est terminé ou le patient était absent : pas de rappel.';
+  if (appointment.startAt < nowLocal) return 'Ce rendez-vous est déjà passé : pas de rappel.';
+  return null;
+}
 
 export interface Appointment {
   id: string;
@@ -302,9 +321,13 @@ export class AppointmentRepository {
     return this.require(id);
   }
 
+  /** Only a planned (or cancelled) appointment can be deleted: a visit that took place stays in the history. */
   delete(id: string): void {
-    const result = this.db.prepare('DELETE FROM appointments WHERE id = ?').run(id);
-    if (result.changes === 0) throw notFound('Appointment');
+    const appointment = this.require(id);
+    if (HAPPENED.includes(appointment.status)) {
+      throw new HttpError(409, 'Ce rendez-vous a eu lieu (ou le patient était absent) : il reste dans l’historique. Annulez-le au lieu de le supprimer.');
+    }
+    this.db.prepare('DELETE FROM appointments WHERE id = ?').run(id);
   }
 
   private validate(row: {
@@ -318,6 +341,10 @@ export class AppointmentRepository {
       throw new HttpError(400, 'Choisissez un patient ou saisissez le nom de la personne.');
     }
     if (row.end_at <= row.start_at) throw new HttpError(400, 'La durée doit être positive.');
+    // "Arrivé", "en cours", "terminé", "absent" describe a visit on its day, not a future one.
+    if (HAPPENED.includes(row.status) && row.start_at.slice(0, 10) > localToday()) {
+      throw new HttpError(409, 'Ce rendez-vous n’a pas encore eu lieu : il ne peut pas être marqué arrivé, en cours, terminé ou absent.');
+    }
 
     if (NON_BLOCKING.includes(row.status)) return;
 

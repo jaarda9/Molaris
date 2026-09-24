@@ -4,7 +4,7 @@ import { getDb } from '../../db/connection.js';
 import { getClinicIdentity } from '../../db/settings.js';
 import { HttpError, parse, route } from '../../routes/http.js';
 import {
-  APPOINTMENT_STATUSES, AppointmentRepository, getAgendaSettings, isValidLocalDateTime, setAgendaSettings
+  APPOINTMENT_STATUSES, AppointmentRepository, getAgendaSettings, isValidLocalDateTime, reminderBlockReason, setAgendaSettings
 } from './repository.js';
 import { buildReminderMessage, buildWhatsAppLink, normalizePhone } from './reminder.js';
 
@@ -56,6 +56,10 @@ agendaRouter.delete('/api/appointments/:id', route((req, res) => {
 agendaRouter.post('/api/appointments/:id/reminder', route((req, res) => {
   const appointments = repo();
   const appointment = appointments.require(req.params.id);
+  const now = new Date();
+  const nowLocal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const blocked = reminderBlockReason(appointment, nowLocal);
+  if (blocked) throw new HttpError(409, blocked);
   const phone = normalizePhone(appointment.phone);
   if (!phone) throw new HttpError(400, 'Numéro de téléphone manquant ou invalide pour ce rendez-vous.');
   const clinic = getClinicIdentity(getDb());

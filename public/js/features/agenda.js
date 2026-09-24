@@ -68,6 +68,10 @@
   const duration = (a) => Math.round((new Date(`${a.endAt}:00Z`) - new Date(`${a.startAt}:00Z`)) / 60000);
   const isOpenDay = (iso) => state.settings.hours.days.includes(weekday(iso));
   const isActive = (a) => a.status !== 'cancelled' && a.status !== 'no_show';
+  // Arrivé / en cours / terminé / absent describe a visit on its day: never offered for a future day.
+  const HAPPENED = ['arrived', 'in_progress', 'completed', 'no_show'];
+  const isFutureDay = (a) => a.startAt.slice(0, 10) > Molaris.format.isoDate();
+  const statusAllowed = (a, s) => !(HAPPENED.includes(s) && isFutureDay(a));
 
   const fmtLongDate = (iso) => parseDate(iso).toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const fmtDayShort = (iso) => parseDate(iso).toLocaleDateString(locale(), { weekday: 'short', day: '2-digit', month: '2-digit' });
@@ -324,7 +328,7 @@
     const height = Math.max(rowPx, (item.e - item.s) / SLOT * rowPx) - 2;
     const width = 100 / item.lanes;
     const tall = height >= rowPx * 2 - 2;
-    const next = NEXT_STATUS[a.status];
+    const next = statusAllowed(a, NEXT_STATUS[a.status]) ? NEXT_STATUS[a.status] : null;
     const walkIn = !a.patientId;
     const reminder = a.reminderSentAt ? `<span title="${esc(t('agenda.reminders.sent'))}" class="text-emerald-600 dark:text-emerald-400 shrink-0">${ICON.whatsapp}</span>` : '';
 
@@ -610,7 +614,7 @@
           <div>
             <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">${esc(t('agenda.detail.status'))}</div>
             <div class="flex flex-wrap gap-1.5">
-              ${STATUSES.map(s => `
+              ${STATUSES.filter(s => s === a.status || statusAllowed(a, s)).map(s => `
                 <button type="button" data-set-status="${s}" ${s === a.status ? 'aria-pressed="true"' : ''}
                   class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ring-1 transition ${s === a.status ? `${STATUS_STYLE[s].pill} ring-2 shadow-sm` : 'ring-slate-200 dark:ring-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}">
                   <span class="w-1.5 h-1.5 rounded-full ${STATUS_STYLE[s].dot}"></span>${esc(statusLabel(s))}${s === a.status ? ICON.check : ''}
@@ -627,9 +631,9 @@
           </div>
           <div class="flex flex-wrap gap-2 pt-1">
             ${a.patientId ? `<button type="button" data-detail="chart" class="${BTN_PRIMARY} inline-flex items-center gap-1.5">${ICON.folder}${esc(t('agenda.detail.openChart'))}</button>` : ''}
-            ${a.phone && isActive(a) ? `<button type="button" data-detail="remind" class="${BTN} bg-emerald-600 hover:bg-emerald-700 text-white inline-flex items-center gap-1.5">${ICON.whatsapp}${esc(t('agenda.detail.whatsapp'))}</button>` : ''}
+            ${a.phone && isActive(a) && a.status !== 'completed' && new Date(a.startAt) > new Date() ? `<button type="button" data-detail="remind" class="${BTN} bg-emerald-600 hover:bg-emerald-700 text-white inline-flex items-center gap-1.5">${ICON.whatsapp}${esc(t('agenda.detail.whatsapp'))}</button>` : ''}
             <button type="button" data-detail="edit" class="${BTN_GHOST}">${esc(t('agenda.detail.edit'))}</button>
-            <button type="button" data-detail="delete" class="${BTN} ml-auto text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50">${esc(t('agenda.detail.delete'))}</button>
+            <button type="button" data-detail="delete" class="${BTN} ml-auto ${HAPPENED.includes(a.status) ? 'hidden' : ''} text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50">${esc(t('agenda.detail.delete'))}</button>
           </div>
           <p data-delete-hint class="hidden text-[11px] text-slate-500 dark:text-slate-400">${esc(t('agenda.detail.deleteHint'))}</p>
         </div>
