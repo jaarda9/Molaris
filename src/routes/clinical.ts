@@ -6,7 +6,7 @@ import { createDefaultPerioTeeth, type PerioChartSnapshot } from '../domain/clin
 import { checkDrugInteractions, checkAllergyConflict, SafetyAlert } from '../domain/clinical-safety.js';
 import { HttpError, languageOf, parse, route } from './http.js';
 import {
-  labCaseCreateSchema, labCaseUpdateSchema, perioChartSchema, toothUpdateSchema, treatmentCreateSchema, treatmentUpdateSchema
+  labCaseCreateSchema, labCaseUpdateSchema, medicationCreateSchema, medicationUpdateSchema, perioChartSchema, toothUpdateSchema, treatmentCreateSchema, treatmentUpdateSchema
 } from './clinical-validation.js';
 
 // Per-patient clinical chart: odontogram, medications, perio, treatment plan, lab cases.
@@ -56,41 +56,39 @@ clinicalRouter.get('/api/medications', (req: Request, res: Response) => {
   res.json({ medications: patientDb.getMedicationsForActivePatient() });
 });
 
-clinicalRouter.post('/api/medications', (req: Request, res: Response) => {
-  try {
-    const { name, dosage, frequency, prescribedFor, language } = req.body;
-    if (!name || typeof name !== 'string') {
-      return res.status(400).json({ error: 'Medication name is required' });
-    }
-    const lang = languageOf(language);
-    const allergyAlert = checkAllergyConflict(patientDb.getActivePatient().allergies, name, lang);
+const plainDrugName = (name: string) => name.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim();
 
-    const medication = patientDb.addMedicationForActivePatient({
-      name,
-      dosage: dosage || '',
-      frequency: frequency || '',
-      prescribedFor
-    });
+/** Allergy + interaction alerts for a drug the patient (now) takes. */
+function medicationAlerts(name: string, language: unknown): SafetyAlert[] {
+  const patient = patientDb.getActivePatient();
+  const lang = languageOf(language);
+  const allergyAlert = checkAllergyConflict(patient.allergies, name, lang);
+  return [...(allergyAlert ? [allergyAlert] : []), ...checkDrugInteractions(patient.medications, [name], lang)];
+}
 
-    const patient = patientDb.getActivePatient();
-    const safetyAlerts: SafetyAlert[] = [];
-    if (allergyAlert) safetyAlerts.push(allergyAlert);
-    safetyAlerts.push(...checkDrugInteractions(patient.medications, [name], lang));
+clinicalRouter.post('/api/medications', route((req: Request, res: Response) => {
+  const input = parse(medicationCreateSchema, req.body);
+  const already = patientDb.getActivePatient().medications
+    .find(m => m.active && plainDrugName(m.name) === plainDrugName(input.name));
+  if (already) throw new HttpError(409, `« ${already.name} » figure déjà dans les traitements en cours.`);
 
-    res.status(201).json({ success: true, medication, patient, safetyAlerts });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+  const medication = patientDb.addMedicationForActivePatient({ ...input, dosage: input.dosage ?? '', frequency: input.frequency ?? '' });
+  const safetyAlerts = medicationAlerts(medication.name, req.body?.language);
+  res.status(201).json({ success: true, medication, patient: patientDb.getActivePatient(), safetyAlerts });
+}));
 
-clinicalRouter.put('/api/medications/:id', (req: Request, res: Response) => {
-  try {
-    const medication = patientDb.updateMedicationForActivePatient(String(req.params.id), req.body);
-    res.json({ success: true, medication });
-  } catch (err: any) {
-    res.status(404).json({ error: err.message });
-  }
-});
+clinicalRouter.put('/api/medications/:id', route((req: Request, res: Response) => {
+  const changes = parse(medicationUpdateSchema, req.body);
+  const id = String(req.params.id);
+  const before = patientDb.getActivePatient().medications.find(m => m.id === id);
+  if (!before) throw new HttpError(404, 'Médicament introuvable.');
+  const wasActive = before.active;
+  const medication = patientDb.updateMedicationForActivePatient(id, changes);
+  // A drug taken again (or renamed) is screened like a new one.
+  const rescreen = medication.active && (!wasActive || changes.name !== undefined);
+  const safetyAlerts = rescreen ? medicationAlerts(medication.name, req.body?.language) : [];
+  res.json({ success: true, medication, safetyAlerts });
+}));
 
 clinicalRouter.delete('/api/medications/:id', (req: Request, res: Response) => {
   try {

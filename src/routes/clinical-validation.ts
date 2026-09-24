@@ -92,7 +92,23 @@ export const toothUpdateSchema = z.object({
 // --- Treatment plan -----------------------------------------------------------------
 
 const TREATMENT_PRIORITIES = ['urgent', 'high', 'routine', 'elective'] as const;
-const TREATMENT_STATUSES = ['proposed', 'accepted', 'in_progress', 'completed', 'declined'] as const;
+// --- Current medications (drug-safety checks read these names) --------------------------
+
+const medicationFields = {
+  name: z.string({ invalid_type_error: 'texte attendu' }).trim().min(1, 'le nom du médicament est obligatoire').max(120, '120 caractères maximum'),
+  dosage: text(120).default(''),
+  frequency: text(120).default(''),
+  prescribedFor: optional(text(300))
+};
+
+export const medicationCreateSchema = z.object(medicationFields);
+
+export const medicationUpdateSchema = z.object({
+  ...medicationFields,
+  active: z.boolean({ invalid_type_error: 'vrai ou faux attendu' })
+}).partial();
+
+const TREATMENT_STATUSES =['proposed', 'accepted', 'in_progress', 'completed', 'declined'] as const;
 const estimatedCost = z.coerce.number({ invalid_type_error: 'nombre attendu' }).min(0, 'le coût ne peut pas être négatif').max(1_000_000, 'coût trop élevé');
 
 export const treatmentCreateSchema = z.object({

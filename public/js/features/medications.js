@@ -57,11 +57,19 @@ function renderMedicationsList() {
         const res = await fetch(`/api/medications/${med.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ active: !med.active })
+          body: JSON.stringify({ active: !med.active, language: systemState.language || 'en' })
         });
         const data = await res.json();
         if (data.success) {
           await fetchMedications();
+          // Taking a drug again is screened like adding it (allergy, interactions).
+          if (data.safetyAlerts && data.safetyAlerts.length > 0) {
+            renderSafetyAlertsInto('medication-safety-alerts', data.safetyAlerts);
+            await fetchActivePatientSafetyAlerts();
+            playClinicalBeep(300, 'sawtooth', 0.25);
+          }
+        } else {
+          alert(molarisT('common.saveError') + ' ' + (data.error || ''));
         }
       } catch (err) {
         alert(molarisT('common.networkError') + ' ' + err.message);

@@ -2,10 +2,22 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   anesthesiaLogSchema, anesthesiaCalcSchema, labCaseUpdateSchema, patientCreateSchema, patientUpdateSchema,
-  perioChartSchema, toothUpdateSchema, treatmentCreateSchema, treatmentUpdateSchema
+  medicationCreateSchema, medicationUpdateSchema, perioChartSchema, toothUpdateSchema, treatmentCreateSchema,
+  treatmentUpdateSchema
 } from './clinical-validation.js';
 
 const ok = (schema: { safeParse: (v: unknown) => { success: boolean } }, value: unknown) => schema.safeParse(value).success;
+
+test('medication: a real name is required; an update can only touch known fields', () => {
+  assert.equal(ok(medicationCreateSchema, { name: '   ' }), false);
+  assert.equal(ok(medicationCreateSchema, { name: 123 }), false);
+  assert.equal(ok(medicationCreateSchema, { name: 'x'.repeat(200) }), false);
+  const created = medicationCreateSchema.parse({ name: ' Amlodipine ', dosage: '5 mg' });
+  assert.deepEqual(created, { name: 'Amlodipine', dosage: '5 mg', frequency: '' });
+  assert.equal(ok(medicationUpdateSchema, { name: 42 }), false);
+  assert.equal(ok(medicationUpdateSchema, { active: 'yes' }), false);
+  assert.deepEqual(medicationUpdateSchema.parse({ active: false, id: 'med_x', addedAt: '1999' }), { active: false });
+});
 
 test('patient: weight and age must be plausible (they drive anesthetic doses)', () => {
   assert.equal(ok(patientCreateSchema, { name: 'A', weightKg: 700 }), false);
