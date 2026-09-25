@@ -63,7 +63,7 @@ export interface PatientRecord {
     carpules: number;
     mg: number;
     epiMg: number;
-    site: string;
+    site?: string;
     notes?: string;
   }>;
   soapNotes: Array<{
@@ -627,7 +627,7 @@ export class PatientRepository {
     carpules: number;
     mg: number;
     epiMg: number;
-    site: string;
+    site?: string;
     notes?: string;
   }) {
     const patient = this.getActivePatient();

@@ -55,7 +55,8 @@ anesthesiaRouter.post('/api/anesthesia/log', (req: Request, res: Response) => {
       carpules: carp,
       mg: Math.round(carp * drug.mgPerCartridge),
       epiMg: Math.round(carp * epiPerCartridge * 1000) / 1000,
-      site: site || 'Buccal Infiltration / Block',
+      // Only what the dentist gave: an unspecified technique is not written into the record.
+      site: site || undefined,
       notes
     });
 

@@ -92,9 +92,35 @@ function initAnesthesiaCalculator() {
       recalculateLA();
     });
   }
+
+  // The counter is only a tally: this records it in the chart's anesthesia log (counted in the
+  // day's total and taken up by the SOAP note), then the tally starts again from 0.
+  const logBtn = document.getElementById('btn-carpule-log');
+  logBtn?.addEventListener('click', async () => {
+    const carpules = systemState.deliveredCarpules;
+    if (!(carpules > 0)) return;
+    logBtn.disabled = true;
+    try {
+      const data = await Molaris.api.post('/api/anesthesia/log', { drugId: systemState.selectedDrugId, carpules, language: systemState.language || 'fr' });
+      systemState.deliveredCarpules = 0;
+      document.getElementById('calc-delivered-carpules').textContent = '0';
+      Molaris.ui.toast(molarisT('la.form.logged').replace('{n}', String(carpules).replace('.', ',')).replace('{drug}', data.entry?.drugName || ''));
+      (data.safetyAlerts || []).forEach(a => Molaris.ui.toast(a.message, 'error'));
+      await recalculateLA();
+    } catch (err) {
+      Molaris.ui.toast(err.message, 'error');
+    }
+    syncCarpuleLogButton();
+  });
+}
+
+function syncCarpuleLogButton() {
+  const logBtn = document.getElementById('btn-carpule-log');
+  if (logBtn) logBtn.disabled = !(systemState.deliveredCarpules > 0);
 }
 
 async function recalculateLA() {
+  syncCarpuleLogButton();
   const weight = Number(document.getElementById('calc-weight-input')?.value) || 70;
   const isCardiac = !!document.getElementById('calc-cardiac-toggle')?.checked;
 

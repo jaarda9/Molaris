@@ -137,7 +137,6 @@ export function executeMolarisAction(commandText: string, language: string = 'en
       carpules,
       mg: Math.round(carpules * mgPerCarp),
       epiMg: Math.round(carpules * epiPerCarp * 1000) / 1000,
-      site: isFr ? 'Infiltration / Tronculaire Spix au Fauteuil' : 'Chairside Operatory Infiltration/Block',
       notes: isFr ? 'Enregistré via action vocale M.O.L.A.R.I.S' : 'Logged via chairside assistant action'
     });
 

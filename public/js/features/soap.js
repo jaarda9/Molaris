@@ -175,14 +175,20 @@ async function loadSignedSOAPNotes() {
         </div>`).join('')}
       <button type="button" data-addendum="${escapeHtml(n.id)}" class="text-[11px] font-semibold text-teal-700 dark:text-teal-300 hover:underline">${escapeHtml(molarisT('soap.addendumBtn'))}</button>
     </div>`).join('');
-  list.querySelectorAll('[data-addendum]').forEach(button => button.addEventListener('click', async () => {
-    const content = prompt(molarisT('soap.addendumPrompt'));
-    if (!content || !content.trim()) return;
-    try {
-      await Molaris.api.post(`/api/soap/notes/${encodeURIComponent(button.dataset.addendum)}/addenda`, { content });
-      loadSignedSOAPNotes();
-    } catch (err) {
-      Molaris.ui.toast(err.message, 'error');
-    }
+  list.querySelectorAll('[data-addendum]').forEach(button => button.addEventListener('click', () => {
+    Molaris.ui.modal({
+      title: molarisT('soap.addendumBtn'),
+      submitLabel: molarisT('soap.addendumSave'),
+      bodyHtml: `
+        <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1" for="soap-addendum-text">${escapeHtml(molarisT('soap.addendumPrompt'))}</label>
+        <textarea id="soap-addendum-text" name="content" rows="5" required maxlength="5000" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs"></textarea>`,
+      onSubmit: async (form, { close }) => {
+        const content = String(form.get('content') || '').trim();
+        if (!content) return;
+        await Molaris.api.post(`/api/soap/notes/${encodeURIComponent(button.dataset.addendum)}/addenda`, { content });
+        close();
+        loadSignedSOAPNotes();
+      }
+    });
   }));
 }
