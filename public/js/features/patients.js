@@ -314,6 +314,8 @@ function syncAgeFromBirthDate() {
   if (age >= 0 && age <= 120) ageInput.value = age;
 }
 
+let pendingPatientCreated = null;
+
 function initPatientManager() {
   document.getElementById('form-patient-birthdate')?.addEventListener('input', syncAgeFromBirthDate);
   const birthInput = document.getElementById('form-patient-birthdate');
@@ -349,21 +351,32 @@ function initPatientManager() {
     });
   }
 
-  if (createBtn) {
-    createBtn.addEventListener('click', () => {
-      const isFr = systemState.language === 'fr';
-      modalTitle.textContent = isFr ? 'Nouveau patient' : 'Add New Dental Patient';
-      form.reset();
-      document.getElementById('form-patient-id').value = '';
-      document.getElementById('form-patient-weight').value = 70;
-      document.getElementById('form-patient-age').value = 35;
-      syncAgeFromBirthDate();
-      modal.classList.remove('hidden');
-    });
-  }
+  // Empty form for a new chart; other screens prefill it (agenda: the caller's name and phone)
+  // and are told which chart was created (null if the form is closed).
+  window.openNewPatientModal = (prefill = {}, onDone = null) => {
+    if (pendingPatientCreated) pendingPatientCreated(null);
+    pendingPatientCreated = onDone;
+    const isFr = systemState.language === 'fr';
+    modalTitle.textContent = isFr ? 'Nouveau patient' : 'Add New Dental Patient';
+    form.reset();
+    document.getElementById('form-patient-id').value = '';
+    document.getElementById('form-patient-weight').value = 70;
+    document.getElementById('form-patient-age').value = 35;
+    document.getElementById('form-patient-name').value = prefill.name || '';
+    document.getElementById('form-patient-phone').value = prefill.phone || '';
+    document.getElementById('form-patient-complaint').value = prefill.chiefComplaint || '';
+    syncAgeFromBirthDate();
+    modal.classList.remove('hidden');
+  };
+  if (createBtn) createBtn.addEventListener('click', () => window.openNewPatientModal());
 
-  if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
-  if (cancelBtn) cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+  const closePatientModal = () => {
+    modal.classList.add('hidden');
+    if (pendingPatientCreated) pendingPatientCreated(null);
+    pendingPatientCreated = null;
+  };
+  if (closeBtn) closeBtn.addEventListener('click', closePatientModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closePatientModal);
 
   if (form) {
     form.addEventListener('submit', async (e) => {
@@ -409,6 +422,9 @@ function initPatientManager() {
           playClinicalBeep(880, 'sine', 0.15);
           await fetchPatients();
           await selectPatient(data.patient.id);
+          const onCreated = patientId ? null : pendingPatientCreated;
+          pendingPatientCreated = null;
+          if (onCreated) onCreated(data.patient);
         } else {
           alert(molarisT('common.saveError') + ' ' + (data.error || ''));
         }

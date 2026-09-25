@@ -481,6 +481,8 @@ export interface Payment {
   reference: string | null;
   paidAt: string;           // clinic-local 'YYYY-MM-DDTHH:MM'
   notes: string | null;
+  /** Completed treatment-plan items paid by this payment (payments outside a quote only). */
+  planItemIds: string[];
   cancelledAt: string | null;
   cancelReason: string | null;
   createdAt: string;
@@ -495,6 +497,7 @@ export interface PaymentInput {
   /** 'YYYY-MM-DD' (today → current time, past day → 12:00) or 'YYYY-MM-DDTHH:MM'. Defaults to now. */
   paidAt?: string;
   notes?: string | null;
+  planItemIds?: string[];
 }
 
 interface PaymentRow {
@@ -510,6 +513,7 @@ interface PaymentRow {
   reference: string | null;
   paid_at: string;
   notes: string | null;
+  plan_item_ids: string | null;
   cancelled_at: string | null;
   cancel_reason: string | null;
   created_at: string;
@@ -530,6 +534,7 @@ function toPayment(row: PaymentRow): Payment {
     reference: row.reference,
     paidAt: row.paid_at,
     notes: row.notes,
+    planItemIds: row.plan_item_ids ? JSON.parse(row.plan_item_ids) as string[] : [],
     cancelledAt: row.cancelled_at,
     cancelReason: row.cancel_reason,
     createdAt: row.created_at
@@ -616,8 +621,19 @@ export class PaymentRepository {
       throw new HttpError(400, 'Date de règlement de plus d’un an : vérifiez l’année.');
     }
 
+    const planItemIds = [...new Set(input.planItemIds ?? [])];
+    if (planItemIds.length && input.quoteId) {
+      throw new HttpError(400, 'Un règlement sur devis paie le devis : les actes réglés ne s’indiquent que hors devis.');
+    }
+
     const id = newId('pay');
     this.db.transaction(() => {
+      if (planItemIds.length) {
+        const alreadyPaid = new Set(this.paidPlanItemIds(input.patientId));
+        if (planItemIds.some(itemId => alreadyPaid.has(itemId))) {
+          throw new HttpError(409, 'Un de ces actes est déjà réglé par un autre règlement.');
+        }
+      }
       if (input.quoteId) {
         const quote = new QuoteRepository(this.db).get(input.quoteId);
         if (!quote) throw notFound('Quote');
@@ -635,12 +651,22 @@ export class PaymentRepository {
       const receiptNumber = nextDocumentNumber(this.db, 'REC', now);
       this.db.prepare(`
         INSERT INTO payments (id, receipt_number, patient_id, quote_id, amount_millimes, method, reference,
-                              paid_at, notes, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                              paid_at, notes, plan_item_ids, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(id, receiptNumber, input.patientId, input.quoteId || null, input.amountMillimes, input.method,
-        blankToNull(input.reference), paidAt, blankToNull(input.notes), nowIso());
+        blankToNull(input.reference), paidAt, blankToNull(input.notes),
+        planItemIds.length ? JSON.stringify(planItemIds) : null, nowIso());
     })();
     return this.get(id)!;
+  }
+
+  /** Treatment-plan items paid outside a quote by the patient's non-cancelled payments. */
+  paidPlanItemIds(patientId: string): string[] {
+    const rows = this.db.prepare(`
+      SELECT plan_item_ids FROM payments
+      WHERE patient_id = ? AND cancelled_at IS NULL AND plan_item_ids IS NOT NULL
+    `).all(patientId) as { plan_item_ids: string }[];
+    return rows.flatMap(r => JSON.parse(r.plan_item_ids) as string[]);
   }
 
   /** Cancelled payments stay on record (and visible) but no longer count. */

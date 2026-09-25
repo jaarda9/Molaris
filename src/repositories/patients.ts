@@ -416,6 +416,17 @@ export class PatientRepository {
   }
 
   private nextChartId(): string {
+    // Imported or demo charts may already use numbers of this year: continue after the highest
+    // one, so a new chart is never numbered below the existing ones (PT-2026-0001 after 0112).
+    const year = new Date().getFullYear();
+    const prefix = `PT-${year}-`;
+    const highest = Math.max(0, ...[...this.patients.values()]
+      .filter(p => p.chartId?.startsWith(prefix))
+      .map(p => Number(p.chartId.slice(prefix.length)) || 0));
+    this.db.prepare(`
+      INSERT INTO document_counters (kind, year, last) VALUES ('PT', ?, ?)
+      ON CONFLICT(kind, year) DO UPDATE SET last = MAX(last, excluded.last)
+    `).run(year, highest);
     let chartId: string;
     do {
       chartId = nextDocumentNumber(this.db, 'PT');

@@ -214,6 +214,11 @@ Molaris.patients = {
   select(patientId) {
     return window.selectPatient(patientId);
   },
+  // Opens the new-patient form, optionally prefilled ({ name, phone, chiefComplaint }).
+  // Resolves with the created patient (now the active chart), or null if the form was closed.
+  create(prefill = {}) {
+    return new Promise(resolve => window.openNewPatientModal(prefill, resolve));
+  },
   // Fills a <select> with all patients ("Name — Chart"), preselecting selectedId.
   async fillSelect(selectEl, selectedId, { allowEmpty = false } = {}) {
     const patients = await Molaris.patients.list();

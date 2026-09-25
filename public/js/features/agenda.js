@@ -623,14 +623,16 @@
             ${a.status === 'arrived' && a.arrivedAt ? `<p class="mt-2 text-amber-700 dark:text-amber-300">${esc(t('agenda.detail.arrivedAt', { time: Molaris.format.time(a.arrivedAt) }))} · ${esc(waitText(a.arrivedAt))}</p>` : ''}
           </div>
           <div>
-            ${row(t('agenda.detail.chart'), a.chartId ? `<span class="font-mono">${esc(a.chartId)}</span>` : `<span class="text-teal-700 dark:text-teal-300">${esc(t('agenda.detail.noChart'))}</span>`)}
+            ${row(t('agenda.detail.chart'), a.chartId ? `<span class="font-mono">${esc(a.chartId)}</span>` : `<span class="text-amber-700 dark:text-amber-300">${esc(t('agenda.detail.noChart'))}</span>`)}
             ${row(t('agenda.detail.phone'), a.phone ? `<span class="font-mono">${esc(a.phone)}</span>` : `<span class="text-slate-400">—</span>`)}
             ${row(t('agenda.detail.reason'), esc(reasonLabel(a.reason)))}
             ${row(t('agenda.detail.notes'), esc(a.notes || ''))}
             ${row(t('agenda.detail.reminder'), reminderText)}
           </div>
           <div class="flex flex-wrap gap-2 pt-1">
-            ${a.patientId ? `<button type="button" data-detail="chart" class="${BTN_PRIMARY} inline-flex items-center gap-1.5">${ICON.folder}${esc(t('agenda.detail.openChart'))}</button>` : ''}
+            ${a.patientId
+              ? `<button type="button" data-detail="chart" class="${BTN_PRIMARY} inline-flex items-center gap-1.5">${ICON.folder}${esc(t('agenda.detail.openChart'))}</button>`
+              : `<button type="button" data-detail="create-chart" class="${BTN_PRIMARY} inline-flex items-center gap-1.5">${ICON.folder}${esc(t('agenda.detail.createChart'))}</button>`}
             ${a.phone && isActive(a) && a.status !== 'completed' && new Date(a.startAt) > new Date() ? `<button type="button" data-detail="remind" class="${BTN} bg-emerald-600 hover:bg-emerald-700 text-white inline-flex items-center gap-1.5">${ICON.whatsapp}${esc(t('agenda.detail.whatsapp'))}</button>` : ''}
             <button type="button" data-detail="edit" class="${BTN_GHOST}">${esc(t('agenda.detail.edit'))}</button>
             <button type="button" data-detail="delete" class="${BTN} ml-auto ${HAPPENED.includes(a.status) ? 'hidden' : ''} text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50">${esc(t('agenda.detail.delete'))}</button>
@@ -651,6 +653,19 @@
       }
     }));
     overlay.querySelector('[data-detail="chart"]')?.addEventListener('click', () => openChart(a).catch(err => Molaris.ui.toast(err.message, 'error')));
+    // A caller booked without a chart: create it from their name and phone, then attach this visit to it.
+    overlay.querySelector('[data-detail="create-chart"]')?.addEventListener('click', async () => {
+      closeDetail();
+      const patient = await Molaris.patients.create({ name: a.patientName, phone: a.phone || '', chiefComplaint: a.reason ? reasonLabel(a.reason) : '' });
+      if (!patient) return;
+      try {
+        await Molaris.api.put(`/api/appointments/${a.id}`, { patientId: patient.id });
+        Molaris.ui.toast(t('agenda.toast.chartLinked'));
+      } catch (err) {
+        Molaris.ui.toast(err.message, 'error');
+      }
+      await refresh();
+    });
     overlay.querySelector('[data-detail="remind"]')?.addEventListener('click', async () => {
       const updated = await sendReminder(a);
       if (updated) fillDetail(updated);

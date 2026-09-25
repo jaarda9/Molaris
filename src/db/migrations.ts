@@ -260,5 +260,19 @@ export const MIGRATIONS: Array<{ name: string; sql: string }> = [
       -- so the pharmacist can check them. Snapshotted (kg) for patients under 15 only.
       ALTER TABLE prescriptions ADD COLUMN patient_weight_kg REAL;
     `
+  },
+  {
+    name: 'billing: acts paid without a quote',
+    sql: `
+      -- Small acts are often paid on the spot without a quote. A payment not linked to a quote
+      -- may name the completed treatment-plan items it pays (JSON array of item ids), so they
+      -- are no longer reported as unbilled. Set at creation only.
+      ALTER TABLE payments ADD COLUMN plan_item_ids TEXT;
+      CREATE TRIGGER payments_plan_items_immutable
+      BEFORE UPDATE OF plan_item_ids ON payments
+      BEGIN
+        SELECT RAISE(ABORT, 'payments are immutable: cancel and record a new one');
+      END;
+    `
   }
 ];

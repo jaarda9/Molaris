@@ -190,7 +190,10 @@
       <div class="rounded-2xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-4 space-y-2">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <p class="text-xs font-semibold text-amber-900 dark:text-amber-200">${esc(t('billing.unbilled.title').replace('{n}', acts.length))}</p>
-          <button type="button" data-action="quote-from-unbilled" class="${BTN}">${esc(t('billing.unbilled.createQuote'))}</button>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" data-action="pay-unbilled" class="${BTN2}">${esc(t('billing.unbilled.payNow'))}</button>
+            <button type="button" data-action="quote-from-unbilled" class="${BTN}">${esc(t('billing.unbilled.createQuote'))}</button>
+          </div>
         </div>
         <ul class="text-xs text-amber-900 dark:text-amber-200 list-disc pl-5">
           ${acts.map(a => `<li>${esc(a.catalogLabel || a.procedure)}${a.toothFdi ? ` · ${esc(t('billing.col.toothFdi'))} ${esc(a.toothFdi)}` : ''}${a.unitPriceMillimes ? ` · ${esc(tnd(a.unitPriceMillimes))}` : ''}</li>`).join('')}
@@ -547,13 +550,18 @@
       </div>`;
   }
 
-  async function openPaymentForm(quoteId) {
-    const { quotes } = await Molaris.api.get(`/api/quotes?patientId=${encodeURIComponent(state.patientId)}`);
+  /** `payActs`: opened from the unbilled banner, to take payment for those acts without a quote. */
+  async function openPaymentForm(quoteId, { payActs = false } = {}) {
+    const [{ quotes }, { acts }] = await Promise.all([
+      Molaris.api.get(`/api/quotes?patientId=${encodeURIComponent(state.patientId)}`),
+      Molaris.api.get(`/api/patients/${encodeURIComponent(state.patientId)}/unbilled-acts`)
+    ]);
     const payable = quotes.filter(q => q.status === 'accepted' && q.remainingMillimes > 0);
     // A single open quote is the one being paid: link it by default (an unlinked payment
     // does not reduce what the patient owes). The amount is only prefilled when the doctor
     // clicked "Enregistrer un règlement" on that quote.
-    const linkedId = quoteId || (payable.length === 1 ? payable[0].id : '');
+    const linkedId = payActs ? '' : quoteId || (payable.length === 1 ? payable[0].id : '');
+    const actLabel = a => `${a.catalogLabel || a.procedure}${a.toothFdi ? ` (${a.toothFdi})` : ''}`;
     const quoteOptions = `<option value="">${esc(t('billing.noQuoteLink'))}</option>` + payable.map(q =>
       `<option value="${esc(q.id)}" ${q.id === linkedId ? 'selected' : ''}>${esc(q.number)} — ${esc(t('billing.remaining'))} ${esc(tnd(q.remainingMillimes))}</option>`).join('');
     const preset = payable.find(q => q.id === quoteId);
@@ -588,6 +596,18 @@
             <select id="billing-pay-quote" name="quoteId" class="${INPUT}">${quoteOptions}</select>
             <p id="billing-pay-unlinked" class="hidden mt-1 text-[11px] text-amber-700 dark:text-amber-300">${esc(t('billing.unlinkedWarning'))}</p>
           </div>
+          <div id="billing-pay-acts" class="col-span-2 hidden">
+            <div class="${LABEL}">${esc(t('billing.paidActs'))}</div>
+            <div class="space-y-1">
+              ${acts.map(a => `
+                <label class="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+                  <input type="checkbox" name="planItemIds" value="${esc(a.itemId)}" data-price="${esc(a.unitPriceMillimes)}" data-label="${esc(actLabel(a))}" ${payActs ? 'checked' : ''} class="rounded">
+                  <span class="min-w-0 flex-1">${esc(actLabel(a))}</span>
+                  ${a.unitPriceMillimes ? `<span class="font-mono whitespace-nowrap text-slate-500">${esc(tnd(a.unitPriceMillimes))}</span>` : ''}
+                </label>`).join('')}
+            </div>
+            <p class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">${esc(t('billing.paidActsHint'))}</p>
+          </div>
           <div class="col-span-2">
             <label class="${LABEL}" for="billing-pay-notes">${esc(t('billing.notes'))}</label>
             <input id="billing-pay-notes" name="notes" class="${INPUT}">
@@ -596,9 +616,11 @@
         <p id="billing-pay-words" class="text-[11px] italic text-slate-500 dark:text-slate-400"></p>`,
       onSubmit: async (form, { close }) => {
         const amountMillimes = parseAmount(form.get('amount'), { allowZero: false });
+        const linkedQuote = form.get('quoteId') || null;
         const { payment } = await Molaris.api.post('/api/payments', {
           patientId: state.patientId,
-          quoteId: form.get('quoteId') || null,
+          quoteId: linkedQuote,
+          planItemIds: linkedQuote ? [] : form.getAll('planItemIds'),
           amountMillimes,
           method: form.get('method'),
           reference: form.get('reference') || null,
@@ -627,6 +649,8 @@
     const syncQuote = () => {
       const q = payable.find(x => x.id === quoteEl.value);
       modal.element.querySelector('#billing-pay-unlinked').classList.toggle('hidden', !!q || payable.length === 0);
+      // Acts are paid one by one only outside a quote.
+      modal.element.querySelector('#billing-pay-acts').classList.toggle('hidden', !!q || acts.length === 0);
       dateEl.min = q && q.issuedAt > oneYearAgo ? q.issuedAt : oneYearAgo;
     };
     // A cheque is traced by its number.
@@ -641,8 +665,20 @@
       syncQuote();
     });
     methodEl.addEventListener('change', syncMethod);
+    // Ticking acts fills the amount and the receipt's "Objet", unless the doctor typed them.
+    const notesEl = modal.element.querySelector('#billing-pay-notes');
+    amountEl.addEventListener('input', () => { amountEl.dataset.typed = '1'; });
+    notesEl.addEventListener('input', () => { notesEl.dataset.typed = '1'; });
+    const syncActs = () => {
+      const checked = [...modal.element.querySelectorAll('input[name="planItemIds"]:checked')];
+      const total = checked.reduce((s, c) => s + Number(c.dataset.price || 0), 0);
+      if (!amountEl.dataset.typed && !quoteEl.value) { amountEl.value = total ? amountInput(total) : ''; showAmount(); }
+      if (!notesEl.dataset.typed) notesEl.value = checked.map(c => c.dataset.label).join(', ');
+    };
+    modal.element.querySelectorAll('input[name="planItemIds"]').forEach(c => c.addEventListener('change', syncActs));
     syncQuote();
     syncMethod();
+    if (payActs) syncActs();
     showAmount();
   }
 
@@ -877,6 +913,7 @@
       }
       case 'print-quote': return printQuote(id);
       case 'new-payment': return openPaymentForm(btn.dataset.quoteId || null);
+      case 'pay-unbilled': return openPaymentForm(null, { payActs: true });
       case 'cancel-payment': return openCancelForm(id);
       case 'print-receipt': return printReceipt(id);
       case 'open-patient':

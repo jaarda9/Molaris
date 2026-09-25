@@ -25,16 +25,18 @@ export function planToothToFdi(toothId: number | undefined): number | null {
 
 /**
  * Completed plan items not covered by a live quote (draft, sent or accepted) of the
- * patient. A quote line covers an item when it names the same act (as typed in the plan,
- * or its catalog name) on the same tooth; each line covers one item.
+ * patient, nor paid directly (`paidItemIds`: items named by a non-cancelled payment made
+ * outside a quote). A quote line covers an item when it names the same act (as typed in
+ * the plan, or its catalog name) on the same tooth; each line covers one item.
  */
-export function findUnbilledActs(plan: TreatmentPlanItem[], quotes: Quote[], catalog: Procedure[]): UnbilledAct[] {
+export function findUnbilledActs(plan: TreatmentPlanItem[], quotes: Quote[], catalog: Procedure[], paidItemIds: Iterable<string> = []): UnbilledAct[] {
+  const paid = new Set(paidItemIds);
   const lines = quotes
     .filter(q => q.status === 'draft' || q.status === 'sent' || q.status === 'accepted')
     .flatMap(q => q.items.map(i => ({ label: plain(i.label), procedureId: i.procedureId, tooth: i.toothFdi ?? null, used: false })));
 
   const result: UnbilledAct[] = [];
-  for (const item of plan.filter(i => i.status === 'completed')) {
+  for (const item of plan.filter(i => i.status === 'completed' && !paid.has(i.id))) {
     const tooth = planToothToFdi(item.toothId);
     const catalogMatch = catalog.find(p => plain(p.labelFr) === plain(item.procedure));
     const names = new Set([plain(item.procedure), ...(catalogMatch ? [plain(catalogMatch.labelFr)] : [])]);

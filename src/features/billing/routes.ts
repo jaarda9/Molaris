@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { getDb } from '../../db/connection.js';
-import { notFound, parse, route } from '../../routes/http.js';
+import { HttpError, notFound, parse, route } from '../../routes/http.js';
 import { patientDb } from '../../repositories/patients.js';
 import { findUnbilledActs } from './unbilled.js';
 import {
@@ -60,7 +60,8 @@ const paymentSchema = z.object({
   method: z.enum(PAYMENT_METHODS),
   reference: optionalText(80),
   paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/, 'date attendue au format AAAA-MM-JJ ou AAAA-MM-JJTHH:MM').optional(),
-  notes: optionalText(500)
+  notes: optionalText(500),
+  planItemIds: z.array(z.string().min(1).max(100)).max(50).optional()
 }).strict();
 
 const byPatient = z.object({ patientId: z.string().min(1) });
@@ -143,7 +144,16 @@ billingRouter.get('/api/payments/:id', route((req, res) => {
 }));
 
 billingRouter.post('/api/payments', route((req, res) => {
-  const payment = new PaymentRepository(getDb()).create(parse(paymentSchema, req.body));
+  const input = parse(paymentSchema, req.body);
+  if (input.planItemIds?.length) {
+    // Only finished acts of this patient's own plan can be paid.
+    const done = new Set((patientDb.getPatientById(input.patientId)?.treatmentPlan ?? [])
+      .filter(i => i.status === 'completed').map(i => i.id));
+    if (input.planItemIds.some(id => !done.has(id))) {
+      throw new HttpError(400, 'Actes réglés : seuls les actes terminés du plan de traitement de ce patient peuvent être réglés.');
+    }
+  }
+  const payment = new PaymentRepository(getDb()).create(input);
   res.status(201).json({ success: true, payment });
 }));
 
@@ -158,7 +168,8 @@ billingRouter.get('/api/patients/:id/unbilled-acts', route((req, res) => {
   const patient = patientDb.getPatientById(String(req.params.id));
   if (!patient) throw notFound('Patient');
   const db = getDb();
-  const acts = findUnbilledActs(patient.treatmentPlan, new QuoteRepository(db).listForPatient(patient.id), new ProcedureRepository(db).list());
+  const acts = findUnbilledActs(patient.treatmentPlan, new QuoteRepository(db).listForPatient(patient.id),
+    new ProcedureRepository(db).list(), new PaymentRepository(db).paidPlanItemIds(patient.id));
   res.json({ acts });
 }));
 

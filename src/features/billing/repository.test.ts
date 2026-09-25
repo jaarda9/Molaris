@@ -275,3 +275,18 @@ test('an expired quote cannot be accepted at its old prices (duplicate it instea
   assert.match(err!.message, /expiré/);
   assert.equal(quotes.setStatus(quotes.duplicate(old.id).id, 'accepted').status, 'accepted');
 });
+
+test('a payment outside a quote can name the acts it pays, once; the column is immutable', () => {
+  const { db, quotes, payments } = setup();
+  const paid = payments.create({ patientId: 'pt_1', amountMillimes: 90_000, method: 'cash', planItemIds: ['t1', 't1'] });
+  assert.deepEqual(paid.planItemIds, ['t1']);
+  assert.deepEqual(payments.paidPlanItemIds('pt_1'), ['t1']);
+  assert.throws(() => payments.create({ patientId: 'pt_1', amountMillimes: 90_000, method: 'cash', planItemIds: ['t1'] }), status(409));
+  const q = acceptedQuote(quotes);
+  assert.throws(() => payments.create({ patientId: 'pt_1', quoteId: q.id, amountMillimes: 1_000, method: 'cash', planItemIds: ['t2'] }), status(400));
+  assert.throws(() => db.prepare('UPDATE payments SET plan_item_ids = NULL WHERE id = ?').run(paid.id), /immutable/);
+  // A cancelled payment no longer pays its acts.
+  payments.cancel(paid.id, 'erreur de saisie');
+  assert.deepEqual(payments.paidPlanItemIds('pt_1'), []);
+  assert.equal(payments.create({ patientId: 'pt_1', amountMillimes: 90_000, method: 'cash', planItemIds: ['t1'] }).planItemIds[0], 't1');
+});

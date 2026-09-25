@@ -182,3 +182,12 @@ test('import only adds new charts: an older export never overwrites current reco
   assert.equal(repo.getPatientById('pt_new')!.name, 'Importée Test');
   assert.equal(repo.getPatientById('pt_bad'), undefined);
 });
+
+test('a new chart number continues after the highest chart number of the year', () => {
+  const { repo } = freshRepo();
+  const prefix = `PT-${new Date().getFullYear()}-`;
+  repo.createPatient({ name: 'Importé', age: 40, chartId: `${prefix}0120` });
+  const created = repo.createPatient({ name: 'Nouveau', age: 30 });
+  assert.equal(created.chartId, `${prefix}0121`);
+  assert.equal(repo.createPatient({ name: 'Suivant', age: 30 }).chartId, `${prefix}0122`);
+});

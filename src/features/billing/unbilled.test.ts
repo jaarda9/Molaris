@@ -42,3 +42,8 @@ test('each quote line covers one act: two identical acts, one line -> one unbill
   const plan = [item('a', 'Composite 1 face', 'completed', 30), item('b', 'Composite 1 face', 'completed', 30)];
   assert.equal(findUnbilledActs(plan, quotes, []).length, 1);
 });
+
+test('an act paid directly (payment outside a quote) is no longer unbilled', () => {
+  const plan = [item('t1', 'Composite 2 faces', 'completed', 19), item('t2', 'Détartrage', 'completed')];
+  assert.deepEqual(findUnbilledActs(plan, [], [], ['t1']).map(a => a.itemId), ['t2']);
+});
