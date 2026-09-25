@@ -39,6 +39,9 @@ The interface is in French (English available); patient documents print in Frenc
 - **Horaires**: opening hours, open days, and chairs (each chair gets its own column; overlaps
   are checked per chair).
 - **Ouvrir le dossier** from an appointment jumps to the patient's chart.
+- New caller without a chart: **Créer le dossier** from the appointment (name, phone and reason
+  prefilled); the appointment is attached to the new chart.
+- Calling a patient into a chair that is still « En cours » asks for confirmation.
 
 ### Patients
 - **Dossiers patients** list with search by name, n° de dossier, phone, CNAM n°, or medical history.
@@ -66,13 +69,16 @@ The interface is in French (English available); patient documents print in Frenc
 - Summary per patient: **Devis acceptés / Réglé sur devis / Reste à payer / Autres règlements**.
 - Warning when completed treatment is **not on any quote** (unbilled work), with one click to
   quote it.
+- **Encaisser sans devis**: for small acts paid on the spot, tick the acts paid; the amount and
+  the receipt's subject fill in, and the acts are no longer flagged « non facturé ».
 - **Encaissements du jour**: the day's takings by payment method.
 - **Catalogue des actes**: your procedures and fees (French label, optional Arabic label,
   default price, optional CNAM key letter and coefficient). Demo prices are only examples.
 
 ### Ordonnances (prescriptions)
 - Patient header shows **age, allergies and current treatments**; for children the weight is
-  printed too.
+  printed too. For a child only the drug name (DCI) is copied from the list: strength, form and
+  dose must be written for the child's weight.
 - Add drugs from the **Liste des médicaments** (recorded by DCI, optional brand) or a free line.
   Default dosages are suggestions to validate.
 - **Phrases courantes (FR + AR)** for quick dosage instructions; optional Arabic instructions
@@ -108,6 +114,8 @@ The interface is in French (English available); patient documents print in Frenc
   Routine / Optionnel), estimated cost, notes.
 - Status **Proposé → Accepté → En cours → Terminé** (or **Refusé**).
 - Totals: **Reste à réaliser** and **Réalisé**.
+- A finished act on a tooth still charted « Carie active » says so, with a **Mettre à jour la
+  dent** button.
 - Completed procedures cannot be deleted (medical record). The plan can be turned into a quote
   in Facturation.
 

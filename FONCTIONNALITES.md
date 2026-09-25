@@ -43,6 +43,9 @@ en français et/ou en arabe.
 - **Horaires** : heures d’ouverture, jours d’ouverture et fauteuils (chaque fauteuil a sa
   colonne ; les chevauchements sont vérifiés par fauteuil).
 - **Ouvrir le dossier** depuis un rendez-vous mène directement au dossier du patient.
+- Nouvel appelant sans dossier : **Créer le dossier** depuis le rendez-vous (nom, téléphone et
+  motif déjà remplis) ; le rendez-vous est rattaché au nouveau dossier.
+- Faire entrer un patient dans un fauteuil encore occupé (« En cours ») demande confirmation.
 
 ### Patients
 - Liste des **Dossiers patients**, recherche par nom, n° de dossier, téléphone, n° CNAM ou
@@ -73,6 +76,8 @@ en français et/ou en arabe.
   Autres règlements**.
 - Alerte quand des actes terminés ne figurent **sur aucun devis** (non facturés), avec création
   du devis en un clic.
+- **Encaisser sans devis** : pour les petits actes payés sur place, cochez les actes réglés ;
+  le montant et l’objet du reçu se remplissent seuls, et les actes ne sont plus « non facturés ».
 - **Encaissements du jour** : la recette de la journée, par mode de paiement.
 - **Catalogue des actes** : vos actes et honoraires (libellé français, libellé arabe facultatif,
   prix par défaut, lettre clé et coefficient CNAM facultatifs). Les prix de démonstration ne
@@ -80,7 +85,8 @@ en français et/ou en arabe.
 
 ### Ordonnances
 - L’en-tête affiche **l’âge, les allergies et les traitements en cours** ; pour un enfant, le
-  poids est aussi imprimé.
+  poids est aussi imprimé. Pour un enfant, seul le nom du médicament (DCI) est repris de la liste :
+  dosage, forme et posologie sont à écrire selon le poids.
 - Ajout des médicaments depuis la **Liste des médicaments** (enregistrés par DCI, nom commercial
   facultatif) ou en ligne libre. Les posologies par défaut sont des suggestions à valider.
 - **Phrases courantes (FR + AR)** pour saisir vite la posologie ; consignes au patient en arabe
@@ -117,6 +123,8 @@ en français et/ou en arabe.
   Optionnel), coût estimé, notes.
 - Statuts **Proposé → Accepté → En cours → Terminé** (ou **Refusé**).
 - Totaux : **Reste à réaliser** et **Réalisé**.
+- Un acte terminé sur une dent encore notée « Carie active » le signale, avec un bouton
+  **Mettre à jour la dent**.
 - Un acte terminé ne peut pas être supprimé (dossier médical). Le plan peut être transformé en
   devis dans Facturation.
 
