@@ -47,8 +47,10 @@ function renderLabCasesList() {
     let dueBadge = '';
     // Late only while the work is still expected back from the lab.
     if (lc.dueDate && ['planned', 'sent', 'in_lab', 'remake'].includes(lc.status)) {
-      const due = new Date(lc.dueDate);
-      const diffDays = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+      // Whole clinic-local days between today and the due day ('YYYY-MM-DD' read as a local date).
+      const [y, m, d] = lc.dueDate.split('-').map(Number);
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const diffDays = Math.round((new Date(y, m - 1, d) - today) / (1000 * 60 * 60 * 24));
       if (diffDays < 0) {
         dueBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">${isFr ? 'EN RETARD' : 'OVERDUE'}</span>`;
       } else if (diffDays <= 2) {

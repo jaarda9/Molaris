@@ -334,7 +334,7 @@ let pendingPatientCreated = null;
 function initPatientManager() {
   document.getElementById('form-patient-birthdate')?.addEventListener('input', syncAgeFromBirthDate);
   const birthInput = document.getElementById('form-patient-birthdate');
-  if (birthInput) birthInput.max = new Date().toISOString().slice(0, 10);
+  if (birthInput) birthInput.max = Molaris.format.isoDate(); // clinic-local today (UTC is a day behind after midnight)
   const searchInput = document.getElementById('patient-search-input');
   const createBtn = document.getElementById('btn-create-patient');
   const modal = document.getElementById('modal-patient');
