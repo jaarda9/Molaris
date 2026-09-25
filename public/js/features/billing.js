@@ -482,14 +482,17 @@
         </table>
         <table>
           <thead><tr><th>Désignation</th><th>Dent (FDI)</th><th>Qté</th><th>Prix unitaire</th><th>Remise</th><th>Montant</th></tr></thead>
-          <tbody>${rows}</tbody>
-          <tfoot><tr><th colspan="5" class="num">Total</th><th class="num">${esc(tnd(q.totalMillimes))}</th></tr></tfoot>
+          <tbody>${rows}
+            <!-- Last row, not a <tfoot>: a footer is repeated on every printed page, where the
+                 grand total under a page's first lines reads like a subtotal. -->
+            <tr><th colspan="5" class="num">Total</th><th class="num">${esc(tnd(q.totalMillimes))}</th></tr>
+          </tbody>
         </table>
         <p>Arrêté le présent devis à la somme de <strong>${esc(q.totalInWords)}</strong>.</p>
         ${q.validUntil ? `<p>Devis valable jusqu'au <strong>${esc(day(q.validUntil))}</strong>.</p>` : ''}
         ${q.notes ? `<p class="muted" style="white-space:pre-line">${esc(q.notes)}</p>` : ''}
         <p class="muted">Montants en dinars tunisiens (DT).</p>
-        <div style="display:flex;justify-content:space-between;gap:24px;margin-top:40px;">
+        <div class="keep-together" style="display:flex;justify-content:space-between;gap:24px;margin-top:40px;">
           <div style="flex:1;border-top:1px solid #cbd5e1;padding-top:6px;min-height:80px;">Bon pour accord<br><span class="muted">Date et signature du patient</span></div>
           <div style="flex:1;border-top:1px solid #cbd5e1;padding-top:6px;min-height:80px;text-align:end;">Signature et cachet du praticien</div>
         </div>`

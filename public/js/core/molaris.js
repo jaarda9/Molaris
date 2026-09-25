@@ -302,6 +302,9 @@ Molaris.print = {
           .num { text-align: end; white-space: nowrap; }
           .muted { color: #64748b; font-size: 10pt; }
           .signature { margin-top: 48px; text-align: end; }
+          /* Long documents: header row repeated on each page, no row or signature split in two. */
+          thead { display: table-header-group; }
+          tr, .signature, .keep-together { break-inside: avoid; page-break-inside: avoid; }
         </style>
       </head>
       <body>${letterhead}<h1>${escapeHtml(title)}</h1>${bodyHtml}</body>
