@@ -340,6 +340,8 @@ window.MOLARIS_TRANSLATIONS = {
     "treatment.errCost": "Invalid amount. Examples: 120 · 120.500 · 1 250.000",
     "treatment.totalToDo": "Still to do:",
     "treatment.totalDone": "Done:",
+    "treatment.chartStillCaries": "Tooth {tooth} is still charted as \"Active caries\" on the odontogram.",
+    "treatment.updateChart": "Update the tooth",
 
     // Medications
     "meds.title": "Medications",
@@ -820,6 +822,8 @@ window.MOLARIS_TRANSLATIONS = {
     "treatment.errCost": "Montant non valide. Exemples : 120 · 120,500 · 1 250,000",
     "treatment.totalToDo": "Reste à réaliser :",
     "treatment.totalDone": "Réalisé :",
+    "treatment.chartStillCaries": "La dent {tooth} est encore notée « Carie active » sur l’odontogramme.",
+    "treatment.updateChart": "Mettre à jour la dent",
 
     // Médicaments
     "meds.title": "Médicaments",

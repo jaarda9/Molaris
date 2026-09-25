@@ -60,6 +60,12 @@ async function fetchTreatmentPlan() {
   }
 }
 
+/** The chart's tooth (permanent or primary) of a plan item, if loaded. */
+function chartToothOf(toothId) {
+  return (systemState.teethData || []).find(t => t.id === toothId)
+    || (systemState.primaryTeeth?.primaryTeeth || []).find(t => t.id === toothId) || null;
+}
+
 function renderTreatmentPlanList() {
   const container = document.getElementById('treatment-plan-list');
   if (!container) return;
@@ -98,6 +104,9 @@ function renderTreatmentPlanList() {
           <span class="px-2 py-0.5 rounded border text-[10px] font-semibold priority-${item.priority}">${getTreatmentPriorityLabel(item.priority, isFr)}</span>
         </div>
         ${item.notes ? `<p class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(item.notes)}</p>` : ''}
+        ${item.status === 'completed' && chartToothOf(item.toothId)?.status === 'caries' ? `
+          <p class="text-xs text-amber-700 dark:text-amber-300">${escapeHtml(molarisT('treatment.chartStillCaries').replace('{tooth}', fdiForToothId(item.toothId)))}
+            <button type="button" class="btn-update-chart-tooth font-semibold underline hover:no-underline">${escapeHtml(molarisT('treatment.updateChart'))}</button></p>` : ''}
         ${(item.estimatedCost !== undefined && item.estimatedCost !== null) ? `<p class="text-xs font-mono text-teal-700 dark:text-teal-400">${escapeHtml(Molaris.format.tnd(Math.round(Number(item.estimatedCost) * 1000)))}</p>` : ''}
       </div>
       <div class="flex items-center gap-2">
@@ -143,6 +152,13 @@ function renderTreatmentPlanList() {
       });
     }
 
+    // Treatment done but the tooth is still charted as a cavity: open it on the odontogram.
+    row.querySelector('.btn-update-chart-tooth')?.addEventListener('click', () => {
+      document.getElementById('nav-tab-odontogram')?.click();
+      const tooth = chartToothOf(item.toothId);
+      if (tooth) selectTooth(tooth);
+    });
+
     row.querySelector('.btn-delete-treatment-item')?.addEventListener('click', async () => {
       if (!confirm(molarisT('treatment.deleteConfirm'))) return;
       try {
@@ -166,6 +182,9 @@ function initTreatmentPlanManager() {
   const cancelBtn = document.getElementById('btn-cancel-modal-treatment');
   const form = document.getElementById('treatment-item-form');
   if (!modal || !form) return;
+
+  // The odontogram may have changed since the list was drawn (charting reminders above).
+  Molaris.events.on('view-shown', ({ view }) => { if (view === 'treatment') renderTreatmentPlanList(); });
 
   if (addBtn) {
     addBtn.addEventListener('click', () => {
