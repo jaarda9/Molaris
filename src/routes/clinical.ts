@@ -91,13 +91,16 @@ clinicalRouter.put('/api/medications/:id', route((req: Request, res: Response) =
   res.json({ success: true, medication, safetyAlerts });
 }));
 
-clinicalRouter.delete('/api/medications/:id', (req: Request, res: Response) => {
-  try {
-    res.json({ success: patientDb.deleteMedicationForActivePatient(String(req.params.id)) });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+clinicalRouter.delete('/api/medications/:id', route((req: Request, res: Response) => {
+  const med = patientDb.getMedicationsForActivePatient().find(m => m.id === String(req.params.id));
+  if (!med) throw new HttpError(404, 'Médicament introuvable.');
+  // Deleting is for a typo on the day it was entered. Afterwards the treatment is part of the
+  // history (an anticoagulant taken last year matters): it is deactivated, not erased.
+  if (!med.addedAt || new Date(med.addedAt).toDateString() !== new Date().toDateString()) {
+    throw new HttpError(409, 'Ce traitement fait partie de l’historique du patient : désactivez-le plutôt que de le supprimer.');
   }
-});
+  res.json({ success: patientDb.deleteMedicationForActivePatient(med.id) });
+}));
 
 // --- Periodontal charting (6-site probing, snapshotted by date) ----------------
 

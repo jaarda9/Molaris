@@ -43,7 +43,7 @@ function renderMedicationsList() {
         <button class="btn-toggle-med px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
           ${med.active ? (isFr ? 'Désactiver' : 'Deactivate') : (isFr ? 'Activer' : 'Activate')}
         </button>
-        <button class="btn-delete-med p-2 rounded-lg bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400" title="${isFr ? 'Supprimer' : 'Delete'}">
+        <button class="btn-delete-med ${med.addedAt && new Date(med.addedAt).toDateString() === new Date().toDateString() ? '' : 'hidden'} p-2 rounded-lg bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400" title="${isFr ? 'Supprimer' : 'Delete'}">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6"></polyline>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -80,7 +80,8 @@ function renderMedicationsList() {
       const isFr2 = systemState.language === 'fr';
       if (!confirm(isFr2 ? 'Supprimer ce médicament ?' : 'Delete this medication?')) return;
       try {
-        await fetch(`/api/medications/${med.id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/medications/${med.id}`, { method: 'DELETE' });
+        if (!res.ok) alert((await res.json()).error || molarisT('common.saveError'));
         await fetchMedications();
       } catch (err) {
         alert(molarisT('common.networkError') + ' ' + err.message);
