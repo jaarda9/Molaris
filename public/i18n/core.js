@@ -1027,35 +1027,35 @@ window.MOLARIS_FRENCH_TEETH = {
 window.MOLARIS_FRENCH_PROTOCOLS = [
   {
     id: 'hot-tooth',
-    title: 'Dent Chaude / Pulpite Aiguë sur Molaire Mandibulaire',
-    category: 'Anesthésie & Urgence',
+    title: 'Dent chaude / pulpite aiguë sur molaire mandibulaire',
+    category: 'Anesthésie et urgence',
     summary: 'Le taux d\'échec de l\'anesthésie tronculaire à l\'épine de Spix atteint 50 à 70% en cas de pulpite symptomatique irréversible.',
     steps: [
-      '1. Spix Standard + Nerf Buccal : 1 carpule de Lidocaïne 2% 1:100 000 ou Articaïne 4%.',
-      '2. Infiltration Complémentaire Obligatoire : 1 carpule d\'Articaïne 4% 1:100 000 en vestibulaire en regard de la dent (diffuse à travers la corticale).',
-      '3. Infiltration Linguale : 0,5 carpule d\'Articaïne 4% pour bloquer le nerf mylo-hyoïdien.',
-      '4. Si sensibilité persistante à l\'ouverture de chambre : Injection intraligamentaire (blanchiment requis, 0,2 ml par racine) ou intra-osseuse (X-Tip/Quicksleeper) à la Mépi vacaine 3% ou Lidocaïne.',
+      '1. Spix standard + nerf buccal : 1 carpule de Lidocaïne 2% 1:100 000 ou Articaïne 4%.',
+      '2. Infiltration complémentaire obligatoire : 1 carpule d\'Articaïne 4% 1:100 000 en vestibulaire en regard de la dent (diffuse à travers la corticale).',
+      '3. Infiltration linguale : 0,5 carpule d\'Articaïne 4% pour bloquer le nerf mylo-hyoïdien.',
+      '4. Si sensibilité persistante à l\'ouverture de chambre : Injection intraligamentaire (blanchiment requis, 0,2 ml par racine) ou intra-osseuse (X-Tip/Quicksleeper) à la mépivacaïne 3 % ou à la lidocaïne.',
       '5. Injection intra-pulpaire en dernier recours : Forte contre-pression avec aiguille courte 30G dans la corne pulpaire.'
     ]
   },
   {
     id: 'broken-instrument',
-    title: 'Instrument Rotatif Fracturé dans le Canal',
+    title: 'Instrument rotatif fracturé dans le canal',
     category: 'Endodontie',
     summary: 'Protocole de gestion des instruments nickel-titane séparés au cours de la préparation canalaire.',
     steps: [
       '1. Arrêt immédiat : Ne forcez aucun autre instrument. Inondez le canal d\'EDTA 17%.',
       '2. Contrôle radiographique : Déterminez la localisation exacte (tiers coronaire, médian ou apical) et la courbure.',
       '3. Si tiers coronaire / médian rectiligne : Accès optique direct sous grossissement/microscope. Inserts ultrasonores dans le sens anti-horaire à faible puissance à sec.',
-      '4. Systèmes d\'extraction : Système IRS, microtubes ou technique de Hedström tressées.',
+      '4. Systèmes d\'extraction : Système IRS, microtubes ou limes de Hedström (technique de tressage).',
       '5. Si apical à la courbure : Tentative de contournement (bypass) avec limes K manuelles pré-courbées #08 / #10 sous EDTA abondant. Si contourné, préparez et obturez en intégrant le fragment.',
       '6. Si bypass impossible et sans lésion périapicale : Obturer jusqu\'au fragment, informer le patient par écrit et surveiller ou adresser à un endodontiste.'
     ]
   },
   {
     id: 'dry-socket',
-    title: 'Alvéolite Sèche (Ostéite Alvéolaire)',
-    category: 'Chirurgie Orale',
+    title: 'Alvéolite sèche (ostéite alvéolaire)',
+    category: 'Chirurgie orale',
     summary: 'Survient 2 à 5 jours après extraction suite à la lyse prématurée du caillot sanguin (fibrinolyse).',
     steps: [
       '1. Diagnostic : Douleur pulsatile insomniante irradiant vers l\'oreille/tempe, fétidité, alvéole vide à os nu, rebelle aux antalgiques habituels.',
@@ -1067,8 +1067,8 @@ window.MOLARIS_FRENCH_PROTOCOLS = [
   },
   {
     id: 'class2-deep-margin',
-    title: 'Remontée de Marge Cervicale Sous-Gingivale (DME)',
-    category: 'Dentisterie Restauratrice',
+    title: 'Remontée de marge cervicale sous-gingivale (DME)',
+    category: 'Dentisterie restauratrice',
     summary: 'Élévation de la boîte proximale sous-gingivale avant restauration directe ou indirecte.',
     steps: [
       '1. Gestion gingivale : Contrôler le fluide créviculaire et le saignement avec ruban Téflon, fil de rétraction ou bistouri électrique.',
@@ -1081,8 +1081,8 @@ window.MOLARIS_FRENCH_PROTOCOLS = [
   },
   {
     id: 'sinus-perforation',
-    title: 'Communication Bucco-Sinusienne (CBS)',
-    category: 'Chirurgie Orale',
+    title: 'Communication bucco-sinusienne (CBS)',
+    category: 'Chirurgie orale',
     summary: 'Gestion de l\'effraction du plancher sinusien lors de l\'extraction d\'une prémolaire ou molaire supérieure.',
     steps: [
       '1. Vérification : Examiner l\'apex extrait. Manœuvre de Valsalva douce (pincer le nez et souffler bouche ouverte) en observant si des bulles apparaissent dans l\'alvéole.',
