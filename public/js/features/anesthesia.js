@@ -37,7 +37,7 @@ function renderAnestheticDrugOptions(drugs) {
     card.innerHTML = `
       <div class="flex items-start justify-between">
         <span class="font-bold text-slate-900 dark:text-white">${escapeHtml(drug.name)}</span>
-        <span class="font-mono text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded font-semibold">${formatDecimal(drug.mgPerCartridge)} mg</span>
+        <span class="shrink-0 whitespace-nowrap font-mono text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded font-semibold">${formatDecimal(drug.mgPerCartridge)} mg</span>
       </div>
       <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
         ${escapeHtml(drug.vasoconstrictor)} &bull; ${escapeHtml(molarisT('la.maxLabel'))} ${formatDecimal(drug.maxDoseMgKg)} mg/kg

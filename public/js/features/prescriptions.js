@@ -159,9 +159,9 @@
         <div class="lg:col-span-2 ${CARD} space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="text-base font-bold text-slate-900 dark:text-white">${esc(t('prescriptions.newTitle'))}</h2>
-            <label class="flex items-center gap-2 text-xs text-slate-500">
+            <label class="flex items-center gap-2 text-xs text-slate-500 w-full sm:w-auto min-w-0">
               <span>${esc(t('prescriptions.patient'))}</span>
-              <select id="rx-patient" class="${INPUT} !w-64"></select>
+              <select id="rx-patient" class="${INPUT} min-w-0 flex-1 sm:flex-none sm:!w-64"></select>
             </label>
           </div>
           <div id="rx-patient-info"></div>
@@ -394,12 +394,15 @@
                 <td class="py-2 pr-3">
                   <div class="font-semibold text-slate-800 dark:text-slate-200">${esc(d.dci)}${d.active ? '' : ` <span class="text-[10px] font-normal text-slate-400">(${esc(t('prescriptions.inactive'))})</span>`}</div>
                   <div class="text-slate-500">${esc([d.brand, d.form, d.strength].filter(Boolean).join(' · '))}</div>
+                  <div class="sm:hidden mt-1 text-slate-500">${esc(t(`prescriptions.cat.${d.category || 'autre'}`))} · ${esc(d.defaultDosage || '')}${d.defaultDuration ? ` — ${esc(d.defaultDuration)}` : ''}</div>
                 </td>
-                <td class="py-2 pr-3 text-slate-500 whitespace-nowrap">${esc(t(`prescriptions.cat.${d.category || 'autre'}`))}</td>
-                <td class="py-2 pr-3 text-slate-500">${esc(d.defaultDosage || '')}${d.defaultDuration ? ` — ${esc(d.defaultDuration)}` : ''}</td>
-                <td class="py-2 text-right whitespace-nowrap space-x-3">
-                  <button type="button" data-action="edit-drug" data-id="${esc(d.id)}" class="${BTN_LINK}">${esc(t('prescriptions.edit'))}</button>
-                  <button type="button" data-action="toggle-drug" data-id="${esc(d.id)}" class="${BTN_LINK}">${esc(t(d.active ? 'prescriptions.deactivate' : 'prescriptions.reactivate'))}</button>
+                <td class="py-2 pr-3 text-slate-500 whitespace-nowrap hidden sm:table-cell">${esc(t(`prescriptions.cat.${d.category || 'autre'}`))}</td>
+                <td class="py-2 pr-3 text-slate-500 hidden sm:table-cell">${esc(d.defaultDosage || '')}${d.defaultDuration ? ` — ${esc(d.defaultDuration)}` : ''}</td>
+                <td class="py-2 text-right whitespace-nowrap align-top sm:align-middle">
+                  <div class="flex flex-col items-end gap-1 sm:flex-row sm:justify-end sm:gap-3">
+                    <button type="button" data-action="edit-drug" data-id="${esc(d.id)}" class="${BTN_LINK}">${esc(t('prescriptions.edit'))}</button>
+                    <button type="button" data-action="toggle-drug" data-id="${esc(d.id)}" class="${BTN_LINK}">${esc(t(d.active ? 'prescriptions.deactivate' : 'prescriptions.reactivate'))}</button>
+                  </div>
                 </td>
               </tr>`).join('')}
           </tbody>

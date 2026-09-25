@@ -39,6 +39,25 @@
     expired: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
   };
 
+  // On a phone the six-column quote table is unusable: each line becomes a small card
+  // (label on its own row, then tooth / qty / price / discount, then the amount).
+  function ensureQuoteLinesStyle() {
+    if (document.getElementById('quote-lines-style')) return;
+    const style = document.createElement('style');
+    style.id = 'quote-lines-style';
+    style.textContent = `
+      @media (max-width: 640px) {
+        .quote-lines thead { display: none; }
+        .quote-lines tr { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; align-items: end; gap: 0.35rem 0.4rem; padding: 0.6rem 0; }
+        .quote-lines td { padding: 0 !important; }
+        .quote-lines td[data-col="label"] { grid-column: 1 / -1; }
+        .quote-lines td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 2px; font-size: 10px; font-weight: 600; text-transform: uppercase; color: rgb(var(--slate-400)); }
+        .quote-lines td[data-col="amount"] { grid-column: 1 / 5; align-self: center; }
+        .quote-lines td[data-col="remove"] { grid-column: 5; align-self: center; }
+      }`;
+    document.head.appendChild(style);
+  }
+
   /** 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:MM' → '23/09/2026' (+ ' 14:30'), without timezone surprises. */
   function day(value) {
     if (!value) return '';
@@ -142,7 +161,7 @@
     const tile = (label, value, tone = 'text-slate-900 dark:text-white', hint = '') => `
       <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3">
         <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">${esc(label)}</div>
-        <div class="text-lg font-bold font-mono ${tone}">${esc(tnd(value))}</div>
+        <div class="text-base sm:text-lg font-bold font-mono whitespace-nowrap ${tone}">${esc(tnd(value))}</div>
         ${hint ? `<div class="text-[10px] text-slate-400">${esc(hint)}</div>` : ''}
       </div>`;
     el.innerHTML = `
@@ -202,9 +221,9 @@
           <td class="py-1.5 text-slate-800 dark:text-slate-200">${esc(i.label)}</td>
           <td class="py-1.5 text-center font-mono text-slate-500">${esc(i.toothFdi ?? '')}</td>
           <td class="py-1.5 text-center font-mono">${esc(i.quantity)}</td>
-          <td class="py-1.5 text-right font-mono">${esc(tnd(i.unitPriceMillimes))}</td>
-          <td class="py-1.5 text-right font-mono text-slate-500">${i.discountMillimes ? esc('− ' + tnd(i.discountMillimes)) : ''}</td>
-          <td class="py-1.5 text-right font-mono font-semibold">${esc(tnd(i.totalMillimes))}</td>
+          <td class="py-1.5 text-right font-mono whitespace-nowrap hidden sm:table-cell">${esc(tnd(i.unitPriceMillimes))}</td>
+          <td class="py-1.5 text-right font-mono text-slate-500 whitespace-nowrap hidden sm:table-cell">${i.discountMillimes ? esc('− ' + tnd(i.discountMillimes)) : ''}</td>
+          <td class="py-1.5 text-right font-mono font-semibold whitespace-nowrap">${esc(tnd(i.totalMillimes))}</td>
         </tr>`).join('');
 
       const paidInfo = q.status === 'accepted' ? `
@@ -224,17 +243,17 @@
             </div>
           </div>
           ${lines ? `
-            <table class="w-full text-xs">
+            <div class="overflow-x-auto"><table class="w-full text-xs">
               <thead class="text-[10px] uppercase text-slate-400"><tr>
                 <th class="text-left font-semibold">${esc(t('billing.col.label'))}</th>
                 <th class="font-semibold">${esc(t('billing.col.tooth'))}</th>
                 <th class="font-semibold">${esc(t('billing.col.qty'))}</th>
-                <th class="text-right font-semibold">${esc(t('billing.col.unitPrice'))}</th>
-                <th class="text-right font-semibold">${esc(t('billing.col.discount'))}</th>
+                <th class="text-right font-semibold hidden sm:table-cell">${esc(t('billing.col.unitPrice'))}</th>
+                <th class="text-right font-semibold hidden sm:table-cell">${esc(t('billing.col.discount'))}</th>
                 <th class="text-right font-semibold">${esc(t('billing.col.amount'))}</th>
               </tr></thead>
               <tbody>${lines}</tbody>
-            </table>` : `<p class="text-xs text-slate-400">${esc(t('billing.quoteNoLines'))}</p>`}
+            </table></div>` : `<p class="text-xs text-slate-400">${esc(t('billing.quoteNoLines'))}</p>`}
           ${q.notes ? `<p class="text-[11px] text-slate-500 dark:text-slate-400 whitespace-pre-line">${esc(q.notes)}</p>` : ''}
           <div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-800 pt-2">
             <div class="flex flex-wrap items-center gap-3 text-xs font-mono">
@@ -299,7 +318,7 @@
           <button type="button" data-add-free class="${BTN2}">+ ${esc(t('billing.addFreeLine'))}</button>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full text-xs">
+          <table class="quote-lines w-full text-xs">
             <thead class="text-[10px] uppercase text-slate-400"><tr>
               <th class="text-left font-semibold py-1">${esc(t('billing.col.label'))}</th>
               <th class="font-semibold w-16">${esc(t('billing.col.toothFdi'))}</th>
@@ -354,6 +373,7 @@
       }
     });
 
+    ensureQuoteLinesStyle();
     const tbody = modal.element.querySelector('#billing-lines');
     const totalEl = modal.element.querySelector('#billing-quote-total');
 
@@ -384,13 +404,13 @@
       if (item.procedureId) tr.dataset.procedureId = item.procedureId;
       const cell = 'px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg w-full text-slate-800 dark:text-slate-100';
       tr.innerHTML = `
-        <td class="py-1 pr-1"><input data-field="label" class="${cell}" value="${esc(item.label || '')}"></td>
-        <td class="py-1 pr-1"><input data-field="tooth" inputmode="numeric" class="${cell} text-center" value="${esc(item.toothFdi ?? '')}" placeholder="—"></td>
-        <td class="py-1 pr-1"><input data-field="qty" type="number" min="1" max="99" step="1" class="${cell} text-center" value="${esc(item.quantity || 1)}"></td>
-        <td class="py-1 pr-1"><input data-field="price" inputmode="decimal" class="${cell} text-right" value="${esc(amountInput(item.unitPriceMillimes))}"></td>
-        <td class="py-1 pr-1"><input data-field="discount" inputmode="decimal" class="${cell} text-right" value="${item.discountMillimes ? esc(amountInput(item.discountMillimes)) : ''}" placeholder="0"></td>
-        <td class="py-1 text-right font-mono font-semibold" data-line-total></td>
-        <td class="py-1 text-right"><button type="button" data-remove class="text-slate-400 hover:text-rose-600 text-base leading-none" title="${esc(t('billing.removeLine'))}">&times;</button></td>`;
+        <td class="py-1 pr-1" data-col="label"><input data-field="label" class="${cell}" value="${esc(item.label || '')}" placeholder="${esc(t('billing.col.label'))}"></td>
+        <td class="py-1 pr-1" data-col data-label="${esc(t('billing.col.toothFdi'))}"><input data-field="tooth" inputmode="numeric" class="${cell} text-center" value="${esc(item.toothFdi ?? '')}" placeholder="—"></td>
+        <td class="py-1 pr-1" data-col data-label="${esc(t('billing.col.qty'))}"><input data-field="qty" type="number" min="1" max="99" step="1" class="${cell} text-center" value="${esc(item.quantity || 1)}"></td>
+        <td class="py-1 pr-1" data-col data-label="${esc(t('billing.col.unitPriceDt'))}"><input data-field="price" inputmode="decimal" class="${cell} text-right" value="${esc(amountInput(item.unitPriceMillimes))}"></td>
+        <td class="py-1 pr-1" data-col data-label="${esc(t('billing.col.discountDt'))}"><input data-field="discount" inputmode="decimal" class="${cell} text-right" value="${item.discountMillimes ? esc(amountInput(item.discountMillimes)) : ''}" placeholder="0"></td>
+        <td class="py-1 text-right font-mono font-semibold" data-col="amount" data-line-total></td>
+        <td class="py-1 text-right" data-col="remove"><button type="button" data-remove class="text-slate-400 hover:text-rose-600 text-base leading-none" title="${esc(t('billing.removeLine'))}">&times;</button></td>`;
       tbody.appendChild(tr);
       recompute();
     }
@@ -497,11 +517,11 @@
       return `
         <tr class="border-t border-slate-100 dark:border-slate-800 align-top">
           <td class="py-2 font-mono ${strike}">${esc(showPatient ? p.paidAt.slice(11, 16) : day(p.paidAt))}</td>
-          <td class="py-2 font-mono ${strike}">${esc(p.receiptNumber)}</td>
+          <td class="py-2 font-mono whitespace-nowrap hidden sm:table-cell ${strike}">${esc(p.receiptNumber)}</td>
           ${showPatient ? `<td class="py-2"><button type="button" data-action="open-patient" data-patient-id="${esc(p.patientId)}" class="text-left text-teal-700 dark:text-teal-300 hover:underline ${strike}">${esc(p.patientName)}</button></td>` : ''}
           <td class="py-2 ${strike}">${esc(t('billing.method.' + p.method))}${p.reference ? ` <span class="text-slate-400">n° ${esc(p.reference)}</span>` : ''}</td>
-          <td class="py-2 font-mono text-slate-500 ${strike}">${esc(p.quoteNumber || '')}</td>
-          <td class="py-2 text-right font-mono font-semibold ${strike}">${esc(tnd(p.amountMillimes))}</td>
+          <td class="py-2 font-mono text-slate-500 hidden sm:table-cell ${strike}">${esc(p.quoteNumber || '')}</td>
+          <td class="py-2 text-right font-mono font-semibold whitespace-nowrap ${strike}">${esc(tnd(p.amountMillimes))}</td>
           <td class="py-2 text-right whitespace-nowrap">
             <button type="button" data-action="print-receipt" data-id="${esc(p.id)}" class="${LINK}">${esc(t('billing.receipt'))}</button>
             ${cancelled ? '' : `<button type="button" data-action="cancel-payment" data-id="${esc(p.id)}" class="${LINK_DANGER}">${esc(t('billing.cancelPayment'))}</button>`}
@@ -515,10 +535,10 @@
         <table class="w-full text-xs">
           <thead class="text-[10px] uppercase text-slate-400"><tr>
             <th class="text-left font-semibold">${esc(showPatient ? t('billing.col.time') : t('billing.col.date'))}</th>
-            <th class="text-left font-semibold">${esc(t('billing.col.receipt'))}</th>
+            <th class="text-left font-semibold hidden sm:table-cell">${esc(t('billing.col.receipt'))}</th>
             ${showPatient ? `<th class="text-left font-semibold">${esc(t('billing.patient'))}</th>` : ''}
             <th class="text-left font-semibold">${esc(t('billing.col.method'))}</th>
-            <th class="text-left font-semibold">${esc(t('billing.col.quote'))}</th>
+            <th class="text-left font-semibold hidden sm:table-cell">${esc(t('billing.col.quote'))}</th>
             <th class="text-right font-semibold">${esc(t('billing.col.amount'))}</th>
             <th></th>
           </tr></thead>
@@ -739,15 +759,17 @@
     const { procedures } = await Molaris.api.get(`/api/procedures?includeInactive=${state.showInactive}`);
     const rows = procedures.map(p => `
       <tr class="border-t border-slate-100 dark:border-slate-800 ${p.active ? '' : 'opacity-50'}">
-        <td class="py-2 text-slate-500">${esc(p.category || '')}</td>
+        <td class="py-2 text-slate-500 hidden sm:table-cell">${esc(p.category || '')}</td>
         <td class="py-2 text-slate-800 dark:text-slate-200">${esc(p.labelFr)}${p.labelAr ? ` <span class="text-slate-400" dir="rtl" lang="ar">${esc(p.labelAr)}</span>` : ''}
           ${p.active ? '' : ` <span class="text-[10px] font-semibold text-slate-500">(${esc(t('billing.inactive'))})</span>`}</td>
-        <td class="py-2 font-mono text-slate-500">${esc(p.code || '')}</td>
-        <td class="py-2 font-mono text-slate-500">${p.cnamKeyLetter ? esc(`${p.cnamKeyLetter} ${p.cnamCoefficient ?? ''}`) : ''}</td>
-        <td class="py-2 text-right font-mono">${esc(tnd(p.defaultPriceMillimes))}</td>
-        <td class="py-2 text-right whitespace-nowrap">
-          <button type="button" data-action="edit-procedure" data-id="${esc(p.id)}" class="${LINK}">${esc(t('billing.edit'))}</button>
-          <button type="button" data-action="toggle-procedure" data-id="${esc(p.id)}" data-active="${p.active}" class="${p.active ? LINK_DANGER : LINK}">${esc(p.active ? t('billing.deactivate') : t('billing.reactivate'))}</button>
+        <td class="py-2 font-mono text-slate-500 hidden sm:table-cell">${esc(p.code || '')}</td>
+        <td class="py-2 font-mono text-slate-500 hidden sm:table-cell">${p.cnamKeyLetter ? esc(`${p.cnamKeyLetter} ${p.cnamCoefficient ?? ''}`) : ''}</td>
+        <td class="py-2 text-right font-mono whitespace-nowrap">${esc(tnd(p.defaultPriceMillimes))}</td>
+        <td class="py-2 pl-2 text-right whitespace-nowrap">
+          <div class="flex flex-col items-end gap-1 sm:flex-row sm:justify-end sm:gap-2">
+            <button type="button" data-action="edit-procedure" data-id="${esc(p.id)}" class="${LINK}">${esc(t('billing.edit'))}</button>
+            <button type="button" data-action="toggle-procedure" data-id="${esc(p.id)}" data-active="${p.active}" class="${p.active ? LINK_DANGER : LINK}">${esc(p.active ? t('billing.deactivate') : t('billing.reactivate'))}</button>
+          </div>
         </td>
       </tr>`).join('');
     content.innerHTML = `
@@ -765,10 +787,10 @@
         ${rows ? `
           <div class="overflow-x-auto"><table class="w-full text-xs">
             <thead class="text-[10px] uppercase text-slate-400"><tr>
-              <th class="text-left font-semibold">${esc(t('billing.col.category'))}</th>
+              <th class="text-left font-semibold hidden sm:table-cell">${esc(t('billing.col.category'))}</th>
               <th class="text-left font-semibold">${esc(t('billing.col.label'))}</th>
-              <th class="text-left font-semibold">${esc(t('billing.col.code'))}</th>
-              <th class="text-left font-semibold">CNAM</th>
+              <th class="text-left font-semibold hidden sm:table-cell">${esc(t('billing.col.code'))}</th>
+              <th class="text-left font-semibold hidden sm:table-cell">CNAM</th>
               <th class="text-right font-semibold">${esc(t('billing.col.price'))}</th>
               <th></th>
             </tr></thead>

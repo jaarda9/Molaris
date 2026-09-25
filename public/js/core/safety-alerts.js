@@ -20,9 +20,9 @@ function renderSafetyAlertsInto(containerId, alerts, opts = {}) {
       : 'INFO';
     const icon = a.severity === 'info' ? 'ℹ️' : '⚠️';
     return `
-      <div class="severity-${a.severity} border rounded-lg px-3 py-2 flex items-start gap-2 text-xs">
+      <div class="severity-${a.severity} border rounded-lg px-3 py-2 flex flex-wrap items-start gap-x-2 gap-y-0.5 text-xs">
         <span class="font-bold whitespace-nowrap">${icon} ${label}:</span>
-        <span>${escapeHtml(a.message)}</span>
+        <span class="min-w-0 flex-1 basis-48 [overflow-wrap:anywhere]">${escapeHtml(a.message)}</span>
       </div>
     `;
   }).join('');
