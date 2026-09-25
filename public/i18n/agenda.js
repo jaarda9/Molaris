@@ -108,6 +108,7 @@ Molaris.i18n.register({
     'agenda.waiting.markNoShow': 'No-show',
     'agenda.waiting.callIn': 'Call in',
     'agenda.waiting.finish': 'Finish',
+    'agenda.waiting.chairBusy': '{name} is still "In progress" in {chair}. Call {patient} in anyway?\n\n(Otherwise cancel, then click "Finish" for {name}.)',
 
     'agenda.reminders.title': 'Reminders for {day}',
     'agenda.reminders.toSend': '{n} to send',
@@ -235,6 +236,7 @@ Molaris.i18n.register({
     'agenda.waiting.markNoShow': 'Absent',
     'agenda.waiting.callIn': 'Faire entrer',
     'agenda.waiting.finish': 'Terminer',
+    'agenda.waiting.chairBusy': '{name} est encore « En cours » au {chair}. Faire entrer {patient} quand même ?\n\n(Sinon, annulez puis cliquez « Terminer » pour {name}.)',
 
     'agenda.reminders.title': 'Rappels pour {day}',
     'agenda.reminders.toSend': '{n} à envoyer',

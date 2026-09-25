@@ -150,6 +150,14 @@
   }
 
   async function saveStatus(appointment, status) {
+    // Calling a patient in while someone is still « En cours » in that chair usually means
+    // the previous visit was not closed.
+    if (status === 'in_progress' && appointment.chair) {
+      const busy = state.today.find(a => a.id !== appointment.id && a.status === 'in_progress' && a.chair === appointment.chair);
+      if (busy && !window.confirm(t('agenda.waiting.chairBusy', { chair: appointment.chair, name: busy.patientName, patient: appointment.patientName }))) {
+        return appointment;
+      }
+    }
     const { appointment: updated } = await Molaris.api.put(`/api/appointments/${appointment.id}`, { status });
     Molaris.ui.toast(t('agenda.toast.status', { name: updated.patientName, status: statusLabel(status) }), 'info');
     await refresh();
@@ -494,7 +502,7 @@
     const late = expected.filter(a => a.startAt < now);
     const next = expected.find(a => a.startAt >= now);
 
-    const chairMeta = (a) => [a.chair, reasonLabel(a.reason), t('agenda.waiting.startedAt', { time: timeOf(a.startAt) })].filter(Boolean).map(esc).join(' · ');
+    const chairMeta = (a) => [a.chair, reasonLabel(a.reason), t('agenda.waiting.startedAt', { time: a.startedAt ? Molaris.format.time(a.startedAt) : timeOf(a.startAt) })].filter(Boolean).map(esc).join(' · ');
     const waitMeta = (a) => {
       const since = a.arrivedAt ? t('agenda.waiting.since', { time: Molaris.format.time(a.arrivedAt), wait: waitText(a.arrivedAt) }) : '';
       return [esc(t('agenda.waiting.appointmentAt', { time: timeOf(a.startAt) })), since ? `<span class="${a.arrivedAt && Date.now() - Date.parse(a.arrivedAt) > 20 * 60000 ? 'text-amber-600 dark:text-amber-400 font-semibold' : ''}">${esc(since)}</span>` : ''].filter(Boolean).join(' · ');

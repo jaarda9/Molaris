@@ -107,8 +107,8 @@ export function checkPrescriptionSafety(
       severity: 'warning',
       source: 'patient',
       message: language === 'fr'
-        ? `Enfant de ${patient.age} ans${weight} : les posologies proposées par défaut sont des posologies adultes. Adapter chaque dose au poids et à la forme pédiatrique.`
-        : `Child aged ${patient.age}${weight}: the default doses are adult doses. Adapt each dose to the weight and use a paediatric form.`
+        ? `Enfant de ${patient.age} ans${weight} : la liste des médicaments contient des dosages adultes. Écrire chaque dose selon le poids, avec une forme pédiatrique.`
+        : `Child aged ${patient.age}${weight}: the drug list holds adult strengths. Write each dose for the weight, with a paediatric form.`
     });
   }
 

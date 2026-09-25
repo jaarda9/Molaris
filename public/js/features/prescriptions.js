@@ -117,6 +117,13 @@
   }
 
   function lineFromDrug(d) {
+    // The list holds adult strengths and doses. For a child (same age limit as the server's
+    // pediatric alert) only the DCI is copied: strength, form and dose must be written for
+    // this child, so an adult dose can never be issued by default.
+    const p = patient();
+    if (p && Number(p.age) < 15) {
+      return { ...emptyLine(), drugId: d.id, drugLabel: d.dci, duration: d.defaultDuration || '', pediatric: true };
+    }
     return {
       drugId: d.id, drugLabel: d.dci, brand: d.brand || '', form: d.form || '', strength: d.strength || '',
       dosage: d.defaultDosage || '', duration: d.defaultDuration || '', quantity: '', instructionsAr: d.defaultInstructionsAr || ''
@@ -296,7 +303,7 @@
           <button type="button" data-action="remove-line" data-line="${i}" title="${esc(t('prescriptions.removeLine'))}" class="mt-1 text-slate-400 hover:text-rose-600 text-lg leading-none px-1">&times;</button>
         </div>
         <div class="pl-7 grid grid-cols-1 md:grid-cols-6 gap-2">
-          <div class="md:col-span-4">${field(i, 'dosage', t('prescriptions.dosage'), 'maxlength="500"')}</div>
+          <div class="md:col-span-4">${field(i, 'dosage', line.pediatric ? t('prescriptions.childDosage').replace('{kg}', patient()?.weightKg ?? '?') : t('prescriptions.dosage'), 'maxlength="500"')}</div>
           <select data-action="phrase" data-line="${i}" class="${INPUT} md:col-span-2">
             <option value="">${esc(t('prescriptions.phrase'))}</option>
             ${PHRASES.map((p, k) => `<option value="${k}">${esc(p.fr)}</option>`).join('')}

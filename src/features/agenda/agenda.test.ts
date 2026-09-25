@@ -127,10 +127,16 @@ test('status workflow records the arrival time and clears it when going back', (
   const arrived = repo.setStatus(a.id, 'arrived');
   assert.equal(arrived.status, 'arrived');
   assert.ok(arrived.arrivedAt);
+  assert.equal(arrived.startedAt, null);
   const started = repo.setStatus(a.id, 'in_progress');
   assert.equal(started.arrivedAt, arrived.arrivedAt, 'arrival time survives later statuses');
-  assert.equal(repo.setStatus(a.id, 'completed').status, 'completed');
-  assert.equal(repo.setStatus(a.id, 'scheduled').arrivedAt, null);
+  assert.ok(started.startedAt, 'the time the patient was called in is recorded');
+  const done = repo.setStatus(a.id, 'completed');
+  assert.equal(done.status, 'completed');
+  assert.equal(done.startedAt, started.startedAt);
+  const back = repo.setStatus(a.id, 'scheduled');
+  assert.equal(back.arrivedAt, null);
+  assert.equal(back.startedAt, null);
 });
 
 test('rescheduling resets the reminder and the confirmation', () => {

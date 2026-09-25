@@ -274,5 +274,13 @@ export const MIGRATIONS: Array<{ name: string; sql: string }> = [
         SELECT RAISE(ABORT, 'payments are immutable: cancel and record a new one');
       END;
     `
+  },
+  {
+    name: 'agenda: time the patient was called into the chair',
+    sql: `
+      -- The waiting room shows « depuis 16:45 » for a patient in the chair: the real time
+      -- they were called in, not the booked time.
+      ALTER TABLE appointments ADD COLUMN started_at TEXT;
+    `
   }
 ];

@@ -47,6 +47,8 @@ export interface Appointment {
   notes: string | null;
   reminderSentAt: string | null;
   arrivedAt: string | null;
+  /** When the patient was called into the chair (status in_progress). */
+  startedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -64,6 +66,7 @@ interface AppointmentRow {
   notes: string | null;
   reminder_sent_at: string | null;
   arrived_at: string | null;
+  started_at: string | null;
   created_at: string;
   updated_at: string;
   chart_name: string | null;
@@ -88,6 +91,7 @@ function toAppointment(row: AppointmentRow): Appointment {
     notes: row.notes,
     reminderSentAt: row.reminder_sent_at,
     arrivedAt: row.arrived_at,
+    startedAt: row.started_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -246,6 +250,7 @@ export class AppointmentRepository {
       status,
       notes: clean(input.notes),
       arrived_at: status === 'arrived' ? now : null,
+      started_at: status === 'in_progress' ? now : null,
       created_at: now,
       updated_at: now
     };
@@ -253,9 +258,9 @@ export class AppointmentRepository {
       this.validate(row);
       this.db.prepare(`
         INSERT INTO appointments (id, patient_id, patient_label, patient_phone, start_at, end_at, chair,
-          reason, status, notes, arrived_at, created_at, updated_at)
+          reason, status, notes, arrived_at, started_at, created_at, updated_at)
         VALUES (@id, @patient_id, @patient_label, @patient_phone, @start_at, @end_at, @chair,
-          @reason, @status, @notes, @arrived_at, @created_at, @updated_at)
+          @reason, @status, @notes, @arrived_at, @started_at, @created_at, @updated_at)
       `).run(row);
     })();
     return this.require(id);
@@ -280,6 +285,9 @@ export class AppointmentRepository {
     let arrivedAt = current.arrivedAt;
     if (status === 'arrived' && current.status !== 'arrived') arrivedAt = now;
     if (status === 'scheduled' || status === 'confirmed') arrivedAt = null;
+    let startedAt = current.startedAt;
+    if (status === 'in_progress' && current.status !== 'in_progress') startedAt = now;
+    if (status === 'scheduled' || status === 'confirmed' || status === 'arrived') startedAt = null;
 
     const row = {
       id,
@@ -295,6 +303,7 @@ export class AppointmentRepository {
       // A reminder for the old time is no longer valid.
       reminder_sent_at: rescheduled ? null : current.reminderSentAt,
       arrived_at: arrivedAt,
+      started_at: startedAt,
       updated_at: now
     };
     this.db.transaction(() => {
@@ -303,7 +312,7 @@ export class AppointmentRepository {
         UPDATE appointments SET patient_id = @patient_id, patient_label = @patient_label,
           patient_phone = @patient_phone, start_at = @start_at, end_at = @end_at, chair = @chair,
           reason = @reason, status = @status, notes = @notes, reminder_sent_at = @reminder_sent_at,
-          arrived_at = @arrived_at, updated_at = @updated_at
+          arrived_at = @arrived_at, started_at = @started_at, updated_at = @updated_at
         WHERE id = @id
       `).run(row);
     })();
