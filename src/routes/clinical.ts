@@ -7,7 +7,7 @@ import { createDefaultPerioTeeth, type PerioChartSnapshot } from '../domain/clin
 import { checkDrugInteractions, checkAllergyConflict, SafetyAlert } from '../domain/clinical-safety.js';
 import { HttpError, languageOf, parse, route } from './http.js';
 import {
-  labCaseCreateSchema, labCaseUpdateSchema, medicationCreateSchema, medicationUpdateSchema, perioChartSchema, toothUpdateSchema, treatmentCreateSchema, treatmentUpdateSchema
+  labCaseCreateSchema, labCaseUpdateSchema, medicationCreateSchema, medicationUpdateSchema, perioChartSchema, toothUpdateSchema, treatmentCreateSchema, treatmentUpdateSchema, TREATMENT_CLEARABLE
 } from './clinical-validation.js';
 
 // Per-patient clinical chart: odontogram, medications, perio, treatment plan, lab cases.
@@ -147,7 +147,8 @@ clinicalRouter.post('/api/treatment-plan', route((req: Request, res: Response) =
 }));
 
 clinicalRouter.put('/api/treatment-plan/:id', route((req: Request, res: Response) => {
-  const changes = parse(treatmentUpdateSchema, req.body);
+  const changes: Record<string, unknown> = parse(treatmentUpdateSchema, req.body);
+  for (const field of TREATMENT_CLEARABLE) if (req.body?.[field] === null) changes[field] = undefined;
   if (!patientDb.getTreatmentPlanForActivePatient().some(i => i.id === String(req.params.id))) {
     throw new HttpError(404, 'Acte du plan de traitement introuvable.');
   }

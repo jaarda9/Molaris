@@ -125,9 +125,13 @@ export const treatmentUpdateSchema = z.object({
   toothId: optional(toothId),
   priority: z.enum(TREATMENT_PRIORITIES, { message: 'priorité inconnue' }).optional(),
   status: z.enum(TREATMENT_STATUSES, { message: 'statut inconnu' }).optional(),
+  cdtCode: optional(text(40)),
   estimatedCost: optional(estimatedCost),
   notes: optional(text(2000))
 });
+
+/** Plan fields an edit may empty: sent as null (a blank means "unchanged" elsewhere). */
+export const TREATMENT_CLEARABLE = ['toothId', 'cdtCode', 'estimatedCost', 'notes'] as const;
 
 // --- Lab cases ------------------------------------------------------------------------
 

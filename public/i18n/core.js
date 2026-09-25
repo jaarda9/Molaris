@@ -344,6 +344,8 @@ window.MOLARIS_TRANSLATIONS = {
     "treatment.totalDone": "Done:",
     "treatment.chartStillCaries": "Tooth {tooth} is still charted as \"Active caries\" on the odontogram.",
     "treatment.updateChart": "Update the tooth",
+    "treatment.edit": "Edit",
+    "treatment.editTitle": "Edit treatment plan item",
 
     // Medications
     "meds.title": "Medications",
@@ -435,6 +437,7 @@ window.MOLARIS_TRANSLATIONS = {
     "patients.allergiesPlaceholder": "e.g. Penicillin, latex, none known",
     "patients.importDone": "Import: {imported} chart(s) added, {skipped} already here (left unchanged), {invalid} invalid (ignored).",
     "patients.importFailed": "Import failed:",
+    "patients.duplicateConfirm": "A chart already exists: {name} ({chart}, {phone}). Create a second chart anyway?\n\nTo see the existing one, cancel and search for it in Patients.",
     "perio.notesPlaceholder": "Chart notes (optional)...",
     "perio.bleedingTitle": "Bleeding on probing",
     "perio.absentTitle": "Missing or unerupted on the odontogram: not probed",
@@ -829,6 +832,8 @@ window.MOLARIS_TRANSLATIONS = {
     "treatment.totalDone": "Réalisé :",
     "treatment.chartStillCaries": "La dent {tooth} est encore notée « Carie active » sur l’odontogramme.",
     "treatment.updateChart": "Mettre à jour la dent",
+    "treatment.edit": "Modifier",
+    "treatment.editTitle": "Modifier l’acte du plan de traitement",
 
     // Médicaments
     "meds.title": "Médicaments",
@@ -920,6 +925,7 @@ window.MOLARIS_TRANSLATIONS = {
     "patients.allergiesPlaceholder": "ex. Pénicilline, latex, aucune connue",
     "patients.importDone": "Import : {imported} dossier(s) ajouté(s), {skipped} déjà présent(s) (non modifiés), {invalid} invalide(s) (ignorés).",
     "patients.importFailed": "Échec de l’import :",
+    "patients.duplicateConfirm": "Un dossier existe déjà : {name} ({chart}, {phone}). Créer quand même un second dossier ?\n\nPour ouvrir le dossier existant, annulez et recherchez-le dans Patients.",
     "perio.notesPlaceholder": "Notes du relevé (facultatif)...",
     "perio.bleedingTitle": "Saignement au sondage",
     "perio.absentTitle": "Dent absente ou incluse sur l’odontogramme : non sondée",

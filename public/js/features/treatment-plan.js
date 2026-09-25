@@ -117,6 +117,9 @@ function renderTreatmentPlanList() {
           <option value="completed">${getTreatmentStatusLabel('completed', isFr)}</option>
           <option value="declined">${getTreatmentStatusLabel('declined', isFr)}</option>
         </select>
+        <button class="btn-edit-treatment-item p-2 rounded-lg bg-slate-100 hover:bg-teal-100 dark:bg-slate-800 dark:hover:bg-teal-950/60 text-slate-500 hover:text-teal-700 dark:hover:text-teal-300" title="${escapeHtml(molarisT('treatment.edit'))}">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+        </button>
         <button class="btn-delete-treatment-item p-2 rounded-lg bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400" title="${isFr ? 'Supprimer' : 'Delete'}">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6"></polyline>
@@ -159,6 +162,8 @@ function renderTreatmentPlanList() {
       if (tooth) selectTooth(tooth);
     });
 
+    row.querySelector('.btn-edit-treatment-item')?.addEventListener('click', () => openTreatmentItemForm(item));
+
     row.querySelector('.btn-delete-treatment-item')?.addEventListener('click', async () => {
       if (!confirm(molarisT('treatment.deleteConfirm'))) return;
       try {
@@ -175,6 +180,29 @@ function renderTreatmentPlanList() {
   });
 }
 
+// The add form doubles as the edit form (a typo in an act or its cost, even once done).
+let editingTreatmentItem = null;
+
+function openTreatmentItemForm(item = null) {
+  const form = document.getElementById('treatment-item-form');
+  const modal = document.getElementById('modal-treatment-item');
+  editingTreatmentItem = item;
+  form.reset();
+  fillFdiToothSelect(document.getElementById('form-treatment-tooth'));
+  const title = modal.querySelector('[data-i18n="treatment.modalTitle"]');
+  if (title) title.textContent = molarisT(item ? 'treatment.editTitle' : 'treatment.modalTitle');
+  if (item) {
+    document.getElementById('form-treatment-tooth').value = item.toothId ? String(item.toothId) : '';
+    document.getElementById('form-treatment-procedure').value = item.procedure || '';
+    document.getElementById('form-treatment-cdt').value = item.cdtCode || '';
+    document.getElementById('form-treatment-priority').value = item.priority || 'routine';
+    document.getElementById('form-treatment-cost').value = item.estimatedCost != null && item.estimatedCost !== ''
+      ? Molaris.format.tnd(Math.round(Number(item.estimatedCost) * 1000)).replace(/\s*DT$/, '') : '';
+    document.getElementById('form-treatment-notes').value = item.notes || '';
+  }
+  modal.classList.remove('hidden');
+}
+
 function initTreatmentPlanManager() {
   const addBtn = document.getElementById('btn-add-treatment-item');
   const modal = document.getElementById('modal-treatment-item');
@@ -186,13 +214,7 @@ function initTreatmentPlanManager() {
   // The odontogram may have changed since the list was drawn (charting reminders above).
   Molaris.events.on('view-shown', ({ view }) => { if (view === 'treatment') renderTreatmentPlanList(); });
 
-  if (addBtn) {
-    addBtn.addEventListener('click', () => {
-      form.reset();
-      fillFdiToothSelect(document.getElementById('form-treatment-tooth'));
-      modal.classList.remove('hidden');
-    });
-  }
+  if (addBtn) addBtn.addEventListener('click', () => openTreatmentItemForm());
   if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
   if (cancelBtn) cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
 
@@ -214,9 +236,13 @@ function initTreatmentPlanManager() {
       estimatedCost: costMillimes !== undefined ? costMillimes / 1000 : undefined,
       notes: document.getElementById('form-treatment-notes').value.trim() || undefined
     };
+    // On edit, an emptied optional field is sent as null so it is really cleared.
+    if (editingTreatmentItem) {
+      for (const key of ['toothId', 'cdtCode', 'estimatedCost', 'notes']) if (payload[key] === undefined) payload[key] = null;
+    }
     try {
-      const res = await fetch('/api/treatment-plan', {
-        method: 'POST',
+      const res = await fetch(editingTreatmentItem ? `/api/treatment-plan/${encodeURIComponent(editingTreatmentItem.id)}` : '/api/treatment-plan', {
+        method: editingTreatmentItem ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });

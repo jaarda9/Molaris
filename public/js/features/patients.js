@@ -401,6 +401,17 @@ function initPatientManager() {
         allergies: document.getElementById('form-patient-allergies').value.trim(),
       };
 
+      // A second chart for the same person splits their history: ask when the name (accents
+      // and case ignored) or the phone number is already on a chart. Namesakes stay possible.
+      if (!patientId) {
+        const plain = (s) => String(s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim();
+        const digits = (s) => String(s || '').replace(/\D/g, '').slice(-8);
+        const same = (systemState.patients || []).find(p => plain(p.name) === plain(payload.name)
+          || (digits(payload.phone).length === 8 && digits(p.phone) === digits(payload.phone)));
+        if (same && !confirm(molarisT('patients.duplicateConfirm')
+          .replace('{name}', same.name).replace('{chart}', same.chartId).replace('{phone}', same.phone || '—'))) return;
+      }
+
       try {
         let res;
         if (patientId) {
