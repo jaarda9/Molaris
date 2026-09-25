@@ -59,13 +59,12 @@ function updateSidebarPreferences(prefs) {
   if (prefs.doctorName) {
     document.getElementById('side-doc-name').textContent = prefs.doctorName;
   }
-  if (prefs.bondingSystem) {
-    document.getElementById('side-pref-bonding').textContent = prefs.bondingSystem.slice(0, 22) + '...';
-  }
-  if (prefs.rotarySystem) {
-    document.getElementById('side-pref-rotary').textContent = prefs.rotarySystem.slice(0, 22);
-  }
-  if (prefs.implantSystem) {
-    document.getElementById('side-pref-implant').textContent = prefs.implantSystem.slice(0, 22);
-  }
+  // Full value; the panel truncates with an ellipsis only when it does not fit (hover shows it all).
+  const show = (id, value) => {
+    const el = document.getElementById(id);
+    if (el && value) { el.textContent = value; el.title = value; }
+  };
+  show('side-pref-bonding', prefs.bondingSystem);
+  show('side-pref-rotary', prefs.rotarySystem);
+  show('side-pref-implant', prefs.implantSystem);
 }
