@@ -49,6 +49,8 @@ The interface is in French (English available); patient documents print in Frenc
   sex, weight, ASA class, **Risque cardiaque** (caps adrenaline at 0.04 mg), reason for visit,
   medical history and alerts, allergies, phone (WhatsApp), CNAM identifier and status
   (assuré, conjoint, enfant, ascendant).
+- If a chart already exists with the same name or phone number, the app says so before
+  creating a second one.
 - **Ouvrir le dossier** makes a patient the active patient.
 - Data tools: **Exporter les dossiers (JSON)**, **Importer des dossiers**, and
   **Sauvegarde complète** (a full copy of the database — agenda, billing, prescriptions,
@@ -113,6 +115,7 @@ The interface is in French (English available); patient documents print in Frenc
 - **Ajouter un acte**: tooth, procedure, optional CNAM code, priority (Urgent / Élevée /
   Routine / Optionnel), estimated cost, notes.
 - Status **Proposé → Accepté → En cours → Terminé** (or **Refusé**).
+- **Modifier** (pencil) button: correct the act, tooth, code, priority, cost or notes.
 - Totals: **Reste à réaliser** and **Réalisé**.
 - A finished act on a tooth still charted « Carie active » says so, with a **Mettre à jour la
   dent** button.
@@ -128,6 +131,7 @@ The interface is in French (English available); patient documents print in Frenc
 - Track crowns, bridges, dentures, appliances: tooth, type, material, shade, margin, lab, due date.
 - Status **Planifié → Envoyé → Au laboratoire → Retourné → Posé** (or **À refaire**); the dates
   sent / received / fitted are recorded automatically.
+- **Modifier** button: new due date from the lab, shade, material, notes.
 - **En retard** and **Échéance proche** badges.
 
 ---
@@ -161,6 +165,7 @@ Patient names and chart numbers are removed before anything is sent to the AI.
   « [à compléter] » — it never invents facts.
 - Edit it, then **Signer et enregistrer au dossier**. A signed note is permanent; corrections are
   added as a dated **Addendum**.
+- Before signing, the app points out any « [à compléter] » gaps left.
 - **Comptes-rendus signés**: the patient's note history.
 
 ---
@@ -171,6 +176,8 @@ Patient names and chart numbers are removed before anything is sent to the AI.
 - **Dose calculator**: choose the anaesthetic, patient weight, cardiac risk → maximum carpules,
   maximum mg, remaining carpules, limiting factor.
 - **+1 carpule injectée** to count during the procedure; doses already logged today are included.
+- **Enregistrer au dossier**: records the injected carpules in the patient's chart (day total, used
+  by the SOAP note).
 - Reference cards: **endocarditis antibiotic prophylaxis** (ESC 2023 + Tunisian consensus) and
   **post-operative pain relief** (non-opioid).
 - Always marked « Calcul indicatif : vérifier le RCP ».

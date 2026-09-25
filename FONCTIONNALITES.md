@@ -54,6 +54,8 @@ en français et/ou en arabe.
   naissance, sexe, poids, classe ASA, **Risque cardiaque** (plafonne l’adrénaline à 0,04 mg),
   motif de consultation, antécédents et alertes médicales, allergies, téléphone (WhatsApp),
   identifiant et qualité CNAM (assuré, conjoint, enfant, ascendant).
+- Si un dossier existe déjà au même nom ou au même numéro de téléphone, le logiciel le signale
+  avant d’en créer un second.
 - **Ouvrir le dossier** fait de ce patient le patient actif.
 - Outils de données : **Exporter les dossiers (JSON)**, **Importer des dossiers** et
   **Sauvegarde complète** (copie complète de la base — agenda, facturation, ordonnances,
@@ -122,6 +124,7 @@ en français et/ou en arabe.
 - **Ajouter un acte** : dent, acte, code CNAM facultatif, priorité (Urgent / Élevée / Routine /
   Optionnel), coût estimé, notes.
 - Statuts **Proposé → Accepté → En cours → Terminé** (ou **Refusé**).
+- Bouton **Modifier** (crayon) : corriger l’acte, la dent, le code, la priorité, le coût ou les notes.
 - Totaux : **Reste à réaliser** et **Réalisé**.
 - Un acte terminé sur une dent encore notée « Carie active » le signale, avec un bouton
   **Mettre à jour la dent**.
@@ -140,6 +143,7 @@ en français et/ou en arabe.
   laboratoire, échéance.
 - Statuts **Planifié → Envoyé → Au laboratoire → Retourné → Posé** (ou **À refaire**) ; les dates
   d’envoi, de retour et de pose sont enregistrées automatiquement.
+- Bouton **Modifier** : nouvelle échéance donnée par le laboratoire, teinte, matériau, notes.
 - Badges **En retard** et **Échéance proche**.
 
 ---
@@ -175,6 +179,7 @@ Les noms des patients et les n° de dossier sont retirés avant tout envoi à l�
   apparaissent en « [à compléter] » : elle n’invente rien.
 - Relisez, corrigez, puis **Signer et enregistrer au dossier**. Un compte-rendu signé est
   définitif ; les corrections s’ajoutent en **Addendum** daté.
+- Avant la signature, le logiciel signale les mentions « [à compléter] » restantes.
 - **Comptes-rendus signés** : l’historique des comptes-rendus du patient.
 
 ---
@@ -186,6 +191,8 @@ Les noms des patients et les n° de dossier sont retirés avant tout envoi à l�
   dose maximale (mg), carpules restantes, facteur limitant.
 - **+1 carpule injectée** pour compter pendant l’acte ; les doses déjà enregistrées aujourd’hui
   sont prises en compte.
+- **Enregistrer au dossier** : inscrit les carpules injectées dans le dossier du patient (total du
+  jour, repris dans le compte-rendu SOAP).
 - Fiches de référence : **antibioprophylaxie de l’endocardite** (ESC 2023 + consensus tunisien)
   et **antalgie post-opératoire** (non opioïde).
 - Toujours signalé « Calcul indicatif : vérifier le RCP ».
