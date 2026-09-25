@@ -1,6 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { openDatabase } from './connection.js';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import Database from 'better-sqlite3';
+import { migrate, openDatabase } from './connection.js';
 import { MIGRATIONS } from './migrations.js';
 import { nextDocumentNumber } from './counters.js';
 import { getClinicIdentity, setClinicIdentity } from './settings.js';
@@ -40,4 +44,23 @@ test('foreign keys are enforced: a quote cannot reference a missing patient', ()
     INSERT INTO quotes (id, number, patient_id, issued_at, created_at, updated_at)
     VALUES ('q1', 'DV-2026-0001', 'nobody', '2026-01-01', '2026-01-01', '2026-01-01')
   `).run(), /FOREIGN KEY/);
+});
+
+test('an existing database is copied to backups/ before a schema upgrade, not on a normal start', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'molaris-upgrade-'));
+  const file = path.join(dir, 'molaris.db');
+  const old = new Database(file);
+  migrate(old, MIGRATIONS.length - 1);   // as left by the previous version
+  old.close();
+
+  openDatabase(file).close();
+  const copies = fs.readdirSync(path.join(dir, 'backups'));
+  assert.equal(copies.length, 1);
+  assert.match(copies[0], new RegExp(`^molaris-avant-mise-a-jour-v${MIGRATIONS.length - 1}-`));
+  const snapshot = new Database(path.join(dir, 'backups', copies[0]), { readonly: true });
+  assert.equal(snapshot.pragma('user_version', { simple: true }), MIGRATIONS.length - 1);
+  snapshot.close();
+
+  openDatabase(file).close();            // already up to date: no new copy
+  assert.equal(fs.readdirSync(path.join(dir, 'backups')).length, 1);
 });
