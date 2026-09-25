@@ -38,7 +38,7 @@ patientsRouter.get('/api/status', (req: Request, res: Response) => {
 patientsRouter.get('/api/patients', (req: Request, res: Response) => {
   res.json({
     activePatientId: patientDb.getActivePatient().id,
-    patients: patientDb.getAllPatients()
+    patients: patientDb.getPatientSummaries()
   });
 });
 

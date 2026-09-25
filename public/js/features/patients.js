@@ -23,6 +23,8 @@ function genderLabel(gender, isFr) {
   return gender || '';
 }
 
+const PATIENT_GRID_LIMIT = 60;
+
 // Redraws (after a save, a patient switch, a language change) keep the search typed in the box.
 function renderPatientsGrid(filterText = document.getElementById('patient-search-input')?.value || '') {
   const grid = document.getElementById('patients-grid');
@@ -67,7 +69,13 @@ function renderPatientsGrid(filterText = document.getElementById('patient-search
 
   const isFr = systemState.language === 'fr';
   grid.innerHTML = '';
-  filtered.forEach(patient => {
+  // A few thousand cards take seconds to draw: show the open chart and the most recently
+  // updated ones, and let the search narrow down the rest.
+  const activeId = systemState.activePatient?.id;
+  const ordered = filtered.slice().sort((a, b) =>
+    (b.id === activeId) - (a.id === activeId) || String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+  const shown = ordered.slice(0, PATIENT_GRID_LIMIT);
+  shown.forEach(patient => {
     const isActive = systemState.activePatient && systemState.activePatient.id === patient.id;
     const card = document.createElement('div');
     card.className = `rounded-2xl border p-5 transition flex flex-col justify-between space-y-4 ${
@@ -77,10 +85,10 @@ function renderPatientsGrid(filterText = document.getElementById('patient-search
     }`;
     card.id = `patient-card-${patient.id}`;
 
-    // Calculate metrics
-    const teethWithFindings = (patient.odontogram || []).filter(t => t.status && t.status !== 'sound' && t.status !== 'unerupted').length;
-    const totalCarpulesGiven = (patient.anesthesiaLog || []).reduce((sum, item) => sum + (Number(item.carpules) || 0), 0);
-    const soapCount = (patient.soapNotes || []).length;
+    // Counters come with the list (it no longer carries whole charts).
+    const teethWithFindings = patient.teethCharted || 0;
+    const totalCarpulesGiven = patient.carpulesGiven || 0;
+    const soapCount = patient.soapCount || 0;
 
     // Initials
     const initials = patient.name
@@ -225,6 +233,12 @@ function renderPatientsGrid(filterText = document.getElementById('patient-search
 
     grid.appendChild(card);
   });
+  if (ordered.length > shown.length) {
+    const more = document.createElement('p');
+    more.className = 'col-span-full text-center text-xs text-slate-500 dark:text-slate-400 py-2';
+    more.textContent = molarisT('patients.moreHidden').replace('{n}', ordered.length - shown.length);
+    grid.appendChild(more);
+  }
 }
 
 async function selectPatient(patientId) {
@@ -347,8 +361,11 @@ function initPatientManager() {
   }
 
   if (searchInput) {
+    // Redrawn once typing pauses, not on every key.
+    let searchTimer = null;
     searchInput.addEventListener('input', (e) => {
-      renderPatientsGrid(e.target.value);
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => renderPatientsGrid(e.target.value), 150);
     });
   }
 

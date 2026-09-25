@@ -19,6 +19,15 @@ import { newId, nowIso } from '../db/ids.js';
 import { ageOn } from '../domain/age.js';
 import { scopedPatientId } from './patient-scope.js';
 
+/** One row of the patient list (see PatientRepository.getPatientSummaries). */
+export type PatientSummary = Pick<PatientRecord, 'id' | 'chartId' | 'name' | 'phone' | 'cnamId' | 'cnamQuality' | 'birthDate'
+  | 'age' | 'gender' | 'weightKg' | 'asaStatus' | 'cardiacRisk' | 'chiefComplaint' | 'medicalAlerts' | 'allergies' | 'updatedAt'> & {
+  medications: Array<{ id: string; name: string; active: true }>;
+  teethCharted: number;
+  carpulesGiven: number;
+  soapCount: number;
+};
+
 export interface PatientRecord {
   id: string;
   chartId: string;
@@ -438,6 +447,24 @@ export class PatientRepository {
 
   public getAllPatients(): PatientRecord[] {
     return [...this.patients.values()].map(withCurrentAge);
+  }
+
+  /**
+   * The patient list as screens need it (cards, search, pickers, prescription header):
+   * identity, medical summary, active medications and counters — not the whole chart
+   * (teeth, notes, logs, conversation), which made the list megabytes long.
+   */
+  public getPatientSummaries(): PatientSummary[] {
+    return this.getAllPatients().map(p => ({
+      id: p.id, chartId: p.chartId, name: p.name, phone: p.phone, cnamId: p.cnamId, cnamQuality: p.cnamQuality,
+      birthDate: p.birthDate, age: p.age, gender: p.gender, weightKg: p.weightKg, asaStatus: p.asaStatus,
+      cardiacRisk: p.cardiacRisk, chiefComplaint: p.chiefComplaint, medicalAlerts: p.medicalAlerts, allergies: p.allergies,
+      medications: (p.medications || []).filter(m => m.active).map(m => ({ id: m.id, name: m.name, active: true })),
+      teethCharted: (p.teeth || []).filter(t => t.status && t.status !== 'sound' && t.status !== 'unerupted').length,
+      carpulesGiven: Math.round((p.anesthesiaLog || []).reduce((sum, e) => sum + (Number(e.carpules) || 0), 0) * 10) / 10,
+      soapCount: (p.soapNotes || []).length,
+      updatedAt: p.updatedAt
+    }));
   }
 
   /**

@@ -191,3 +191,13 @@ test('a new chart number continues after the highest chart number of the year', 
   assert.equal(created.chartId, `${prefix}0121`);
   assert.equal(repo.createPatient({ name: 'Suivant', age: 30 }).chartId, `${prefix}0122`);
 });
+
+test('the patient list is a light summary with the card counters', () => {
+  const { repo } = freshRepo();
+  const mohamed = repo.getPatientSummaries().find(p => p.id === 'pt_1')!;
+  assert.equal('teeth' in mohamed, false);
+  assert.equal('consultHistory' in mohamed, false);
+  assert.ok(mohamed.teethCharted > 0);
+  assert.equal(mohamed.soapCount, repo.getPatientById('pt_1')!.soapNotes.length);
+  assert.ok(mohamed.medications.every(m => m.active));
+});
