@@ -97,12 +97,17 @@
     }
 
     /* FDI dental chart: 8 teeth | midline | 8 teeth per arch, one row per arch. */
-    .odonto-chart { min-width: 760px; }
+    /* 640px fits a 1024px laptop/tablet with the sidebar (32 teeth visible at once);
+       narrower phones scroll the chart sideways (hint above it). */
+    .odonto-chart { min-width: 640px; }
     .arch-row {
       display: grid;
       grid-template-columns: repeat(8, minmax(0, 1fr)) 2px repeat(8, minmax(0, 1fr));
-      column-gap: 0.375rem;
+      column-gap: 0.25rem;
     }
+    @media (min-width: 1280px) { .arch-row { column-gap: 0.375rem; } }
+    .odonto-scroll-hint { display: none; }
+    @media (max-width: 719px) { .odonto-scroll-hint { display: block; } }
     .arch-midline { background-color: #64748b; align-self: stretch; margin: -0.25rem 0; }
     .arch-occlusal { height: 2px; background-color: #64748b; margin: 0.25rem 0; }
     .dark .arch-midline, .dark .arch-occlusal { background-color: #94a3b8; }
@@ -558,7 +563,7 @@
         <div class="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <form id="chat-form" class="flex items-center gap-2">
             <!-- Voice Dictation Button -->
-            <button type="button" id="mic-btn" class="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center justify-center" title="Hands-free voice dictation" data-i18n-title="chat.micTooltip">
+            <button type="button" id="mic-btn" class="shrink-0 p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center justify-center" title="Hands-free voice dictation" data-i18n-title="chat.micTooltip">
               <svg id="mic-icon" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
                 <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
@@ -568,11 +573,11 @@
             </button>
 
             <!-- Text Input -->
-            <input type="text" id="chat-input" placeholder="Ask a clinical question (e.g. 'Anesthetizing a hot 46?' or 'DME vs crown lengthening')..." data-i18n-placeholder="chat.inputPlaceholder" class="flex-1 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400">
+            <input type="text" id="chat-input" placeholder="Ask a clinical question (e.g. 'Anesthetizing a hot 46?' or 'DME vs crown lengthening')..." data-i18n-placeholder="chat.inputPlaceholder" class="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400">
 
             <!-- Send Button -->
-            <button type="submit" id="send-chat-btn" class="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium text-sm transition flex items-center space-x-1.5 shadow-sm shadow-teal-600/30">
-              <span data-i18n="chat.sendBtn">Ask</span>
+            <button type="submit" id="send-chat-btn" title="Send" data-i18n-title="chat.sendBtn" class="shrink-0 px-3 sm:px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium text-sm transition flex items-center space-x-1.5 shadow-sm shadow-teal-600/30">
+              <span data-i18n="chat.sendBtn" class="hidden sm:inline">Ask</span>
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="22" y1="2" x2="11" y2="13"></line>
                 <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -725,6 +730,7 @@
 
         <!-- FDI dental chart as used in Tunisia: patient's right on the left of the screen.
              Upper: 18→11 | 21→28, lower: 48→41 | 31→38, numbers along the occlusal plane. -->
+        <p class="odonto-scroll-hint text-[11px] text-slate-500 dark:text-slate-400 mb-1" data-i18n="odonto.scrollHint">Swipe sideways to see the whole chart →</p>
         <div class="overflow-x-auto">
           <div class="odonto-chart space-y-1">
             <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400">
