@@ -106,6 +106,9 @@ function initSOAPGenerator() {
 
   // Sign = the reviewed text becomes a signed (immutable) note of the open chart.
   signBtn?.addEventListener('click', async () => {
+    // Gaps the AI could not fill must be completed or deliberately left before signing.
+    const gaps = (output.value.match(/\[\s*(à compléter|to be completed)\s*\]/gi) || []).length;
+    if (gaps && !confirm(molarisT('soap.gapsConfirm').replace('{n}', gaps))) return;
     if (!confirm(molarisT('soap.signConfirm'))) return;
     signBtn.disabled = true;
     try {

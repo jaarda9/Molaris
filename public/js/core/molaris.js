@@ -139,6 +139,9 @@ Molaris.ui = {
    * Opens a modal containing a <form>. `bodyHtml` holds the form fields.
    * onSubmit(formData, { close, setError }) may be async; throw to show an error.
    */
+  /** Open modals, topmost last (Escape closes only the topmost). */
+  _modals: [],
+
   modal({ title, bodyHtml, submitLabel, onSubmit, wide = false }) {
     const isFr = Molaris.isFr();
     const overlay = document.createElement('div');
@@ -158,15 +161,30 @@ Molaris.ui = {
           </div>
         </form>
       </div>`;
-    const close = () => overlay.remove();
+    const onKey = (e) => { if (e.key === 'Escape' && Molaris.ui._modals.at(-1) === overlay) dismiss(); };
+    const close = () => {
+      overlay.remove();
+      document.removeEventListener('keydown', onKey);
+      Molaris.ui._modals = Molaris.ui._modals.filter(m => m !== overlay);
+    };
+    // Escape or a click beside the dialog closes it, but never silently drops typed data
+    // (a stray click must not lose a 10-line quote).
+    let dirty = false;
+    const dismiss = () => {
+      if (!dirty || window.confirm(isFr ? 'Fermer sans enregistrer ?' : 'Close without saving?')) close();
+    };
     const errorBox = overlay.querySelector('[data-error]');
     const setError = (message) => {
       errorBox.textContent = message || '';
       errorBox.classList.toggle('hidden', !message);
     };
     overlay.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', close));
-    overlay.addEventListener('mousedown', e => { if (e.target === overlay) close(); });
+    overlay.addEventListener('mousedown', e => { if (e.target === overlay) dismiss(); });
     const form = overlay.querySelector('form');
+    form.addEventListener('input', () => { dirty = true; });
+    form.addEventListener('change', () => { dirty = true; });
+    document.addEventListener('keydown', onKey);
+    Molaris.ui._modals.push(overlay);
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       setError('');

@@ -17,6 +17,7 @@ import { detectImageType } from '../domain/image-type.js';
 import { HttpError, languageOf, parse, route } from './http.js';
 import { z } from 'zod';
 import { toothId as toothIdSchema } from './clinical-validation.js';
+import { cleanSoapDraft } from '../ai/soap-draft.js';
 import { historyForModel } from '../ai/chat-history.js';
 
 const MAX_QUESTION_CHARS = 4000;
@@ -149,14 +150,20 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     const contents = history.turns;
     contents.push({ role: 'user', parts: [{ text: `${contextPrompt}\nDoctor asks: ${safeMessage}` }] });
 
-    const result = await callGeminiWithResilience({
+    const ask = (withTools: boolean) => callGeminiWithResilience({
       preferredModel: 'gemini-3.8-flash',
       contents,
       config: {
         systemInstruction: MOLARIS_SYSTEM_PROMPT, temperature: 0.35, maxOutputTokens: 1500,
-        ...(offerTools ? { tools: [{ functionDeclarations: ASSISTANT_TOOLS }] } : {})
+        ...(withTools ? { tools: [{ functionDeclarations: ASSISTANT_TOOLS }] } : {})
       }
     });
+    let result = await ask(offerTools);
+    // Reading the open chart's file is not an answer: its data is already in the prompt.
+    // When that is all the model did, ask again without tools for the clinical answer.
+    const readsActiveFileOnly = result.functionCalls.length > 0 && result.functionCalls.every(call =>
+      call.name === 'get_patient_summary' && [undefined, '', 'ACTIVE'].includes(call.args?.patient as string | undefined));
+    if (readsActiveFileOnly) result = await ask(false);
 
     // Tool calls: reads are answered from the local data, writes come back as a proposal to confirm.
     let proposal: Proposal | undefined;
@@ -262,7 +269,19 @@ aiRouter.post('/api/analyze-image', aiLimiter, upload.single('image'), async (re
     // toothId is the internal (Universal) id; the model is only given the FDI number.
     const focusTooth = toothNumber ? findPatientTooth(activePatient, Number(toothNumber)) : null;
 
-    let visionPrompt = `
+    // The screen's two sample cases are schematic drawings made for demonstrations: the model
+    // is told so, and walks through them as a labelled teaching exercise instead of refusing.
+    const sampleNote = req.body.sample === '1'
+      ? (language === 'fr'
+        ? `
+CETTE IMAGE EST UN SCHÉMA PÉDAGOGIQUE fourni par le logiciel pour la démonstration, PAS une radiographie de patient. Ne la refusez pas : commencez par « Exemple pédagogique — schéma, pas une radiographie réelle », décrivez ce que le schéma représente (formes sombres = zones radioclaires), puis suivez la structure ci-dessous comme exercice, en rappelant qu'aucune conclusion clinique ne peut en être tirée.
+`
+        : `
+THIS IMAGE IS A SCHEMATIC TEACHING DRAWING supplied by the software for demonstrations, NOT a patient radiograph. Do not refuse it: start with "Teaching example — schematic, not a real radiograph", describe what the drawing depicts (dark shapes = radiolucent areas), then follow the structure below as an exercise, recalling that no clinical conclusion can be drawn from it.
+`)
+      : '';
+
+    let visionPrompt = `${sampleNote}
 Read this dental radiograph or intraoral image as a decision-support aid for the treating dentist (Tunisia).
 Everything you report is a finding to be confirmed by the dentist, not a diagnosis.
 FIRST check the image: if it is not a dental radiograph or intraoral photograph, or it is too blurred, dark,
@@ -287,7 +306,7 @@ State the limits of reading a single image.
 `;
 
     if (language === 'fr') {
-      visionPrompt += `\n[DIRECTIVE DE LANGUE OBLIGATOIRE] : Rédigez l'ensemble du rapport exclusivement en français odontologique professionnel (numérotation FDI, médicaments en DCI), intitulés des sections compris.\n`;
+      visionPrompt += `\n[DIRECTIVE DE LANGUE OBLIGATOIRE] : Rédigez l'ensemble du rapport exclusivement en français odontologique professionnel (numérotation FDI, médicaments en DCI), intitulés des sections compris : 1. **Type et qualité de l'image** 2. **Constatations radiographiques / cliniques** 3. **Hypothèses diagnostiques à confirmer** 4. **Options thérapeutiques à discuter** 5. **⚠️ Signaux d'alerte et précautions au fauteuil**.\n`;
     } else {
       visionPrompt += `\n[LANGUAGE DIRECTIVE]: write the whole report in English.\n`;
     }
@@ -407,6 +426,9 @@ aiRouter.post('/api/generate-soap', aiLimiter, async (req: Request, res: Respons
     const anesthesia = anesthesiaUsed
       || (loggedToday ? `${loggedToday} (${fr ? 'journal d’anesthésie du jour' : 'today’s anesthesia log'})` : missing);
 
+    const now = new Date();
+    const today = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Tunis', day: '2-digit', month: '2-digit', year: 'numeric' }).format(now);
+
     let soapPrompt = '';
     if (language === 'fr') {
       soapPrompt = `
@@ -418,12 +440,14 @@ DÉTAILS CLINIQUES : ${details || missing}
 ANESTHÉSIE LOCALE : ${anesthesia}
 MATÉRIAUX UTILISÉS : ${materialsUsed || missing}
 PATIENT (anonymisé) : ${activePatient.age} ans | Statut ASA: ${activePatient.asaStatus} | Poids: ${activePatient.weightKg}kg | Alertes: ${activePatient.medicalAlerts}
+DATE DE LA SÉANCE : ${today}
 
+Le texte est enregistré tel quel dans le dossier médical : commencez directement par la ligne « **Date :** ${today} », sans phrase d'introduction ni de conclusion, sans séparateur, sans ligne « Patient ».
 Rédigez STRICTEMENT en français professionnel (dents en numérotation FDI, médicaments en DCI) selon la structure suivante.
 N'inventez aucune constatation, mesure ou valeur qui ne figure pas ci-dessus : écrivez « [à compléter] » à la place.
 N'affirmez jamais qu'un geste a été fait (digue, test d'aspiration, contrôle occlusal, consentement…) ni qu'il n'y a pas eu de complication si ce n'est pas indiqué ci-dessus : « [à compléter] ».
 - **Date** (n'inventez aucun nom ni identifiant : l'identité du patient est ajoutée par le logiciel)
-- **S (Subjectif)** : Motif de consultation, anamnèse médicale vérifiée, évaluation de la douleur (EVA 0-10), recueil du consentement éclairé du patient.
+- **S (Subjectif)** : Motif de consultation, anamnèse médicale, évaluation de la douleur (EVA 0-10), consentement éclairé — chacun « [à compléter] » s'il n'est pas indiqué ci-dessus.
 - **O (Objectif)** : Examen clinique visuel, tests de vitalité pulpaire (froid, test électrique, percussion axiale/latérale, palpation vestibulaire, sondage parodontal), constatations radiologiques pré-opératoires.
 - **A (Analyse)** : Diagnostic pulpaire et péri-apical retenu par le praticien, argumenté.
 - **P (Plan de traitement & Déroulement de l'Acte)** :
@@ -446,12 +470,14 @@ CLINICAL DETAILS: ${details || missing}
 LOCAL ANESTHESIA: ${anesthesia}
 MATERIALS: ${materialsUsed || missing}
 PATIENT (anonymized): ${activePatient.age}y | ASA: ${activePatient.asaStatus} | Weight: ${activePatient.weightKg}kg | Alerts: ${activePatient.medicalAlerts}
+VISIT DATE: ${today}
 
+The text is saved as is in the medical record: start directly with the line "**Date:** ${today}", with no introduction or closing remark, no separator, no "Patient" line.
 Write in English (FDI tooth numbers, drugs by INN/generic name), formatted strictly as below.
 Do not invent any finding, measurement or value that is not given above: write "[to be completed]" instead.
 Never state that a step was done (rubber dam, aspiration test, occlusal check, consent…) or that there was no complication unless it is given above: "[to be completed]".
 - **Date** (do not invent any name or ID: patient identity is attached by the software)
-- **S (Subjective)**: Chief complaint, medical history reviewed, pain score, informed consent obtained.
+- **S (Subjective)**: Chief complaint, medical history, pain score, informed consent — each "[to be completed]" unless given above.
 - **O (Objective)**: Clinical examination, vitality tests (cold, EPT, percussion, palpation, periodontal probing depths), pre-op radiograph findings.
 - **A (Assessment)**: Pulpal & periapical diagnosis retained by the dentist, with its rationale.
 - **P (Plan & Procedure Performed)**:
@@ -473,7 +499,7 @@ Never state that a step was done (rubber dam, aspiration test, occlusal check, c
     });
 
     const isFr = language === 'fr';
-    const noteText = result.text || (isFr ? 'Compte-rendu SOAP généré.' : 'Clinical SOAP note generated.');
+    const noteText = cleanSoapDraft(result.text, today) || (isFr ? 'Compte-rendu SOAP généré.' : 'Clinical SOAP note generated.');
 
     // A DRAFT only: an AI text is never signed into the medical record by itself.
     // The dentist reviews/edits it, then signs it (POST /api/soap/notes).

@@ -64,12 +64,35 @@ function initNavigation() {
   });
   document.getElementById('sidebar-backdrop')?.addEventListener('click', closeMobileNav);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMobileNav(); });
+  initLegacyModalEscape();
 
   // Landing view: the one open before a reload, otherwise the day's agenda.
   let startId = 'nav-tab-agenda';
   try { startId = sessionStorage.getItem('molaris_view') || startId; } catch (e) { /* storage unavailable */ }
   const start = document.getElementById(startId);
   (start && !start.classList.contains('hidden') ? start : document.getElementById('nav-tab-advisor'))?.click();
+}
+
+// The page's own dialogs (patient, treatment act, medication, lab case, perio tooth) close
+// with Escape through their × button (so their close logic runs), asking first when
+// something was typed since they opened.
+function initLegacyModalEscape() {
+  const modals = [...document.querySelectorAll('[id^="modal-"].fixed')];
+  modals.forEach(modal => {
+    const markDirty = () => { modal.dataset.dirty = '1'; };
+    modal.addEventListener('input', markDirty);
+    modal.addEventListener('change', markDirty);
+    new MutationObserver(() => { if (!modal.classList.contains('hidden')) delete modal.dataset.dirty; })
+      .observe(modal, { attributes: true, attributeFilter: ['class'] });
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || Molaris.ui._modals.length) return;
+    const open = modals.find(m => !m.classList.contains('hidden'));
+    if (!open) return;
+    if (open.dataset.dirty && !window.confirm(Molaris.isFr() ? 'Fermer sans enregistrer ?' : 'Close without saving?')) return;
+    const closeBtn = open.querySelector('[id^="btn-close-modal"]');
+    if (closeBtn) closeBtn.click(); else open.classList.add('hidden');
+  });
 }
 
 function closeMobileNav() {

@@ -46,6 +46,19 @@ const ALLERGY_STOPWORDS = new Set([
   'choc', 'asthme', 'aussi', 'suspectee', 'suspicion', 'enfance', 'depuis'
 ]);
 
+/** Vitamin K antagonists (AVK): the ones whose effect is followed by the INR. */
+const VITAMIN_K_ANTAGONISTS = ['warfarin', 'coumadin', 'acenocoumarol', 'sintrom', 'fluindione', 'previscan'];
+
+/** True when the drug name is an anticoagulant or an antiplatelet (aspirin included). */
+export function isAnticoagulant(drugName: string): boolean {
+  return containsAny(drugName, ANTICOAGULANTS);
+}
+
+/** True when the drug name is a vitamin K antagonist (AVK). */
+export function isVitaminKAntagonist(drugName: string): boolean {
+  return containsAny(drugName, VITAMIN_K_ANTAGONISTS);
+}
+
 /** True when the drug name is an NSAID (aspirin included). */
 export function isNsaid(drugName: string): boolean {
   return containsAny(drugName, NSAIDS) || containsAny(drugName, ASPIRIN);

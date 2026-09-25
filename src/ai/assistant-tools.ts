@@ -551,5 +551,5 @@ export function toolInstructions(lang: Lang, now: Date = new Date()): string {
     `- Patients are referred to by codes (ACTIVE = the open chart; P1, P2… = patients named by the doctor). Never ask for or write a name.\n` +
     `- A pronoun or follow-up (il, elle, son, sa, « et ses paiements ? ») means the patient of the previous exchange, even when it is not ACTIVE.\n` +
     `- When the doctor asks for practice data (balance/solde, devis, paiements, recette, rendez-vous, allergies, traitements) or asks you to do something (créer un devis, encaisser, prendre rendez-vous, noter une dent, ajouter un médicament, ouvrir un dossier), CALL THE MATCHING TOOL instead of answering in text. Never invent figures.\n` +
-    `- For clinical questions, answer normally without tools.\n`;
+    `- For clinical questions (précautions, conduite à tenir, diagnostic, posologie, anesthésie…), answer normally without tools. The ACTIVE patient's file is already given above: never call get_patient_summary for ACTIVE to answer a clinical question.\n`;
 }

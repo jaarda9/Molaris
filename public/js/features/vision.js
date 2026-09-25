@@ -88,6 +88,7 @@ function initVisionUploader() {
         formData.append('image', currentImageFile);
         formData.append('query', query);
         formData.append('language', systemState.language || 'fr');
+        if (currentImageFile.molarisSample) formData.append('sample', '1');
         if (systemState.selectedTooth) {
           formData.append('toothId', systemState.selectedTooth.id);
         }
@@ -205,6 +206,7 @@ function loadSampleDentalImage(caseType) {
 
   canvas.toBlob((blob) => {
     const file = new File([blob], `${caseType}-radiograph.png`, { type: 'image/png' });
+    file.molarisSample = true; // a drawing, not a patient radiograph (told to the AI)
     currentImageFile = file;
     const imagePreview = document.getElementById('image-preview');
     imagePreview.src = canvas.toDataURL();

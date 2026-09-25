@@ -23,7 +23,8 @@ function genderLabel(gender, isFr) {
   return gender || '';
 }
 
-function renderPatientsGrid(filterText = '') {
+// Redraws (after a save, a patient switch, a language change) keep the search typed in the box.
+function renderPatientsGrid(filterText = document.getElementById('patient-search-input')?.value || '') {
   const grid = document.getElementById('patients-grid');
   const countBadge = document.getElementById('patient-count-badge');
   if (!grid) return;
