@@ -7,17 +7,28 @@ const SOAP_EXAMPLE_FIELDS = [
   ['soap-input-materials', 'soap.exampleMaterials'],
   ['soap-input-outcome', 'soap.exampleOutcome']
 ];
-const SOAP_EXAMPLE_TOOTH_ID = 30; // FDI 46 (internal ids are Universal)
-
-// Pre-fills a worked example in the UI language, and swaps it on a language
-// change as long as the doctor has not typed over it.
-function fillSOAPExample(previousLang) {
+// The worked example is a hint (placeholder), never a value: an example anesthesia or
+// material left in a field would end up in a signed medical record.
+function showSOAPExampleHints() {
   SOAP_EXAMPLE_FIELDS.forEach(([id, key]) => {
     const el = document.getElementById(id);
-    if (!el) return;
-    const untouched = el.value === '' || (previousLang && el.value === molarisT(key, previousLang));
-    if (untouched) el.value = molarisT(key);
+    if (el) el.placeholder = molarisT(key);
   });
+}
+
+// Empties the form and the draft: after signing, and when another chart is opened
+// (a draft of the previous patient must never be signed into the new one).
+function resetSOAPForm() {
+  SOAP_EXAMPLE_FIELDS.forEach(([id]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const toothSelect = document.getElementById('soap-input-tooth');
+  if (toothSelect) toothSelect.value = '';
+  const output = document.getElementById('soap-output-area');
+  if (output) output.value = '';
+  const signBtn = document.getElementById('sign-soap-btn');
+  if (signBtn) signBtn.disabled = true;
 }
 
 function refreshSOAPToothSelect(toothSelect) {
@@ -31,16 +42,14 @@ function initSOAPGenerator() {
   const copyBtn = document.getElementById('copy-soap-btn');
   const toothSelect = document.getElementById('soap-input-tooth');
 
-  fillSOAPExample();
+  showSOAPExampleHints();
   if (toothSelect) {
     fillFdiToothSelect(toothSelect);
-    toothSelect.value = String(SOAP_EXAMPLE_TOOTH_ID);
+    toothSelect.value = '';
   }
 
-  let currentLang = systemState.language;
-  Molaris.events.on('language-changed', ({ language }) => {
-    fillSOAPExample(currentLang);
-    currentLang = language;
+  Molaris.events.on('language-changed', () => {
+    showSOAPExampleHints();
     if (toothSelect) refreshSOAPToothSelect(toothSelect);
   });
   // Tooth names are only known once the odontogram has loaded.
@@ -107,7 +116,7 @@ function initSOAPGenerator() {
         materialsUsed: document.getElementById('soap-input-materials')?.value || undefined,
         content: output.value
       });
-      output.value = '';
+      resetSOAPForm();
       if (signStatus) signStatus.textContent = `✓ ${molarisT('soap.signed')}`;
       playClinicalBeep(880, 'sine', 0.2);
       loadSignedSOAPNotes();
@@ -128,7 +137,11 @@ function initSOAPGenerator() {
     });
   }
 
-  Molaris.events.on('patient-changed', loadSignedSOAPNotes);
+  Molaris.events.on('patient-changed', () => {
+    resetSOAPForm();
+    if (signStatus) signStatus.textContent = '';
+    loadSignedSOAPNotes();
+  });
   Molaris.events.on('view-shown', ({ view }) => { if (view === 'soap') loadSignedSOAPNotes(); });
   Molaris.events.on('language-changed', loadSignedSOAPNotes);
 }

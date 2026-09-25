@@ -664,7 +664,7 @@ export class PatientRepository {
     const entry: SoapAddendum = {
       id: newId('addend'),
       content: addendum.content,
-      author: addendum.author || 'Attending Doctor',
+      author: addendum.author || 'Praticien traitant',
       timestamp: nowIso()
     };
     if (!note.addenda) note.addenda = [];

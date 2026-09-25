@@ -15,10 +15,26 @@ export function parse<T>(schema: ZodType<T>, input: unknown): T {
   const result = schema.safeParse(input);
   if (!result.success) {
     const issue = result.error.issues[0];
-    throw new HttpError(400, `${issue.path.join('.') || 'body'}: ${issue.message}`);
+    // Shown as-is in the (French) clinic UI: « Acte : l’acte est obligatoire ».
+    const where = issue.path.map(part => (typeof part === 'number' ? String(part + 1) : FIELD_LABELS[part] ?? part)).join(' › ');
+    const missing = issue.code === 'invalid_type' && issue.received === 'undefined';
+    throw new HttpError(400, `${where || 'Requête'} : ${missing ? 'obligatoire' : issue.message}`);
   }
   return result.data;
 }
+
+const FIELD_LABELS: Record<string, string> = {
+  name: 'Nom', phone: 'Téléphone', age: 'Âge', birthDate: 'Date de naissance', weightKg: 'Poids', gender: 'Sexe',
+  asaStatus: 'Classe ASA', allergies: 'Allergies', medicalAlerts: 'Antécédents', chartId: 'N° de dossier',
+  cnamId: 'Identifiant CNAM', cnamQuality: 'Qualité CNAM', patientId: 'Patient',
+  procedure: 'Acte', toothId: 'Dent', toothFdi: 'Dent', status: 'Statut', priority: 'Priorité', notes: 'Remarques',
+  content: 'Texte', estimatedCost: 'Coût estimé', caseType: 'Type de travail', dueDate: 'Échéance',
+  dosage: 'Posologie', frequency: 'Fréquence', duration: 'Durée', drugLabel: 'Médicament',
+  amountMillimes: 'Montant', method: 'Mode de paiement', reference: 'Référence', paidAt: 'Date du paiement',
+  quoteId: 'Devis', items: 'Lignes', label: 'Libellé', quantity: 'Quantité', unitPriceMillimes: 'Prix unitaire',
+  startAt: 'Début', endAt: 'Fin', durationMinutes: 'Durée', reason: 'Motif', chair: 'Fauteuil',
+  carpules: 'Carpules', drugId: 'Anesthésique', teeth: 'Dents', sites: 'Sites', language: 'Langue'
+};
 
 /** Wraps a (possibly async) handler so thrown errors reach the error middleware. */
 export function route(handler: (req: Request, res: Response) => unknown): RequestHandler {

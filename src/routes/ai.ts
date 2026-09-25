@@ -25,6 +25,10 @@ export const aiRouter = Router();
 
 // 503 with a readable, translated message when the AI is out of quota or overloaded.
 function sendAiError(res: Response, err: unknown, req: Request): void {
+  if (err instanceof HttpError) {
+    res.status(err.status).json({ error: err.message });
+    return;
+  }
   res.status(err instanceof AiUnavailableError ? 503 : 500).json({ error: aiErrorMessage(err, languageOf(req.body?.language)) });
 }
 
@@ -380,27 +384,44 @@ aiRouter.get('/api/soap/history', (req: Request, res: Response) => {
   });
 });
 
+const soapDraftSchema = z.object({
+  procedure: z.string({ required_error: 'l’acte est obligatoire' }).trim().min(1, 'l’acte est obligatoire').max(300),
+  toothId: z.preprocess(v => (v === '' || v === null ? undefined : v), toothIdSchema.optional()),
+  details: z.string().trim().max(5000).optional(),
+  anesthesiaUsed: z.string().trim().max(300).optional(),
+  materialsUsed: z.string().trim().max(300).optional(),
+  language: z.enum(['fr', 'en']).catch('en')
+});
+
 aiRouter.post('/api/generate-soap', aiLimiter, async (req: Request, res: Response) => {
   try {
-    const { procedure, toothId, details, anesthesiaUsed, materialsUsed, language = 'en' } = req.body;
+    const { procedure, toothId, details, anesthesiaUsed, materialsUsed, language } = parse(soapDraftSchema, req.body);
     const memory = loadMemory();
     const activePatient = patientDb.getActivePatient();
     const tooth = toothId ? findPatientTooth(activePatient, Number(toothId)) : null;
+    // What the dentist left blank is marked as missing, never filled with a plausible default:
+    // a draft saying « sans complication » or « digue, composite » can be signed unnoticed.
+    const fr = language === 'fr';
+    const missing = fr ? 'non renseigné — écrire « [à compléter] »' : 'not provided — write "[to be completed]"';
+    const loggedToday = dosesLoggedOn(activePatient.anesthesiaLog).map(d => `${d.carpules} × ${d.drug.name}`).join(', ');
+    const anesthesia = anesthesiaUsed
+      || (loggedToday ? `${loggedToday} (${fr ? 'journal d’anesthésie du jour' : 'today’s anesthesia log'})` : missing);
 
     let soapPrompt = '';
     if (language === 'fr') {
       soapPrompt = `
 Rédigez un projet de compte-rendu clinique dentaire au format SOAP, rigoureux sur le plan médico-légal, que le praticien relira et validera.
 
-ACTE RÉALISÉ : ${procedure || 'Soin conservateur / Traitement endodontique / Chirurgie'}
-DENT CONCERNÉE : ${tooth ? `Dent ${tooth.fdi} (FDI) - ${tooth.name}` : 'Général / Non spécifié'}
-DÉTAILS CLINIQUES : ${details || 'Acte réalisé avec succès sans complication'}
-ANESTHÉSIE LOCALE : ${anesthesiaUsed || `${activePatient.deliveredCarpules} carpules administrées`}
-MATÉRIAUX UTILISÉS : ${materialsUsed || 'Digue dentaire, mordançage sélectif, composite'}
+ACTE RÉALISÉ : ${procedure}
+DENT CONCERNÉE : ${tooth ? `Dent ${tooth.fdi} (FDI) - ${tooth.name}` : 'non précisée'}
+DÉTAILS CLINIQUES : ${details || missing}
+ANESTHÉSIE LOCALE : ${anesthesia}
+MATÉRIAUX UTILISÉS : ${materialsUsed || missing}
 PATIENT (anonymisé) : ${activePatient.age} ans | Statut ASA: ${activePatient.asaStatus} | Poids: ${activePatient.weightKg}kg | Alertes: ${activePatient.medicalAlerts}
 
 Rédigez STRICTEMENT en français professionnel (dents en numérotation FDI, médicaments en DCI) selon la structure suivante.
 N'inventez aucune constatation, mesure ou valeur qui ne figure pas ci-dessus : écrivez « [à compléter] » à la place.
+N'affirmez jamais qu'un geste a été fait (digue, test d'aspiration, contrôle occlusal, consentement…) ni qu'il n'y a pas eu de complication si ce n'est pas indiqué ci-dessus : « [à compléter] ».
 - **Date** (n'inventez aucun nom ni identifiant : l'identité du patient est ajoutée par le logiciel)
 - **S (Subjectif)** : Motif de consultation, anamnèse médicale vérifiée, évaluation de la douleur (EVA 0-10), recueil du consentement éclairé du patient.
 - **O (Objectif)** : Examen clinique visuel, tests de vitalité pulpaire (froid, test électrique, percussion axiale/latérale, palpation vestibulaire, sondage parodontal), constatations radiologiques pré-opératoires.
@@ -419,15 +440,16 @@ N'inventez aucune constatation, mesure ou valeur qui ne figure pas ci-dessus : �
       soapPrompt = `
 Draft a dental SOAP clinical progress note, medicolegally rigorous, for the dentist to review and sign off.
 
-PROCEDURE: ${procedure || 'Operative Restoration / Endodontic / Surgical treatment'}
-TOOTH: ${tooth ? `${tooth.fdi} (FDI) - ${tooth.name}` : 'General / Not specified'}
-CLINICAL DETAILS: ${details || 'Procedure completed successfully without complications'}
-LOCAL ANESTHESIA: ${anesthesiaUsed || `${activePatient.deliveredCarpules} carpules administered via infiltration/block`}
-MATERIALS: ${materialsUsed || 'Rubber dam isolation, selective etch, composite'}
+PROCEDURE: ${procedure}
+TOOTH: ${tooth ? `${tooth.fdi} (FDI) - ${tooth.name}` : 'not specified'}
+CLINICAL DETAILS: ${details || missing}
+LOCAL ANESTHESIA: ${anesthesia}
+MATERIALS: ${materialsUsed || missing}
 PATIENT (anonymized): ${activePatient.age}y | ASA: ${activePatient.asaStatus} | Weight: ${activePatient.weightKg}kg | Alerts: ${activePatient.medicalAlerts}
 
 Write in English (FDI tooth numbers, drugs by INN/generic name), formatted strictly as below.
 Do not invent any finding, measurement or value that is not given above: write "[to be completed]" instead.
+Never state that a step was done (rubber dam, aspiration test, occlusal check, consent…) or that there was no complication unless it is given above: "[to be completed]".
 - **Date** (do not invent any name or ID: patient identity is attached by the software)
 - **S (Subjective)**: Chief complaint, medical history reviewed, pain score, informed consent obtained.
 - **O (Objective)**: Clinical examination, vitality tests (cold, EPT, percussion, palpation, periodontal probing depths), pre-op radiograph findings.
