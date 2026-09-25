@@ -154,13 +154,15 @@ clinicalRouter.put('/api/treatment-plan/:id', route((req: Request, res: Response
   res.json({ success: true, item: patientDb.updateTreatmentPlanItemForActivePatient(String(req.params.id), changes) });
 }));
 
-clinicalRouter.delete('/api/treatment-plan/:id', (req: Request, res: Response) => {
-  try {
-    res.json({ success: patientDb.deleteTreatmentPlanItemForActivePatient(String(req.params.id)) });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+clinicalRouter.delete('/api/treatment-plan/:id', route((req: Request, res: Response) => {
+  const item = patientDb.getTreatmentPlanForActivePatient().find(i => i.id === String(req.params.id));
+  if (!item) throw new HttpError(404, 'Acte du plan de traitement introuvable.');
+  // A performed act is part of the patient's record (and of the unbilled-acts check).
+  if (item.status === 'completed') {
+    throw new HttpError(409, 'Un acte réalisé fait partie du dossier et ne peut pas être supprimé. S’il a été marqué réalisé par erreur, changez d’abord son statut.');
   }
-});
+  res.json({ success: patientDb.deleteTreatmentPlanItemForActivePatient(item.id) });
+}));
 
 // --- Lab cases --------------------------------------------------------------------
 

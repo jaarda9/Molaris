@@ -74,7 +74,17 @@ function renderTreatmentPlanList() {
   const priorityOrder = { urgent: 0, high: 1, routine: 2, elective: 3 };
   const sorted = [...items].sort((a, b) => (priorityOrder[a.priority] ?? 9) - (priorityOrder[b.priority] ?? 9));
 
-  container.innerHTML = '';
+  // Totals of the costed items: still to do (proposed / accepted / in progress) and done.
+  const millimesOf = (i) => (i.estimatedCost == null || !Number.isFinite(Number(i.estimatedCost)) ? 0 : Math.round(Number(i.estimatedCost) * 1000));
+  const costOf = (list) => list.reduce((sum, i) => sum + millimesOf(i), 0);
+  const toDo = costOf(items.filter(i => ['proposed', 'accepted', 'in_progress'].includes(i.status)));
+  const done = costOf(items.filter(i => i.status === 'completed'));
+
+  container.innerHTML = (toDo || done) ? `
+    <div class="flex flex-wrap justify-end gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+      <span>${escapeHtml(molarisT('treatment.totalToDo'))} <strong class="font-mono text-slate-800 dark:text-slate-100">${escapeHtml(Molaris.format.tnd(toDo))}</strong></span>
+      <span>${escapeHtml(molarisT('treatment.totalDone'))} <strong class="font-mono text-slate-800 dark:text-slate-100">${escapeHtml(Molaris.format.tnd(done))}</strong></span>
+    </div>` : '';
   sorted.forEach(item => {
     const row = document.createElement('div');
     row.className = 'bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3';
@@ -121,8 +131,13 @@ function renderTreatmentPlanList() {
           if (resData.success) {
             item.status = resData.item.status;
             playClinicalBeep(700, 'sine', 0.1);
+            renderTreatmentPlanList();
+          } else {
+            e.target.value = item.status;
+            alert(`${molarisT('treatment.errUpdate')} ${resData.error || ''}`);
           }
         } catch (err) {
+          e.target.value = item.status;
           alert(`${molarisT('treatment.errUpdate')} ${err.message}`);
         }
       });
@@ -131,7 +146,9 @@ function renderTreatmentPlanList() {
     row.querySelector('.btn-delete-treatment-item')?.addEventListener('click', async () => {
       if (!confirm(molarisT('treatment.deleteConfirm'))) return;
       try {
-        await fetch(`/api/treatment-plan/${item.id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/treatment-plan/${item.id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!data.success) alert(`${molarisT('treatment.errDelete')} ${data.error || ''}`);
         await fetchTreatmentPlan();
       } catch (err) {
         alert(`${molarisT('treatment.errDelete')} ${err.message}`);
@@ -163,13 +180,19 @@ function initTreatmentPlanManager() {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const toothVal = document.getElementById('form-treatment-tooth').value;
-    const costVal = document.getElementById('form-treatment-cost').value;
+    const costVal = document.getElementById('form-treatment-cost').value.trim();
+    // Typed the Tunisian way ("1 250,500"); the plan stores dinars (legacy field).
+    const costMillimes = costVal !== '' ? Molaris.format.parseTnd(costVal) : undefined;
+    if (costMillimes === null) {
+      alert(molarisT('treatment.errCost'));
+      return;
+    }
     const payload = {
       toothId: toothVal ? Number(toothVal) : undefined,
       procedure: document.getElementById('form-treatment-procedure').value.trim(),
       cdtCode: document.getElementById('form-treatment-cdt').value.trim() || undefined,
       priority: document.getElementById('form-treatment-priority').value,
-      estimatedCost: costVal !== '' ? Number(costVal) : undefined,
+      estimatedCost: costMillimes !== undefined ? costMillimes / 1000 : undefined,
       notes: document.getElementById('form-treatment-notes').value.trim() || undefined
     };
     try {

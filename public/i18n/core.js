@@ -337,6 +337,9 @@ window.MOLARIS_TRANSLATIONS = {
     "treatment.errUpdate": "Could not update the status:",
     "treatment.errDelete": "Could not delete the item:",
     "treatment.errSave": "Could not save the item:",
+    "treatment.errCost": "Invalid amount. Examples: 120 · 120.500 · 1 250.000",
+    "treatment.totalToDo": "Still to do:",
+    "treatment.totalDone": "Done:",
 
     // Medications
     "meds.title": "Medications",
@@ -814,6 +817,9 @@ window.MOLARIS_TRANSLATIONS = {
     "treatment.errUpdate": "Impossible de modifier le statut :",
     "treatment.errDelete": "Impossible de supprimer l'acte :",
     "treatment.errSave": "Impossible d'enregistrer l'acte :",
+    "treatment.errCost": "Montant non valide. Exemples : 120 · 120,500 · 1 250,000",
+    "treatment.totalToDo": "Reste à réaliser :",
+    "treatment.totalDone": "Réalisé :",
 
     // Médicaments
     "meds.title": "Médicaments",
