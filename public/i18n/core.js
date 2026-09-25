@@ -417,6 +417,8 @@ window.MOLARIS_TRANSLATIONS = {
     "labcases.statusRemake": "Remake",
     "labcases.overdue": "Overdue",
     "labcases.dueSoon": "Due Soon",
+    "labcases.edit": "Edit",
+    "labcases.editTitle": "Edit lab case",
 
     // FR sweep (odontogram FDI chart, placeholders, messages)
     "header.patientSelectorTitle": "Click to switch or manage patients",
@@ -905,6 +907,8 @@ window.MOLARIS_TRANSLATIONS = {
     "labcases.statusRemake": "À refaire",
     "labcases.overdue": "En retard",
     "labcases.dueSoon": "Échéance proche",
+    "labcases.edit": "Modifier",
+    "labcases.editTitle": "Modifier le travail de laboratoire",
 
     // FR sweep (odontogram FDI chart, placeholders, messages)
     "header.patientSelectorTitle": "Cliquer pour changer ou gérer les patients",

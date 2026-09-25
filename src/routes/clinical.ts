@@ -7,7 +7,7 @@ import { createDefaultPerioTeeth, type PerioChartSnapshot } from '../domain/clin
 import { checkDrugInteractions, checkAllergyConflict, SafetyAlert } from '../domain/clinical-safety.js';
 import { HttpError, languageOf, parse, route } from './http.js';
 import {
-  labCaseCreateSchema, labCaseUpdateSchema, medicationCreateSchema, medicationUpdateSchema, perioChartSchema, toothUpdateSchema, treatmentCreateSchema, treatmentUpdateSchema, TREATMENT_CLEARABLE
+  labCaseCreateSchema, labCaseUpdateSchema, medicationCreateSchema, medicationUpdateSchema, perioChartSchema, toothUpdateSchema, treatmentCreateSchema, treatmentUpdateSchema, TREATMENT_CLEARABLE, LAB_CLEARABLE
 } from './clinical-validation.js';
 
 // Per-patient clinical chart: odontogram, medications, perio, treatment plan, lab cases.
@@ -189,7 +189,9 @@ clinicalRouter.put('/api/lab-cases/:id', route((req: Request, res: Response) => 
   } catch (err) {
     throw new HttpError(400, (err as Error).message);
   }
-  res.json({ success: true, labCase: patientDb.updateLabCaseForActivePatient(current.id, progressed) });
+  const cleared: Record<string, unknown> = { ...progressed };
+  for (const field of LAB_CLEARABLE) if (req.body?.[field] === null) cleared[field] = undefined;
+  res.json({ success: true, labCase: patientDb.updateLabCaseForActivePatient(current.id, cleared) });
 }));
 
 clinicalRouter.delete('/api/lab-cases/:id', (req: Request, res: Response) => {

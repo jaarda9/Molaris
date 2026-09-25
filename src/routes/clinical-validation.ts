@@ -147,6 +147,9 @@ const labFields = {
   notes: optional(text(2000))
 };
 
+/** Lab case fields an edit may empty: sent as null. */
+export const LAB_CLEARABLE = ['toothId', 'material', 'shade', 'marginDesign', 'occlusalNotes', 'labName', 'dueDate', 'notes'] as const;
+
 export const labCaseCreateSchema = z.object({
   caseType: z.string().trim().min(1, 'le type de travail est obligatoire').max(120),
   ...labFields

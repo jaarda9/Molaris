@@ -85,6 +85,9 @@ function renderLabCasesList() {
           <option value="seated">${getLabStatusLabel('seated', isFr)}</option>
           <option value="remake">${getLabStatusLabel('remake', isFr)}</option>
         </select>
+        <button class="btn-edit-labcase p-2 rounded-lg bg-slate-100 hover:bg-teal-100 dark:bg-slate-800 dark:hover:bg-teal-950/60 text-slate-500 hover:text-teal-700 dark:hover:text-teal-300" title="${escapeHtml(molarisT('labcases.edit'))}">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+        </button>
         <button class="btn-delete-labcase p-2 rounded-lg bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400" title="${isFr ? 'Supprimer' : 'Delete'}">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6"></polyline>
@@ -117,6 +120,8 @@ function renderLabCasesList() {
       });
     }
 
+    row.querySelector('.btn-edit-labcase')?.addEventListener('click', () => openLabCaseForm(lc));
+
     row.querySelector('.btn-delete-labcase')?.addEventListener('click', async () => {
       const isFr2 = systemState.language === 'fr';
       if (!confirm(isFr2 ? 'Supprimer ce cas de laboratoire ?' : 'Delete this lab case?')) return;
@@ -132,6 +137,29 @@ function renderLabCasesList() {
   });
 }
 
+// The add form doubles as the edit form (the lab moves the due date, a shade is corrected…).
+let editingLabCase = null;
+const LAB_FORM_FIELDS = [
+  ['form-labcase-type', 'caseType'], ['form-labcase-material', 'material'], ['form-labcase-shade', 'shade'],
+  ['form-labcase-margin', 'marginDesign'], ['form-labcase-occlusal', 'occlusalNotes'], ['form-labcase-labname', 'labName'],
+  ['form-labcase-duedate', 'dueDate'], ['form-labcase-notes', 'notes']
+];
+
+function openLabCaseForm(lc = null) {
+  const form = document.getElementById('lab-case-form');
+  const modal = document.getElementById('modal-lab-case');
+  editingLabCase = lc;
+  form.reset();
+  fillFdiToothSelect(document.getElementById('form-labcase-tooth'));
+  const title = modal.querySelector('[data-i18n="labcases.modalTitle"]');
+  if (title) title.textContent = molarisT(lc ? 'labcases.editTitle' : 'labcases.modalTitle');
+  if (lc) {
+    document.getElementById('form-labcase-tooth').value = lc.toothId ? String(lc.toothId) : '';
+    LAB_FORM_FIELDS.forEach(([id, key]) => { document.getElementById(id).value = lc[key] || ''; });
+  }
+  modal.classList.remove('hidden');
+}
+
 function initLabCaseManager() {
   const addBtn = document.getElementById('btn-add-lab-case');
   const modal = document.getElementById('modal-lab-case');
@@ -140,13 +168,7 @@ function initLabCaseManager() {
   const form = document.getElementById('lab-case-form');
   if (!modal || !form) return;
 
-  if (addBtn) {
-    addBtn.addEventListener('click', () => {
-      form.reset();
-      fillFdiToothSelect(document.getElementById('form-labcase-tooth'));
-      modal.classList.remove('hidden');
-    });
-  }
+  if (addBtn) addBtn.addEventListener('click', () => openLabCaseForm());
   if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
   if (cancelBtn) cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
 
@@ -164,9 +186,13 @@ function initLabCaseManager() {
       dueDate: document.getElementById('form-labcase-duedate').value || undefined,
       notes: document.getElementById('form-labcase-notes').value.trim() || undefined
     };
+    // On edit, an emptied field is sent as null so it is really cleared.
+    if (editingLabCase) {
+      for (const key of ['toothId', ...LAB_FORM_FIELDS.map(([, k]) => k).filter(k => k !== 'caseType')]) if (payload[key] === undefined) payload[key] = null;
+    }
     try {
-      const res = await fetch('/api/lab-cases', {
-        method: 'POST',
+      const res = await fetch(editingLabCase ? `/api/lab-cases/${encodeURIComponent(editingLabCase.id)}` : '/api/lab-cases', {
+        method: editingLabCase ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
