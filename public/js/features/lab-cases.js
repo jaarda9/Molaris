@@ -90,7 +90,7 @@ function renderLabCasesList() {
         <button class="btn-edit-labcase p-2 rounded-lg bg-slate-100 hover:bg-teal-100 dark:bg-slate-800 dark:hover:bg-teal-950/60 text-slate-500 hover:text-teal-700 dark:hover:text-teal-300" title="${escapeHtml(molarisT('labcases.edit'))}">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
         </button>
-        <button class="btn-delete-labcase p-2 rounded-lg bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400" title="${isFr ? 'Supprimer' : 'Delete'}">
+        <button class="btn-delete-labcase ${lc.status === 'planned' ? '' : 'hidden'} p-2 rounded-lg bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400" title="${isFr ? 'Supprimer' : 'Delete'}">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6"></polyline>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -128,7 +128,8 @@ function renderLabCasesList() {
       const isFr2 = systemState.language === 'fr';
       if (!confirm(isFr2 ? 'Supprimer ce cas de laboratoire ?' : 'Delete this lab case?')) return;
       try {
-        await fetch(`/api/lab-cases/${lc.id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/lab-cases/${lc.id}`, { method: 'DELETE' });
+        if (!res.ok) alert((await res.json()).error || molarisT('common.saveError'));
         await fetchLabCases();
       } catch (err) {
         alert(molarisT('common.networkError') + ' ' + err.message);

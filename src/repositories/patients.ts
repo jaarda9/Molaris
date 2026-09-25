@@ -18,6 +18,7 @@ import { nextDocumentNumber } from '../db/counters.js';
 import { newId, nowIso } from '../db/ids.js';
 import { ageOn } from '../domain/age.js';
 import { scopedPatientId } from './patient-scope.js';
+import { HttpError } from '../routes/http.js';
 
 /** One row of the patient list (see PatientRepository.getPatientSummaries). */
 export type PatientSummary = Pick<PatientRecord, 'id' | 'chartId' | 'name' | 'phone' | 'cnamId' | 'cnamQuality' | 'birthDate'
@@ -73,6 +74,9 @@ export interface PatientRecord {
     mg: number;
     epiMg: number;
     site?: string;
+    /** A mistaken entry is cancelled with a reason, never deleted; it no longer counts. */
+    cancelledAt?: string;
+    cancelReason?: string;
     notes?: string;
   }>;
   soapNotes: Array<{
@@ -461,7 +465,7 @@ export class PatientRepository {
       cardiacRisk: p.cardiacRisk, chiefComplaint: p.chiefComplaint, medicalAlerts: p.medicalAlerts, allergies: p.allergies,
       medications: (p.medications || []).filter(m => m.active).map(m => ({ id: m.id, name: m.name, active: true })),
       teethCharted: (p.teeth || []).filter(t => t.status && t.status !== 'sound' && t.status !== 'unerupted').length,
-      carpulesGiven: Math.round((p.anesthesiaLog || []).reduce((sum, e) => sum + (Number(e.carpules) || 0), 0) * 10) / 10,
+      carpulesGiven: Math.round((p.anesthesiaLog || []).filter(e => !e.cancelledAt).reduce((sum, e) => sum + (Number(e.carpules) || 0), 0) * 10) / 10,
       soapCount: (p.soapNotes || []).length,
       updatedAt: p.updatedAt
     }));
@@ -664,6 +668,21 @@ export class PatientRepository {
     patient.selectedDrugId = logEntry.drugId;
     this.touch(patient);
     return { patient, entry };
+  }
+
+  /** Marks a mistaken anesthesia entry as cancelled (kept, with its reason; no longer counted). */
+  public cancelAnesthesiaEntryForActivePatient(entryId: string, reason: string) {
+    const patient = this.getActivePatient();
+    const entry = patient.anesthesiaLog.find(e => e.id === entryId);
+    if (!entry) throw new HttpError(404, 'Saisie d’anesthésie introuvable.');
+    if (entry.cancelledAt) throw new HttpError(409, 'Cette saisie est déjà annulée.');
+    const why = (reason || '').trim();
+    if (why.length < 3) throw new HttpError(400, 'Indiquez le motif de l’annulation.');
+    entry.cancelledAt = nowIso();
+    entry.cancelReason = why;
+    patient.deliveredCarpules = Math.max(0, Math.round((patient.deliveredCarpules - entry.carpules) * 10) / 10);
+    this.touch(patient);
+    return entry;
   }
 
   public addSoapNoteForActivePatient(note: {

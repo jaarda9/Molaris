@@ -329,7 +329,11 @@ if (removeToothContextBtn) {
 const resetOdontogramBtn = document.getElementById('reset-odontogram-btn');
 if (resetOdontogramBtn) {
   resetOdontogramBtn.addEventListener('click', async () => {
-    if (!confirm(molarisT('odonto.resetConfirm'))) return;
+    // Everything charted is lost: say for whom and how much, and that it cannot be undone.
+    const charted = [...(systemState.teethData || []), ...(systemState.primaryTeeth?.primaryTeeth || [])]
+      .filter(t => (t.status && t.status !== 'sound' && t.status !== 'unerupted' && !(t.dentition === 'primary' && t.status === 'missing')) || t.notes).length;
+    if (charted && !confirm(molarisT('odonto.resetConfirm')
+      .replace('{n}', charted).replace('{name}', systemState.activePatient?.name || ''))) return;
     await fetch('/api/odontogram/reset', { method: 'POST' });
     await fetchOdontogram();
     systemState.selectedTooth = null;

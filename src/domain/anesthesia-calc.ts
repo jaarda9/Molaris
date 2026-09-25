@@ -36,7 +36,7 @@ function allowedMgFor(drug: AnestheticDrug, weightKg: number): number {
  * toward today's maximum), grouped by drug.
  */
 export function dosesLoggedOn(
-  log: Array<{ drugId: string; carpules: number; timestamp: string }>,
+  log: Array<{ drugId: string; carpules: number; timestamp: string; cancelledAt?: string }>,
   now: Date = new Date(),
   drugs: AnestheticDrug[] = ANESTHETICS
 ): Array<{ drug: AnestheticDrug; carpules: number }> {
@@ -46,7 +46,7 @@ export function dosesLoggedOn(
   };
   const byDrug = new Map<string, number>();
   for (const entry of log) {
-    if (!sameDay(entry.timestamp) || !(entry.carpules > 0)) continue;
+    if (!sameDay(entry.timestamp) || !(entry.carpules > 0) || entry.cancelledAt) continue;
     byDrug.set(entry.drugId, (byDrug.get(entry.drugId) ?? 0) + entry.carpules);
   }
   return [...byDrug].flatMap(([drugId, carpules]) => {

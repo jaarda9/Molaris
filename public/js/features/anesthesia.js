@@ -119,6 +119,36 @@ function syncCarpuleLogButton() {
   if (logBtn) logBtn.disabled = !(systemState.deliveredCarpules > 0);
 }
 
+// Today's recorded doses, each correctable: a mistaken one (wrong dictation, wrong patient)
+// is cancelled with a reason — kept, struck through, no longer counted.
+function renderTodayEntries(entries) {
+  const box = document.getElementById('calc-today-entries');
+  if (!box) return;
+  box.classList.toggle('hidden', !entries.length);
+  box.innerHTML = entries.map(e => `
+    <div class="flex items-center gap-2 ${e.cancelledAt ? 'line-through text-slate-400' : 'text-slate-600 dark:text-slate-300'}">
+      <span class="font-mono">${escapeHtml(Molaris.format.time(e.timestamp))}</span>
+      <span class="flex-1 min-w-0 truncate" title="${escapeHtml(e.notes || '')}">${escapeHtml(formatDecimal(e.carpules))} × ${escapeHtml(e.drugName)}${e.notes ? ` · ${escapeHtml(e.notes)}` : ''}</span>
+      ${e.cancelledAt
+        ? `<span class="no-underline shrink-0" title="${escapeHtml(e.cancelReason || '')}">${escapeHtml(molarisT('la.entryCancelled'))}</span>`
+        : `<button type="button" data-cancel-entry="${escapeHtml(e.id)}" class="shrink-0 text-rose-600 dark:text-rose-400 hover:underline">${escapeHtml(molarisT('la.cancelEntry'))}</button>`}
+    </div>`).join('');
+  box.querySelectorAll('[data-cancel-entry]').forEach(btn => btn.addEventListener('click', () => {
+    Molaris.ui.modal({
+      title: molarisT('la.cancelEntryTitle'),
+      submitLabel: molarisT('la.cancelEntryConfirm'),
+      bodyHtml: `
+        <p class="text-slate-600 dark:text-slate-400">${escapeHtml(molarisT('la.cancelEntryExplain'))}</p>
+        <textarea name="reason" rows="2" required minlength="3" maxlength="500" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs" placeholder="${escapeHtml(molarisT('la.cancelEntryReason'))}"></textarea>`,
+      onSubmit: async (form, { close }) => {
+        await Molaris.api.post(`/api/anesthesia/log/${encodeURIComponent(btn.dataset.cancelEntry)}/cancel`, { reason: form.get('reason') });
+        close();
+        await recalculateLA();
+      }
+    });
+  }));
+}
+
 async function recalculateLA() {
   syncCarpuleLogButton();
   const weight = Number(document.getElementById('calc-weight-input')?.value) || 70;
@@ -144,6 +174,7 @@ async function recalculateLA() {
     document.getElementById('calc-res-max-mg').textContent = `${data.allowedMaxMg} mg`;
     document.getElementById('calc-res-remaining').textContent = `${formatDecimal(data.remainingCarpules)}`;
 
+    renderTodayEntries(data.todayEntries || []);
     const loggedEl = document.getElementById('calc-logged-today');
     if (loggedEl) {
       const logged = (data.loggedToday || []).map(d => `${formatDecimal(d.carpules)} × ${d.drugName}`).join(' + ');

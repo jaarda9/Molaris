@@ -201,3 +201,13 @@ test('the patient list is a light summary with the card counters', () => {
   assert.equal(mohamed.soapCount, repo.getPatientById('pt_1')!.soapNotes.length);
   assert.ok(mohamed.medications.every(m => m.active));
 });
+
+test('a mistaken anesthesia entry is cancelled with a reason, once, and kept', () => {
+  const { repo } = freshRepo();
+  const { entry } = repo.logAnesthesiaForActivePatient({ drugId: 'lido_100k', drugName: 'Lidocaïne', carpules: 2, mg: 72, epiMg: 0.036 });
+  assert.throws(() => repo.cancelAnesthesiaEntryForActivePatient(entry.id, ''), /motif/);
+  const cancelled = repo.cancelAnesthesiaEntryForActivePatient(entry.id, 'Saisie vocale erronée');
+  assert.ok(cancelled.cancelledAt);
+  assert.throws(() => repo.cancelAnesthesiaEntryForActivePatient(entry.id, 'encore'), /déjà annulée/);
+  assert.ok(repo.getActivePatient().anesthesiaLog.some(e => e.id === entry.id));
+});

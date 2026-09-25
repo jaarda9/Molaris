@@ -194,10 +194,12 @@ clinicalRouter.put('/api/lab-cases/:id', route((req: Request, res: Response) => 
   res.json({ success: true, labCase: patientDb.updateLabCaseForActivePatient(current.id, cleared) });
 }));
 
-clinicalRouter.delete('/api/lab-cases/:id', (req: Request, res: Response) => {
-  try {
-    res.json({ success: patientDb.deleteLabCaseForActivePatient(String(req.params.id)) });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+clinicalRouter.delete('/api/lab-cases/:id', route((req: Request, res: Response) => {
+  const labCase = patientDb.getLabCasesForActivePatient().find(c => c.id === String(req.params.id));
+  if (!labCase) throw new HttpError(404, 'Travail de laboratoire introuvable.');
+  // Once sent to the lab, the work is part of the patient's record (a crown fitted in the mouth).
+  if (labCase.status !== 'planned') {
+    throw new HttpError(409, 'Ce travail a déjà été envoyé au laboratoire : il reste dans le dossier. Corrigez-le avec « Modifier » ou changez son statut.');
   }
-});
+  res.json({ success: patientDb.deleteLabCaseForActivePatient(labCase.id) });
+}));

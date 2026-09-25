@@ -3,7 +3,8 @@ import { patientDb } from '../repositories/patients.js';
 import { ANESTHETICS, QUICK_PROTOCOLS } from '../domain/dental-data.js';
 import { calculateAnestheticDose, dosesLoggedOn } from '../domain/anesthesia-calc.js';
 import { checkDrugInteractions } from '../domain/clinical-safety.js';
-import { HttpError, languageOf, parse } from './http.js';
+import { HttpError, languageOf, parse, route } from './http.js';
+import { z } from 'zod';
 import { anesthesiaCalcSchema, anesthesiaLogSchema } from './clinical-validation.js';
 
 export const anesthesiaRouter = Router();
@@ -30,13 +31,22 @@ anesthesiaRouter.post('/api/calc-la', (req: Request, res: Response) => {
         priorDoses: loggedToday,
         language
       }),
-      loggedToday: loggedToday.map(d => ({ drugId: d.drug.id, drugName: d.drug.name, carpules: d.carpules }))
+      loggedToday: loggedToday.map(d => ({ drugId: d.drug.id, drugName: d.drug.name, carpules: d.carpules })),
+      // Today's individual entries (cancelled ones included, shown struck through) for correction.
+      todayEntries: activePatient.anesthesiaLog
+        .filter(e => new Date(e.timestamp).toDateString() === new Date().toDateString())
+        .map(e => ({ id: e.id, timestamp: e.timestamp, drugName: e.drugName, carpules: e.carpules, notes: e.notes || null, cancelledAt: e.cancelledAt || null, cancelReason: e.cancelReason || null }))
     });
   } catch (err: any) {
     // Validation errors (HttpError) keep their 400; anything else is a server error.
     res.status(err instanceof HttpError ? err.status : 500).json({ error: err.message });
   }
 });
+
+anesthesiaRouter.post('/api/anesthesia/log/:id/cancel', route((req: Request, res: Response) => {
+  const { reason } = parse(z.object({ reason: z.string().trim().min(3, 'indiquez le motif de l’annulation').max(500) }), req.body);
+  res.json({ success: true, entry: patientDb.cancelAnesthesiaEntryForActivePatient(String(req.params.id), reason) });
+}));
 
 anesthesiaRouter.post('/api/anesthesia/log', (req: Request, res: Response) => {
   try {

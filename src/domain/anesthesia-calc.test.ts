@@ -131,3 +131,12 @@ test('only injections logged today count; earlier visits do not', () => {
   const today = dosesLoggedOn(log, new Date(2026, 8, 24, 15, 0));
   assert.deepEqual(today.map(d => [d.drug.id, d.carpules]), [['lido_100k', 2]]);
 });
+
+test('a cancelled anesthesia entry no longer counts toward the day', () => {
+  const now = new Date();
+  const log = [
+    { drugId: 'arti_100k', carpules: 2, timestamp: now.toISOString() },
+    { drugId: 'arti_100k', carpules: 1, timestamp: now.toISOString(), cancelledAt: now.toISOString() }
+  ];
+  assert.equal(dosesLoggedOn(log, now).reduce((s, d) => s + d.carpules, 0), 2);
+});
