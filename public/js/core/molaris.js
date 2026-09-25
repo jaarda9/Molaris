@@ -263,11 +263,13 @@ Molaris.print = {
       clinic = (await Molaris.api.get('/api/settings/clinic')).clinic;
     } catch { /* print without letterhead rather than not at all */ }
 
-    const line = (label, value) => value ? `<div>${label ? `${escapeHtml(label)} ` : ''}${escapeHtml(value)}</div>` : '';
+    // dir="auto": each line keeps its own direction, so a French address on an Arabic
+    // document stays « 10, avenue… » (not « avenue… ,10 »), and an Arabic one reads right to left.
+    const line = (label, value) => value ? `<div dir="auto">${label ? `${escapeHtml(label)} ` : ''}${escapeHtml(value)}</div>` : '';
     const letterhead = `
       <header class="letterhead">
         <div>
-          <div class="clinic">${escapeHtml(clinic.doctorName || clinic.clinicName || '')}</div>
+          <div class="clinic" dir="auto">${escapeHtml(clinic.doctorName || clinic.clinicName || '')}</div>
           ${line('', clinic.specialty)}
           ${clinic.doctorName ? line('', clinic.clinicName) : ''}
         </div>
