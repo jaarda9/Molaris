@@ -33,7 +33,8 @@ const realDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date attendue au forma
 // --- Patients -----------------------------------------------------------------------
 
 const patientFields = {
-  name: z.string().trim().min(1, 'le nom est obligatoire').max(120, '120 caractères maximum'),
+  // Double spaces typed in the form would show on every printed document.
+  name: z.string().trim().min(1, 'le nom est obligatoire').max(120, '120 caractères maximum').transform(s => s.replace(/\s+/g, ' ')),
   chartId: optional(text(40)),
   phone: text(40).optional(),
   cnamId: text(40).optional(),

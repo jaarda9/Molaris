@@ -49,10 +49,19 @@ export function errorMiddleware(err: unknown, _req: Request, res: Response, _nex
     res.status(err.status).json({ error: err.message });
   } else if (err instanceof ZodError) {
     res.status(400).json({ error: err.issues[0]?.message || 'Invalid request' });
+  } else if (isBodyParserError(err)) {
+    // A malformed or oversized body is the client's mistake, not a server failure.
+    res.status(err.status).json({ error: err.type === 'entity.too.large' ? 'Requête trop volumineuse.' : 'Requête invalide (données mal formées).' });
   } else {
     console.error('[Unhandled route error]', err);
     res.status(500).json({ error: (err as Error)?.message || 'Internal server error' });
   }
+}
+
+/** Errors raised by express.json() (bad JSON, body too large) carry a 4xx status and a type. */
+function isBodyParserError(err: unknown): err is { status: number; type: string } {
+  const e = err as { status?: unknown; type?: unknown };
+  return typeof e?.type === 'string' && e.type.startsWith('entity.') && typeof e.status === 'number' && e.status >= 400 && e.status < 500;
 }
 
 export function languageOf(value: unknown): 'en' | 'fr' {

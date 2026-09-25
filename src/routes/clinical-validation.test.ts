@@ -69,3 +69,7 @@ test('anesthesia: no zero or negative carpules, plausible weight', () => {
   assert.equal(ok(anesthesiaCalcSchema, { weightKg: 0 }), false);
   assert.equal(ok(anesthesiaCalcSchema, { weightKg: 70, carpulesGiven: -3 }), false);
 });
+
+test('patient names: extra spaces collapse, letters are untouched', () => {
+  assert.equal(patientCreateSchema.parse({ name: '  Sassi   Mejri\tSalsabil ' }).name, 'Sassi Mejri Salsabil');
+});

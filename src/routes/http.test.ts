@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { z } from 'zod';
-import { HttpError, parse } from './http.js';
+import { errorMiddleware, HttpError, parse } from './http.js';
 
 const messageOf = (fn: () => unknown) => {
   try {
@@ -24,4 +24,13 @@ test('nested and unknown fields keep a readable path', () => {
   const schema = z.object({ items: z.array(z.object({ label: z.string().min(1, 'vide') })), zzz: z.string().optional() });
   assert.equal(messageOf(() => parse(schema, { items: [{ label: '' }] })), 'Lignes › 1 › Libellé : vide');
   assert.equal(messageOf(() => parse(z.object({ zzz: z.string().min(2, 'court') }), { zzz: 'a' })), 'zzz : court');
+});
+
+test('a malformed JSON body is a 400 with a French message, not a server error', () => {
+  let status = 0; let body: unknown;
+  const res = { status(s: number) { status = s; return this; }, json(b: unknown) { body = b; return this; } };
+  const parseErr = Object.assign(new SyntaxError('Unexpected token'), { status: 400, type: 'entity.parse.failed' });
+  errorMiddleware(parseErr, {} as never, res as never, () => {});
+  assert.equal(status, 400);
+  assert.deepEqual(body, { error: 'Requête invalide (données mal formées).' });
 });
