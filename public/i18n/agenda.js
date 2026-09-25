@@ -63,6 +63,9 @@ Molaris.i18n.register({
     'agenda.form.book': 'Book',
     'agenda.form.pickPatient': 'Please choose a patient.',
     'agenda.form.minutes': '{n} min',
+    'agenda.form.closedDay': 'The practice is closed that day (see opening hours).',
+    'agenda.form.outsideHours': 'Outside opening hours ({start}–{end}).',
+    'agenda.form.pastDate': 'This date is in the past.',
 
     'agenda.detail.phone': 'Phone',
     'agenda.detail.reason': 'Reason',
@@ -191,6 +194,9 @@ Molaris.i18n.register({
     'agenda.form.book': 'Réserver',
     'agenda.form.pickPatient': 'Veuillez choisir un patient.',
     'agenda.form.minutes': '{n} min',
+    'agenda.form.closedDay': 'Le cabinet est fermé ce jour-là (voir les horaires).',
+    'agenda.form.outsideHours': 'En dehors des horaires d’ouverture ({start}–{end}).',
+    'agenda.form.pastDate': 'Cette date est passée.',
 
     'agenda.detail.phone': 'Téléphone',
     'agenda.detail.reason': 'Motif',

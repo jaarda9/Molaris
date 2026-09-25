@@ -768,6 +768,7 @@
             ${chairs.map(c => `<option value="${esc(c)}" ${c === chair ? 'selected' : ''}>${esc(c)}</option>`).join('')}
           </select></div>
       </div>
+      <p data-slot-warning class="hidden -mt-1 text-[11px] font-semibold text-amber-700 dark:text-amber-300"></p>
       <div><label class="${LABEL}">${esc(t('agenda.form.reason'))}</label>
         <input name="reason" list="agenda-reasons" maxlength="120" value="${esc(existing?.reason || '')}" placeholder="${esc(t('agenda.form.reasonPlaceholder'))}" class="${INPUT}">
         <datalist id="agenda-reasons">${REASONS.map(([fr, key]) => `<option value="${esc(fr)}">${Molaris.isFr() ? '' : esc(t(`agenda.reason.${key}`))}</option>`).join('')}</datalist>
@@ -819,6 +820,23 @@
     };
     form.querySelectorAll('[name="mode"]').forEach(r => r.addEventListener('change', syncMode));
     syncMode();
+    // Booking stays possible (an exceptional Saturday, recording a past visit) but never unnoticed.
+    const slotWarning = form.querySelector('[data-slot-warning]');
+    const syncSlotWarning = () => {
+      const d = form.querySelector('[name="date"]').value;
+      const tm = form.querySelector('[name="time"]').value;
+      const endMin = toMin(tm) + Number(form.querySelector('[name="duration"]').value || 0);
+      const { start, end } = state.settings.hours;
+      const text = !d ? ''
+        : !isOpenDay(d) ? t('agenda.form.closedDay')
+        : (toMin(tm) < toMin(start) || endMin > toMin(end)) ? t('agenda.form.outsideHours', { start, end })
+        : (!isEdit && `${d}T${tm}` < `${Molaris.format.isoDate()}T00:00`) ? t('agenda.form.pastDate')
+        : '';
+      slotWarning.textContent = text ? `⚠ ${text}` : '';
+      slotWarning.classList.toggle('hidden', !text);
+    };
+    ['date', 'time', 'duration'].forEach(n => form.querySelector(`[name="${n}"]`).addEventListener('change', syncSlotWarning));
+    syncSlotWarning();
     form.querySelectorAll('[data-reason]').forEach(b => b.addEventListener('click', () => {
       form.querySelector('[name="reason"]').value = b.dataset.reason;
     }));
