@@ -226,7 +226,9 @@
         </div>
         <div class="rounded-lg bg-slate-50 dark:bg-slate-800/60 px-3 py-2">
           <div class="text-[10px] uppercase tracking-wide text-slate-400">${esc(t('prescriptions.allergies'))}</div>
-          <div class="font-semibold text-slate-800 dark:text-slate-200">${esc(p.allergies || t('prescriptions.none'))}</div>
+          ${p.allergies
+            ? `<div class="font-semibold text-slate-800 dark:text-slate-200">${esc(p.allergies)}</div>`
+            : `<div class="font-semibold text-amber-700 dark:text-amber-300">${esc(t('prescriptions.notRecorded'))}</div>`}
         </div>
         <div class="rounded-lg bg-slate-50 dark:bg-slate-800/60 px-3 py-2">
           <div class="text-[10px] uppercase tracking-wide text-slate-400">${esc(t('prescriptions.currentMeds'))}</div>

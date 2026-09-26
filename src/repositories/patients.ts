@@ -27,7 +27,11 @@ export type PatientSummary = Pick<PatientRecord, 'id' | 'chartId' | 'name' | 'ph
   teethCharted: number;
   carpulesGiven: number;
   soapCount: number;
+  demo: boolean;
 };
+
+/** Ids of the example charts seeded into a new database (see buildSeedPatients). */
+const DEMO_PATIENT_IDS = new Set(['pt_1', 'pt_2', 'pt_3', 'pt_4']);
 
 export interface PatientRecord {
   id: string;
@@ -382,6 +386,20 @@ export class PatientRepository {
     }
   }
 
+  /** Removes every demo chart that can be removed; a real chart must exist first. */
+  public deleteDemoPatients(): { deleted: string[]; kept: Array<{ name: string; reason: string }> } {
+    const demos = [...this.patients.values()].filter(p => this.isDemoPatient(p.id));
+    if (demos.length && demos.length === this.patients.size) {
+      throw new Error('Créez d’abord votre premier patient : la base ne peut pas rester vide.');
+    }
+    const deleted: string[] = [];
+    const kept: Array<{ name: string; reason: string }> = [];
+    for (const p of demos) {
+      try { this.deletePatient(p.id); deleted.push(p.name); } catch (err: any) { kept.push({ name: p.name, reason: err.message }); }
+    }
+    return { deleted, kept };
+  }
+
   private seed(): void {
     this.db.transaction(() => {
       for (const patient of buildSeedPatients()) this.save(patient);
@@ -433,8 +451,9 @@ export class PatientRepository {
     // one, so a new chart is never numbered below the existing ones (PT-2026-0001 after 0112).
     const year = new Date().getFullYear();
     const prefix = `PT-${year}-`;
+    // The demo charts' numbers do not count: a new clinic's first patient is PT-…-0001.
     const highest = Math.max(0, ...[...this.patients.values()]
-      .filter(p => p.chartId?.startsWith(prefix))
+      .filter(p => p.chartId?.startsWith(prefix) && !DEMO_PATIENT_IDS.has(p.id))
       .map(p => Number(p.chartId.slice(prefix.length)) || 0));
     this.db.prepare(`
       INSERT INTO document_counters (kind, year, last) VALUES ('PT', ?, ?)
@@ -467,6 +486,7 @@ export class PatientRepository {
       teethCharted: (p.teeth || []).filter(t => t.status && t.status !== 'sound' && t.status !== 'unerupted').length,
       carpulesGiven: Math.round((p.anesthesiaLog || []).filter(e => !e.cancelledAt).reduce((sum, e) => sum + (Number(e.carpules) || 0), 0) * 10) / 10,
       soapCount: (p.soapNotes || []).length,
+      demo: DEMO_PATIENT_IDS.has(p.id),
       updatedAt: p.updatedAt
     }));
   }
@@ -525,9 +545,11 @@ export class PatientRepository {
       weightKg: Number(data.weightKg) || 70,
       asaStatus: data.asaStatus || 'ASA I',
       cardiacRisk: !!data.cardiacRisk,
-      medicalAlerts: data.medicalAlerts || 'Aucune',
-      allergies: data.allergies || 'Aucune allergie connue',
-      chiefComplaint: data.chiefComplaint || 'Consultation',
+      // Blank stays blank (« non renseigné »): « Aucune allergie connue » is a statement the
+      // dentist has to make, not a default.
+      medicalAlerts: data.medicalAlerts ?? '',
+      allergies: data.allergies ?? '',
+      chiefComplaint: data.chiefComplaint ?? '',
       deliveredCarpules: 0,
       selectedDrugId: data.selectedDrugId || 'lido_100k',
       isPregnantOrNursing: !!data.isPregnantOrNursing,
@@ -560,14 +582,21 @@ export class PatientRepository {
     return updated;
   }
 
+  /** The fictitious charts a new database starts with (examples, not the clinic's patients). */
+  public isDemoPatient(id: string): boolean {
+    return DEMO_PATIENT_IDS.has(id);
+  }
+
   public deletePatient(id: string): boolean {
     if (!this.patients.has(id)) return false;
     if (this.patients.size <= 1) {
-      throw new Error('Cannot delete the only remaining patient record in the database.');
+      throw new Error('C’est le seul dossier de la base : créez d’abord un autre patient.');
     }
     // A chart with clinical history is a medical record: it is kept. Only a chart created
     // by mistake (nothing recorded) can be deleted — deleting would also cascade the agenda.
+    // The demo charts' "history" is fictitious: they can always be removed.
     const patient = this.patients.get(id)!;
+    if (this.isDemoPatient(id)) return this.removePatientRow(id);
     const visits = (this.db.prepare(`
       SELECT COUNT(*) AS n FROM appointments
       WHERE patient_id = ? AND status IN ('arrived', 'in_progress', 'completed', 'no_show')
@@ -584,6 +613,10 @@ export class PatientRepository {
     if (history.length) {
       throw new Error(`Ce dossier contient ${history.join(', ')} : il ne peut pas être supprimé (dossier médical à conserver).`);
     }
+    return this.removePatientRow(id);
+  }
+
+  private removePatientRow(id: string): boolean {
     try {
       this.db.prepare('DELETE FROM patients WHERE id = ?').run(id);
     } catch (err: any) {

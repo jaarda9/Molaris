@@ -71,5 +71,12 @@ test('anesthesia: no zero or negative carpules, plausible weight', () => {
 });
 
 test('patient names: extra spaces collapse, letters are untouched', () => {
-  assert.equal(patientCreateSchema.parse({ name: '  Sassi   Mejri\tSalsabil ' }).name, 'Sassi Mejri Salsabil');
+  assert.equal(patientCreateSchema.parse({ name: '  Sassi   Mejri\tSalsabil ', age: 30, weightKg: 60 }).name, 'Sassi Mejri Salsabil');
+});
+
+test('a chart is not created with a guessed age or weight', () => {
+  assert.equal(ok(patientCreateSchema, { name: 'A', weightKg: 60 }), false);          // no age, no birth date
+  assert.equal(ok(patientCreateSchema, { name: 'A', age: 30 }), false);               // no weight
+  assert.equal(ok(patientCreateSchema, { name: 'A', birthDate: '1990-05-01', weightKg: 60 }), true);
+  assert.equal(ok(patientCreateSchema, { name: 'A', age: 30, weightKg: 60 }), true);
 });

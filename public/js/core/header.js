@@ -47,7 +47,7 @@ function updateActivePatientHeaderUI(patient) {
       .map(part => part[0]).slice(0, 2).join('').toUpperCase() || '—';
   }
   // Age matters at a glance (children, elderly patients); weight drives the anesthesia doses.
-  if (weightEl) weightEl.textContent = `${patient.age} ${isFr ? 'ans' : 'y'} · ${patient.weightKg} kg`;
+  if (weightEl) weightEl.textContent = `${patient.age} ${isFr ? 'ans' : 'y'} · ${isFr ? String(patient.weightKg).replace('.', ',') : patient.weightKg} kg`;
 
   if (cardiacBadge) {
     cardiacBadge.textContent = isFr ? 'Risque cardiaque' : 'Cardiac risk';

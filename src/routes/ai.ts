@@ -105,8 +105,9 @@ aiRouter.post('/api/chat', aiLimiter, async (req: Request, res: Response) => {
     contextPrompt += `- Preferred Implant System: ${memory.preferences.implantSystem}\n`;
     contextPrompt += `- ACTIVE PATIENT (anonymized) | Age: ${activePatient.age}${activePatient.gender ? ` (${activePatient.gender})` : ''} | Weight: ${activePatient.weightKg}kg | ASA Status: ${activePatient.asaStatus} | Cardiac Risk: ${activePatient.cardiacRisk ? 'YES (Strict 0.04mg Epi Max)' : 'NO'}\n`;
     contextPrompt += `- Chief Complaint: "${activePatient.chiefComplaint}"\n`;
-    contextPrompt += `- Medical Alerts: ${activePatient.medicalAlerts}\n`;
-    contextPrompt += `- Allergies: ${activePatient.allergies}\n`;
+    // Blank = never asked: the model must not read it as "none".
+    contextPrompt += `- Medical Alerts: ${activePatient.medicalAlerts || 'NOT RECORDED (ask, do not assume none)'}\n`;
+    contextPrompt += `- Allergies: ${activePatient.allergies || 'NOT RECORDED (ask, do not assume none)'}\n`;
     const activeMeds = activePatient.medications.filter(m => m.active).map(m => [m.name, m.dosage, m.frequency].filter(Boolean).join(' '));
     contextPrompt += `- Current Medications: ${activeMeds.length ? activeMeds.join('; ') : 'none recorded'}\n`;
     const anesthesiaToday = dosesLoggedOn(activePatient.anesthesiaLog).map(d => `${d.carpules} x ${d.drug.name}`).join(', ');
@@ -290,7 +291,7 @@ Never describe teeth, bone or lesions you cannot actually see.
 
 CLINICAL QUERY: ${clinicalQuery}
 ${focusTooth ? `FOCUS AREA: tooth ${focusTooth.fdi} (FDI) - ${focusTooth.name}` : ''}
-PATIENT (anonymized): ${activePatient.age}y ${activePatient.gender} | ASA: ${activePatient.asaStatus} | Chief Complaint: "${activePatient.chiefComplaint}" | Medical Alerts: ${activePatient.medicalAlerts}
+PATIENT (anonymized): ${activePatient.age}y ${activePatient.gender} | ASA: ${activePatient.asaStatus} | Chief Complaint: "${activePatient.chiefComplaint}" | Medical Alerts: ${activePatient.medicalAlerts || 'not recorded'}
 
 Structure the assessment as follows (FDI tooth numbers, no procedure codes):
 1. **Image type & quality**: (bitewing, periapical, panoramic, intraoral photo; angulation, contrast, crown/apex coverage).
@@ -439,7 +440,7 @@ DENT CONCERNÉE : ${tooth ? `Dent ${tooth.fdi} (FDI) - ${tooth.name}` : 'non pr�
 DÉTAILS CLINIQUES : ${details || missing}
 ANESTHÉSIE LOCALE : ${anesthesia}
 MATÉRIAUX UTILISÉS : ${materialsUsed || missing}
-PATIENT (anonymisé) : ${activePatient.age} ans | Statut ASA: ${activePatient.asaStatus} | Poids: ${activePatient.weightKg}kg | Alertes: ${activePatient.medicalAlerts}
+PATIENT (anonymisé) : ${activePatient.age} ans | Statut ASA: ${activePatient.asaStatus} | Poids: ${activePatient.weightKg}kg | Alertes: ${activePatient.medicalAlerts || 'non renseignées'}
 DATE DE LA SÉANCE : ${today}
 
 Le texte est enregistré tel quel dans le dossier médical : commencez directement par la ligne « **Date :** ${today} », sans phrase d'introduction ni de conclusion, sans séparateur, sans ligne « Patient ».
@@ -469,7 +470,7 @@ TOOTH: ${tooth ? `${tooth.fdi} (FDI) - ${tooth.name}` : 'not specified'}
 CLINICAL DETAILS: ${details || missing}
 LOCAL ANESTHESIA: ${anesthesia}
 MATERIALS: ${materialsUsed || missing}
-PATIENT (anonymized): ${activePatient.age}y | ASA: ${activePatient.asaStatus} | Weight: ${activePatient.weightKg}kg | Alerts: ${activePatient.medicalAlerts}
+PATIENT (anonymized): ${activePatient.age}y | ASA: ${activePatient.asaStatus} | Weight: ${activePatient.weightKg}kg | Alerts: ${activePatient.medicalAlerts || 'not recorded'}
 VISIT DATE: ${today}
 
 The text is saved as is in the medical record: start directly with the line "**Date:** ${today}", with no introduction or closing remark, no separator, no "Patient" line.

@@ -68,7 +68,11 @@ export const patientCreateSchema = z.object({
   isPregnantOrNursing: patientFields.isPregnantOrNursing.optional(),
   prophylaxisRequired: patientFields.prophylaxisRequired.optional(),
   prophylaxisReason: patientFields.prophylaxisReason.optional()
-});
+})
+  // A chart is not created with a guessed age or weight: both set anesthetic limits and the
+  // children's-dose warnings (they used to default to 35 years and 70 kg).
+  .refine(p => p.age !== undefined || !!p.birthDate, { message: 'indiquez l’âge ou la date de naissance', path: ['age'] })
+  .refine(p => p.weightKg !== undefined, { message: 'indiquez le poids (il fixe la dose maximale d’anesthésique)', path: ['weightKg'] });
 
 /** Only the identity/medical fields a form edits; clinical records have their own endpoints. */
 export const patientUpdateSchema = z.object(patientFields).partial();

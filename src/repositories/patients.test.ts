@@ -140,8 +140,11 @@ test('advisor conversation: saved per patient, survives a reload, capped, cleara
 
 test('a chart with clinical history cannot be deleted; an empty one (created by mistake) can', () => {
   const { db, repo } = freshRepo();
-  // pt_1 has a signed SOAP note and an anesthesia log (demo data).
-  assert.throws(() => repo.deletePatient('pt_1'), /ne peut pas être supprimé/);
+  // A real chart with a recorded anesthesia is a medical record (demo charts are not).
+  const treated = repo.createPatient({ name: 'Patient traité' });
+  repo.setActivePatient(treated.id);
+  repo.logAnesthesiaForActivePatient({ drugId: 'arti_100k', drugName: 'Articaïne', carpules: 1, mg: 68, epiMg: 0.017 });
+  assert.throws(() => repo.deletePatient(treated.id), /ne peut pas être supprimé/);
 
   const empty = repo.createPatient({ name: 'Erreur de saisie' });
   assert.equal(repo.deletePatient(empty.id), true);
@@ -210,4 +213,21 @@ test('a mistaken anesthesia entry is cancelled with a reason, once, and kept', (
   assert.ok(cancelled.cancelledAt);
   assert.throws(() => repo.cancelAnesthesiaEntryForActivePatient(entry.id, 'encore'), /déjà annulée/);
   assert.ok(repo.getActivePatient().anesthesiaLog.some(e => e.id === entry.id));
+});
+
+test('the example charts of a new database can be removed in one go, once a real chart exists', () => {
+  const { repo } = freshRepo();
+  assert.equal(repo.getPatientSummaries().filter(p => p.demo).length, 4);
+  assert.throws(() => repo.deleteDemoPatients(), /premier patient/);
+  const real = repo.createPatient({ name: 'Premier Patient', age: 30 });
+  const { deleted, kept } = repo.deleteDemoPatients();
+  assert.equal(deleted.length, 4);
+  assert.equal(kept.length, 0);
+  assert.deepEqual(repo.getAllPatients().map(p => p.id), [real.id]);
+  assert.equal(repo.getActivePatient().id, real.id);
+});
+
+test('a new clinic numbers its first patient 0001 even with the example charts present', () => {
+  const { repo } = freshRepo();
+  assert.equal(repo.createPatient({ name: 'Premier', age: 30 }).chartId, `PT-${new Date().getFullYear()}-0001`);
 });

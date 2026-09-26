@@ -439,6 +439,11 @@ window.MOLARIS_TRANSLATIONS = {
     "patients.allergiesPlaceholder": "e.g. Penicillin, latex, none known",
     "patients.importDone": "Import: {imported} chart(s) added, {skipped} already here (left unchanged), {invalid} invalid (ignored).",
     "patients.importFailed": "Import failed:",
+    "patients.demoBanner": "{n} example chart(s) (fictitious patients provided for the demonstration) are still in your records. Remove them now that you have entered your own patients.",
+    "patients.demoBannerFirst": "The {n} charts below are examples (fictitious patients) to try Molaris. Create your first patient; you can then remove the examples in one click.",
+    "patients.demoRemove": "Remove the example charts",
+    "patients.demoBadge": "Example",
+    "patients.demoRemoveConfirm": "Remove the example charts and everything recorded in them? Your own patients are not affected.",
     "patients.moreHidden": "{n} other charts not shown: search by name, chart number or phone.",
     "patients.duplicateConfirm": "A chart already exists: {name} ({chart}, {phone}). Create a second chart anyway?\n\nTo see the existing one, cancel and search for it in Patients.",
     "perio.notesPlaceholder": "Chart notes (optional)...",
@@ -934,6 +939,11 @@ window.MOLARIS_TRANSLATIONS = {
     "patients.allergiesPlaceholder": "ex. Pénicilline, latex, aucune connue",
     "patients.importDone": "Import : {imported} dossier(s) ajouté(s), {skipped} déjà présent(s) (non modifiés), {invalid} invalide(s) (ignorés).",
     "patients.importFailed": "Échec de l’import :",
+    "patients.demoBanner": "{n} dossier(s) d’exemple (patients fictifs fournis pour la démonstration) figurent encore dans vos dossiers. Supprimez-les maintenant que vous avez saisi vos propres patients.",
+    "patients.demoBannerFirst": "Les {n} dossiers ci-dessous sont des exemples (patients fictifs) pour découvrir Molaris. Créez votre premier patient ; vous pourrez ensuite supprimer les exemples en un clic.",
+    "patients.demoRemove": "Supprimer les dossiers d’exemple",
+    "patients.demoBadge": "Exemple",
+    "patients.demoRemoveConfirm": "Supprimer les dossiers d’exemple et tout ce qui y est enregistré ? Vos propres patients ne sont pas concernés.",
     "patients.moreHidden": "{n} autres dossiers non affichés : recherchez par nom, n° de dossier ou téléphone.",
     "patients.duplicateConfirm": "Un dossier existe déjà : {name} ({chart}, {phone}). Créer quand même un second dossier ?\n\nPour ouvrir le dossier existant, annulez et recherchez-le dans Patients.",
     "perio.notesPlaceholder": "Notes du relevé (facultatif)...",
@@ -1372,10 +1382,9 @@ window.applyMolarisLanguage = function(lang) {
   });
 
   const genderSelect = document.getElementById('form-patient-gender');
-  if (genderSelect && genderSelect.options.length >= 3) {
-    genderSelect.options[0].text = t('patients.genderMale');
-    genderSelect.options[1].text = t('patients.genderFemale');
-    genderSelect.options[2].text = t('patients.genderOther');
+  if (genderSelect) {
+    const labels = { Male: 'patients.genderMale', Female: 'patients.genderFemale', Other: 'patients.genderOther' };
+    [...genderSelect.options].forEach(o => { if (labels[o.value]) o.text = t(labels[o.value]); });
   }
 
   const asaSelect = document.getElementById('form-patient-asa');

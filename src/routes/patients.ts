@@ -75,6 +75,15 @@ patientsRouter.put('/api/patients/:id', route((req: Request, res: Response) => {
   res.json({ success: true, patient: updated });
 }));
 
+// The example charts a new installation starts with, removed in one go.
+patientsRouter.post('/api/patients/demo/remove', (req: Request, res: Response) => {
+  try {
+    res.json({ success: true, ...patientDb.deleteDemoPatients(), activePatient: patientDb.getActivePatient() });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 patientsRouter.delete('/api/patients/:id', (req: Request, res: Response) => {
   try {
     const success = patientDb.deletePatient(String(req.params.id));

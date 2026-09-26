@@ -25,6 +25,35 @@ function genderLabel(gender, isFr) {
 
 const PATIENT_GRID_LIMIT = 60;
 
+// A new installation starts with fictitious example charts: say so, and offer to remove them
+// (they cannot be removed one by one like real charts, which keep their medical history).
+function renderDemoBanner() {
+  const banner = document.getElementById('patients-demo-banner');
+  if (!banner) return;
+  const demos = (systemState.patients || []).filter(p => p.demo);
+  const realCount = (systemState.patients || []).length - demos.length;
+  banner.classList.toggle('hidden', !demos.length);
+  if (!demos.length) return;
+  banner.querySelector('p').textContent = molarisT(realCount ? 'patients.demoBanner' : 'patients.demoBannerFirst').replace('{n}', demos.length);
+  const btn = banner.querySelector('button');
+  btn.textContent = molarisT('patients.demoRemove');
+  btn.classList.toggle('hidden', !realCount);
+}
+
+async function removeDemoPatients() {
+  if (!confirm(molarisT('patients.demoRemoveConfirm'))) return;
+  try {
+    const res = await fetch('/api/patients/demo/remove', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    if (data.kept?.length) alert(data.kept.map(k => `${k.name} : ${k.reason}`).join('\n'));
+    await fetchPatients();
+    if (data.activePatient) await selectPatient(data.activePatient.id);
+  } catch (err) {
+    alert(`${molarisT('common.saveError')} ${err.message}`);
+  }
+}
+
 // Redraws (after a save, a patient switch, a language change) keep the search typed in the box.
 function renderPatientsGrid(filterText = document.getElementById('patient-search-input')?.value || '') {
   const grid = document.getElementById('patients-grid');
@@ -42,6 +71,8 @@ function renderPatientsGrid(filterText = document.getElementById('patient-search
     if (text.includes(q)) return true;
     return qDigits.length >= 4 && [p.phone, p.cnamId].some(v => String(v || '').replace(/\D/g, '').includes(qDigits));
   });
+
+  renderDemoBanner();
 
   if (countBadge) {
     const isFr = systemState.language === 'fr';
@@ -109,7 +140,7 @@ function renderPatientsGrid(filterText = document.getElementById('patient-search
               ${initials}
             </div>
             <div>
-              <h3 class="font-bold text-sm text-slate-900 dark:text-white leading-snug">${escapeHtml(patient.name)}</h3>
+              <h3 class="font-bold text-sm text-slate-900 dark:text-white leading-snug">${escapeHtml(patient.name)}${patient.demo ? ` <span class="ml-1 align-middle px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">${escapeHtml(molarisT('patients.demoBadge'))}</span>` : ''}</h3>
               <div class="flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                 <span>${escapeHtml(patient.chartId)}</span>
                 <span>&bull;</span>
@@ -136,25 +167,23 @@ function renderPatientsGrid(filterText = document.getElementById('patient-search
               : ''
           }
           <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-            ${patient.weightKg || 70} kg
+            ${String(patient.weightKg ?? '—').replace('.', ',')} kg
           </span>
         </div>
 
         <!-- Chief Complaint -->
         <div class="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-2.5 text-xs text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-800">
           <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">${isFr ? 'Motif de consultation' : 'Chief Complaint'}</div>
-          <p class="italic line-clamp-2">${escapeHtml(patient.chiefComplaint || (isFr ? 'Bilan bucco-dentaire complet de routine' : 'Routine comprehensive evaluation'))}</p>
+          <p class="italic line-clamp-2">${escapeHtml(patient.chiefComplaint || '—')}</p>
         </div>
 
         <!-- Medical Alerts / Allergies -->
-        ${
-          patient.medicalAlerts || patient.allergies
-            ? `<div class="text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5">
-                ${patient.medicalAlerts ? `<div class="truncate"><strong class="text-slate-700 dark:text-slate-300">${isFr ? 'Alertes :' : 'Alerts:'}</strong> ${escapeHtml(patient.medicalAlerts)}</div>` : ''}
-                ${patient.allergies ? `<div class="truncate"><strong class="text-rose-600 dark:text-rose-400">${isFr ? 'Allergies :' : 'Allergies:'}</strong> ${escapeHtml(patient.allergies)}</div>` : ''}
-              </div>`
-            : ''
-        }
+        <div class="text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5">
+          ${patient.medicalAlerts ? `<div class="truncate"><strong class="text-slate-700 dark:text-slate-300">${isFr ? 'Alertes :' : 'Alerts:'}</strong> ${escapeHtml(patient.medicalAlerts)}</div>` : ''}
+          ${patient.allergies
+            ? `<div class="truncate"><strong class="text-rose-600 dark:text-rose-400">${isFr ? 'Allergies :' : 'Allergies:'}</strong> ${escapeHtml(patient.allergies)}</div>`
+            : `<div class="truncate text-amber-700 dark:text-amber-300">${isFr ? 'Allergies : non renseignées' : 'Allergies: not recorded'}</div>`}
+        </div>
 
         <!-- Operatory Metrics Grid -->
         <div class="grid grid-cols-3 gap-2 pt-1 text-center">
@@ -300,10 +329,10 @@ function openEditPatientModal(patient) {
   document.getElementById('form-patient-cnam-id').value = patient.cnamId || '';
   document.getElementById('form-patient-cnam-quality').value = patient.cnamQuality || '';
   document.getElementById('form-patient-birthdate').value = patient.birthDate || '';
-  document.getElementById('form-patient-age').value = patient.age || 35;
+  document.getElementById('form-patient-age').value = patient.age ?? '';
   syncAgeFromBirthDate();
-  document.getElementById('form-patient-gender').value = patient.gender || 'Male';
-  document.getElementById('form-patient-weight').value = patient.weightKg || 70;
+  document.getElementById('form-patient-gender').value = patient.gender || '';
+  document.getElementById('form-patient-weight').value = patient.weightKg ?? '';
   document.getElementById('form-patient-asa').value = patient.asaStatus || 'ASA I';
   document.getElementById('form-patient-cardiac').checked = !!patient.cardiacRisk;
   document.getElementById('form-patient-complaint').value = patient.chiefComplaint || '';
@@ -378,8 +407,9 @@ function initPatientManager() {
     modalTitle.textContent = isFr ? 'Nouveau patient' : 'Add New Dental Patient';
     form.reset();
     document.getElementById('form-patient-id').value = '';
-    document.getElementById('form-patient-weight').value = 70;
-    document.getElementById('form-patient-age').value = 35;
+    // No guessed age or weight (they set anesthetic limits): the dentist types them.
+    document.getElementById('form-patient-weight').value = '';
+    document.getElementById('form-patient-age').value = '';
     document.getElementById('form-patient-name').value = prefill.name || '';
     document.getElementById('form-patient-phone').value = prefill.phone || '';
     document.getElementById('form-patient-complaint').value = prefill.chiefComplaint || '';
@@ -387,6 +417,7 @@ function initPatientManager() {
     modal.classList.remove('hidden');
   };
   if (createBtn) createBtn.addEventListener('click', () => window.openNewPatientModal());
+  document.getElementById('btn-remove-demo-patients')?.addEventListener('click', removeDemoPatients);
 
   const closePatientModal = () => {
     modal.classList.add('hidden');
@@ -408,9 +439,9 @@ function initPatientManager() {
         cnamId: document.getElementById('form-patient-cnam-id').value.trim(),
         cnamQuality: document.getElementById('form-patient-cnam-quality').value,
         birthDate: document.getElementById('form-patient-birthdate').value || undefined,
-        age: Number(document.getElementById('form-patient-age').value) || 35,
+        age: document.getElementById('form-patient-age').value === '' ? undefined : Number(document.getElementById('form-patient-age').value),
         gender: document.getElementById('form-patient-gender').value,
-        weightKg: Number(document.getElementById('form-patient-weight').value) || 70,
+        weightKg: document.getElementById('form-patient-weight').value === '' ? undefined : Number(document.getElementById('form-patient-weight').value),
         asaStatus: document.getElementById('form-patient-asa').value,
         cardiacRisk: document.getElementById('form-patient-cardiac').checked,
         chiefComplaint: document.getElementById('form-patient-complaint').value.trim(),
