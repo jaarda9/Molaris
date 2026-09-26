@@ -4,7 +4,7 @@ import { getDb } from '../../db/connection.js';
 import { HttpError, notFound, parse, route } from '../../routes/http.js';
 import { patientDb, type PatientRecord } from '../../repositories/patients.js';
 import { DRUG_CATEGORIES, DrugRepository, PRESCRIPTION_LANGUAGES, PrescriptionRepository } from './repository.js';
-import { loadWhoStarterDrugs } from './starter.js';
+import { loadStarterDrugs } from './starter.js';
 import { checkPrescriptionSafety } from './safety.js';
 import { issuePrescription, PrescriptionInputError, renewalItems, type IssueResult } from './service.js';
 
@@ -105,9 +105,9 @@ prescriptionsRouter.post('/api/drugs', route((req, res) => {
   res.status(201).json({ success: true, drug });
 }));
 
-// WHO starter list (AWaRe 2022, dental chapter), loaded on request by a new clinic.
+// Starter list (HAS 2026 antibiotics, WHO analgesics), loaded on request by a new clinic.
 prescriptionsRouter.post('/api/drugs/starter', route((req, res) => {
-  const added = loadWhoStarterDrugs(getDb());
+  const added = loadStarterDrugs(getDb());
   res.json({ success: true, added, drugs: new DrugRepository(getDb()).list() });
 }));
 

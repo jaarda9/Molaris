@@ -12,11 +12,11 @@ export const DEMO_DRUGS: Array<DrugInput & { id: string }> = [
   // --- Antibiotiques -------------------------------------------------------
   {
     id: 'drug_demo_amoxicilline', category: 'antibiotique',
-    dci: 'Amoxicilline', form: 'gélule', strength: '500 mg',
-    // OMS, guide AWaRe 2022 (infections bucco-dentaires) : 500 mg toutes les 8 h,
-    // 3 jours si la cause est traitée, sinon 5 jours (same as the starter list).
-    defaultDosage: '1 gélule toutes les 8 heures', defaultDuration: '3 jours (5 jours si la cause n’a pas pu être traitée)',
-    defaultInstructionsAr: 'كبسولة واحدة كل 8 ساعات'
+    dci: 'Amoxicilline', form: 'comprimé', strength: '1 g',
+    // HAS 2026 (prescription des antibiotiques en pratique bucco-dentaire, tableau 14):
+    // 1 g, 3 fois par jour, 3 jours (+2 si persistance) — same as the starter list.
+    defaultDosage: '1 comprimé 3 fois par jour', defaultDuration: '3 jours (prolonger de 2 jours si les symptômes persistent)',
+    defaultInstructionsAr: 'قرص واحد 3 مرات في اليوم'
   },
   {
     // ⚠️ À VÉRIFIER: forme/dosage 1 g/125 mg et 2 vs 3 prises par jour selon l'indication.

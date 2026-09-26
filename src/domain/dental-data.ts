@@ -186,7 +186,7 @@ export const QUICK_PROTOCOLS = [
     steps: [
       '1. Verification: Check extracted root tip for sinus floor bone snippet. Instruct patient to gently pinch nose and blow (Valsalva test) while observing socket for bubbling (avoid aggressive blowing).',
       '2. If < 2mm perforation: Promote stable blood clot. Place gelatin sponge (Gelfoam) or collagen plug with figure-eight suture. Clot usually heals spontaneously.',
-      '3. If 2mm - 5mm perforation: Place collagen plug or PRF membrane secured with figure-eight resorbable suture. Prescribe sinus precautions + Amoxicillin/Clavulanate (Augmentin) 875mg BID x 7d + nasal decongestant (Oxymetazoline spray x 3d).',
+      '3. If 2mm - 5mm perforation: Place collagen plug or PRF membrane secured with figure-eight resorbable suture. Prescribe sinus precautions + post-operative antibiotic prophylaxis (HAS 2026): amoxicillin 1 g twice daily for 5 days (proven penicillin allergy: azithromycin 500 mg once daily for 3 days) + nasal decongestant (Oxymetazoline spray x 3d).',
       '4. If > 5mm perforation: Requires surgical primary closure (buccal advancement flap or palatal island flap). If not experienced, pack socket, prescribe antibiotics/sinus protocol, and urgently refer to Oral & Maxillofacial Surgery.',
       '5. Sinus precautions for patient: No nose blowing for 2 weeks, sneeze with mouth wide open, no drinking through straws, no smoking, no playing wind instruments.'
     ]

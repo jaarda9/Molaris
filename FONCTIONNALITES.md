@@ -95,6 +95,10 @@ en français et/ou en arabe.
   facultatives.
 - **Vérification de sécurité automatique** : allergies, traitements en cours et interactions.
   Une alerte critique **bloque** l’impression, sauf si vous cochez la confirmation.
+- **Repères HAS 2026** sur toute ordonnance avec antibiotique (indications, amoxicilline 1 g 3 fois par jour
+  pendant 3 jours, réévaluation à 3 jours ; dose selon le poids chez l’enfant).
+- Cabinet qui démarre : **Charger la liste de départ (HAS 2026)** (amoxicilline, azithromycine,
+  métronidazole, paracétamol, ibuprofène), à relire avant usage.
 - Langue d’impression : **Français**, **Arabe** ou **Français + arabe**.
 - **Émettre et imprimer** : l’ordonnance reçoit un numéro (`ORD-2026-0001`) et devient un
   document définitif (ni modifiable ni supprimable).

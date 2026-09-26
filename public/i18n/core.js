@@ -1127,7 +1127,7 @@ window.MOLARIS_FRENCH_PROTOCOLS = [
     steps: [
       '1. Vérification : Examiner l\'apex extrait. Manœuvre de Valsalva douce (pincer le nez et souffler bouche ouverte) en observant si des bulles apparaissent dans l\'alvéole.',
       '2. Si perforation < 2 mm : Favoriser un caillot stable. Mèche de collagène ou éponge de gélatine + suture en croix (huit). Cicatrisation spontanée fréquente.',
-      '3. Si perforation 2 à 5 mm : Bouchon de collagène ou membrane PRF suturée en huit. Prescrire antibiotiques (Amoxicilline/Acide Clavulanique 1g x2/j pendant 7j) + décongestionnant nasal.',
+      '3. Si perforation 2 à 5 mm : Bouchon de collagène ou membrane PRF suturée en huit. Antibioprophylaxie post-opératoire recommandée (HAS 2026) : amoxicilline 1 g 2 fois par jour pendant 5 jours ; en cas d’allergie avérée aux pénicillines, azithromycine 500 mg 1 fois par jour pendant 3 jours. + décongestionnant nasal.',
       '4. Si perforation > 5 mm : Fermeture chirurgicale par lambeau d\'avancement vestibulaire ou palatin. Si praticien non expérimenté, méchage, antibiothérapie et adressage urgent en chirurgie maxillo-faciale.',
       '5. Consignes sinusiennes impératives : Ne pas se moucher pendant 2 semaines, éternuer bouche grande ouverte, pas de paille, pas d\'instruments à vent.'
     ]

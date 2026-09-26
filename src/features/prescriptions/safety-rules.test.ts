@@ -84,22 +84,26 @@ test('the same drug on two lines blocks (double dose)', () => {
   assert.ok(r.alerts.some(a => a.source === 'duplicate' && /Amoxicilline/.test(a.message)));
 });
 
-// --- WHO AWaRe antibiotic stewardship ------------------------------------------------
+// --- Antibiotic stewardship (HAS 2026, WHO « Watch ») ---------------------------------
 
-test('an antibiotic brings the WHO dental-indication reminder; a Watch antibiotic a warning', () => {
-  const amox = checkPrescriptionSafety(patient(''), [{ drugLabel: 'Amoxicilline', strength: '500 mg' }]);
+test('an antibiotic brings the HAS 2026 reminder; azithromycin is kept for penicillin allergy', () => {
+  const amox = checkPrescriptionSafety(patient(''), [{ drugLabel: 'Amoxicilline', strength: '1 g' }]);
   const reminder = amox.alerts.find(a => a.source === 'stewardship');
   assert.equal(reminder?.severity, 'info');
-  assert.match(reminder!.message, /3 jours si la cause est traitée, sinon 5 jours/);
+  assert.match(reminder!.message, /amoxicilline 1 g 3 fois par jour pendant 3 jours/);
+  assert.match(reminder!.message, /Réévaluer à 3 jours/);
   assert.equal(amox.hasCritical, false);
   const azi = checkPrescriptionSafety(patient(''), [{ drugLabel: 'Azithromycine' }]);
-  assert.ok(azi.alerts.some(a => a.source === 'stewardship' && a.severity === 'warning' && /Watch/.test(a.message)));
+  assert.ok(azi.alerts.some(a => a.source === 'stewardship' && a.severity === 'warning' && /allergie avérée aux pénicillines/.test(a.message)));
   assert.equal(checkPrescriptionSafety(patient(''), [{ drugLabel: 'Paracétamol' }]).alerts.length, 0);
 });
 
-test('a child on amoxicillin gets the WHO weight-band dose', () => {
+test('a child on amoxicillin gets the HAS weight-based dose; under 6, no tablets', () => {
   const r = checkPrescriptionSafety(patient('', { age: 7, weightKg: 24 }), [{ drugLabel: 'Amoxicilline' }]);
-  assert.ok(r.alerts.some(a => /80–90 mg\/kg\/jour, soit pour 24 kg : 500 mg toutes les 8 h ou 1 g toutes les 12 h/.test(a.message)));
-  const toddler = checkPrescriptionSafety(patient('', { age: 2, weightKg: 12 }), [{ drugLabel: 'Amoxicilline' }]);
-  assert.ok(toddler.alerts.some(a => /12 kg : 500 mg toutes les 12 h/.test(a.message)));
+  assert.ok(r.alerts.some(a => /50 mg\/kg\/jour en 3 prises.*pour 24 kg : 400 mg 3 fois par jour/.test(a.message)));
+  assert.ok(!r.alerts.some(a => /moins de 6 ans/.test(a.message)));
+  const heavy = checkPrescriptionSafety(patient('', { age: 14, weightKg: 70 }), [{ drugLabel: 'Amoxicilline' }]);
+  assert.ok(heavy.alerts.some(a => /70 kg : 1000 mg 3 fois par jour/.test(a.message)), 'capped at 3 g/day');
+  const toddler = checkPrescriptionSafety(patient('', { age: 4, weightKg: 16 }), [{ drugLabel: 'Amoxicilline' }]);
+  assert.ok(toddler.alerts.some(a => /moins de 6 ans : pas de comprimés/.test(a.message)));
 });

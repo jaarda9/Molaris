@@ -87,6 +87,10 @@ The interface is in French (English available); patient documents print in Frenc
   for the patient.
 - **Automatic safety check** against allergies, current medications and interactions.
   A critical alert **blocks** printing unless you tick the confirmation.
+- **HAS 2026 guidance** on every prescription with an antibiotic (indications, amoxicillin 1 g three
+  times a day for 3 days, reassess at 3 days; weight-based dose for children).
+- New clinic: **Charger la liste de départ (HAS 2026)** (amoxicillin, azithromycin, metronidazole,
+  paracetamol, ibuprofen), to review before use.
 - Print language: **Français**, **Arabe**, or **Français + arabe**.
 - **Émettre et imprimer** — the prescription is numbered (`ORD-2026-0001`) and becomes a
   permanent record (it cannot be edited or deleted).

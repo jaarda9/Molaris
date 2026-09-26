@@ -16,25 +16,23 @@ export interface PrescriptionSafetyAlert {
 
 export type SafetyPatient = Pick<PatientRecord, 'allergies' | 'medications'> & Partial<Pick<PatientRecord, 'age' | 'weightKg'>>;
 
-// --- Antibiotic stewardship: WHO AWaRe antibiotic book (2022), « Oral and dental infections » ---
+// --- Antibiotic stewardship -------------------------------------------------------------
+// Main reference (Tunisia follows the French guidance; no Tunisian dental guideline exists):
+// HAS, « Prescription des antibiotiques en pratique bucco-dentaire », juillet 2026 (tableaux 14
+// et 15). Complement: WHO AWaRe antibiotic book 2022 for the « Watch » classification.
+// See docs/medical/references-cliniques-logiciel.md.
 const plainName = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 const ANTIBIOTIC_TERMS = ['amoxicill', 'penicill', 'phenoxymethyl', 'clavulan', 'clindamycin', 'metronidazol', 'azithromycin',
   'clarithromycin', 'erythromycin', 'spiramycin', 'doxycyclin', 'tetracyclin', 'cefalexin', 'cefuroxim', 'cefadroxil',
   'cefixim', 'cefpodoxim', 'ciprofloxacin', 'levofloxacin', 'ofloxacin', 'pristinamycin', 'lincomycin'];
-/** Antibiotics the WHO classes « Watch » (higher resistance risk) that dentists commonly prescribe. */
+/** Antibiotics the WHO classes « Watch »; HAS keeps them for penicillin allergy. */
 const WATCH_TERMS = ['azithromycin', 'clarithromycin'];
 export const isAntibiotic = (name: string) => ANTIBIOTIC_TERMS.some(t => plainName(name).includes(t));
 
-/** WHO AWaRe amoxicillin weight bands for children (80–90 mg/kg/day). */
-function whoChildAmoxicillin(weightKg: number, fr: boolean): string | null {
-  if (!(weightKg >= 3)) return null;
-  const bands: Array<[number, string, string]> = [
-    [6, '250 mg toutes les 12 h', '250 mg every 12 h'], [10, '375 mg toutes les 12 h', '375 mg every 12 h'],
-    [15, '500 mg toutes les 12 h', '500 mg every 12 h'], [20, '750 mg toutes les 12 h', '750 mg every 12 h'],
-    [Infinity, '500 mg toutes les 8 h ou 1 g toutes les 12 h', '500 mg every 8 h or 1 g every 12 h']
-  ];
-  const band = bands.find(([max]) => weightKg < max)!;
-  return fr ? band[1] : band[2];
+/** HAS 2026 (tableau 15): amoxicillin 50 mg/kg/day in 3 doses, not over 3 g/day — per-dose amount. */
+function hasChildAmoxicillinDose(weightKg: number): number | null {
+  if (!(weightKg > 0)) return null;
+  return Math.round(Math.min(weightKg * 50, 3000) / 3);
 }
 
 /** Under this age the catalog's default (adult) doses must be adapted to the child's weight. */
@@ -133,7 +131,7 @@ export function checkPrescriptionSafety(
     });
   }
 
-  // WHO AWaRe: most dental infections are treated by the dental procedure, not antibiotics.
+  // HAS 2026: an antibiotic only complements a local procedure, in defined situations.
   const fr = language === 'fr';
   const antibiotics = planned.filter(isAntibiotic);
   if (antibiotics.length) {
@@ -141,8 +139,8 @@ export function checkPrescriptionSafety(
       severity: 'info',
       source: 'stewardship',
       message: fr
-        ? 'Antibiotique (OMS, guide AWaRe 2022) : non indiqué pour la douleur, la pulpite ni avant un acte courant ; le traitement est le geste dentaire (drainage, extraction). À réserver aux infections qui s’étendent avec signes généraux (tuméfaction faciale, trismus, fièvre ≥ 38 °C), à l’immunodépression sévère ou au diabète non équilibré. Durée : 3 jours si la cause est traitée, sinon 5 jours ; premier choix amoxicilline ou phénoxyméthylpénicilline.'
-        : 'Antibiotic (WHO AWaRe book 2022): not indicated for pain, pulpitis or before routine procedures; the treatment is the dental procedure (drainage, extraction). Keep for spreading infections with systemic signs (facial swelling, trismus, fever ≥ 38 °C), severe immunosuppression or uncontrolled diabetes. Duration: 3 days if the source is treated, otherwise 5 days; first choice amoxicillin or phenoxymethylpenicillin.'
+        ? 'Antibiotique (HAS 2026) : toujours en complément d’un geste local (drainage, traitement de la cause) ; les douleurs dentaires, majoritairement inflammatoires, se traitent par le geste et des antalgiques. Indiqué si patient à haut risque d’endocardite infectieuse ou à risque infectieux augmenté, signes d’extension locale (suppuration), régionale (tuméfaction, trismus) ou générale (adénopathie, fièvre), ou si le geste ne peut pas être réalisé. Adulte, 1re intention : amoxicilline 1 g 3 fois par jour pendant 3 jours (prolonger de 2 jours si les symptômes persistent). Réévaluer à 3 jours (consultation ou téléphone).'
+        : 'Antibiotic (HAS 2026): always alongside a local procedure (drainage, treating the cause); dental pain, mostly inflammatory, is treated by the procedure and analgesics. Indicated for patients at high risk of infective endocarditis or at increased infectious risk, signs of local (suppuration), regional (swelling, trismus) or systemic (lymphadenopathy, fever) spread, or if the procedure cannot be done. Adult first line: amoxicillin 1 g three times a day for 3 days (2 more days if symptoms persist). Reassess at 3 days (visit or phone).'
     });
   }
   const watch = antibiotics.filter(name => WATCH_TERMS.some(t => plainName(name).includes(t)));
@@ -151,22 +149,32 @@ export function checkPrescriptionSafety(
       severity: 'warning',
       source: 'stewardship',
       message: fr
-        ? `${watch.join(', ')} : antibiotique du groupe « Watch » de l’OMS (risque plus élevé de résistances). Pour une infection dentaire, les antibiotiques du groupe « Access » (amoxicilline, phénoxyméthylpénicilline) sont le premier choix.`
-        : `${watch.join(', ')}: WHO « Watch » group antibiotic (higher resistance risk). For dental infections, « Access » antibiotics (amoxicillin, phenoxymethylpenicillin) are the first choice.`
+        ? `${watch.join(', ')} : alternative réservée à l’allergie avérée aux pénicillines, à une contre-indication ou à une rupture de stock (HAS 2026) ; antibiotique du groupe « Watch » de l’OMS (risque plus élevé de résistances). Sinon, l’amoxicilline reste le premier choix.`
+        : `${watch.join(', ')}: an alternative for proven penicillin allergy, contraindication or stock-out (HAS 2026); WHO « Watch » group antibiotic (higher resistance risk). Otherwise amoxicillin remains the first choice.`
     });
   }
-  if (typeof patient.age === 'number' && patient.age < PEDIATRIC_AGE_LIMIT && patient.weightKg
-    && antibiotics.some(name => plainName(name).includes('amoxicill') && !plainName(name).includes('clavulan'))) {
-    const band = whoChildAmoxicillin(patient.weightKg, fr);
-    if (band) {
+  const child = typeof patient.age === 'number' && patient.age < PEDIATRIC_AGE_LIMIT;
+  if (child && patient.weightKg && antibiotics.some(name => plainName(name).includes('amoxicill') && !plainName(name).includes('clavulan'))) {
+    const dose = hasChildAmoxicillinDose(patient.weightKg);
+    if (dose) {
+      const kg = fr ? String(patient.weightKg).replace('.', ',') : String(patient.weightKg);
       alerts.push({
         severity: 'info',
         source: 'stewardship',
         message: fr
-          ? `Repère OMS (AWaRe 2022) pour l’amoxicilline chez l’enfant : 80–90 mg/kg/jour, soit pour ${String(patient.weightKg).replace('.', ',')} kg : ${band}.`
-          : `WHO reference (AWaRe 2022) for amoxicillin in children: 80–90 mg/kg/day, i.e. for ${patient.weightKg} kg: ${band}.`
+          ? `Repère HAS 2026 pour l’amoxicilline chez l’enfant : 50 mg/kg/jour en 3 prises, sans dépasser 3 g/jour, pendant 3 jours — pour ${kg} kg : ${dose} mg 3 fois par jour.`
+          : `HAS 2026 reference for amoxicillin in children: 50 mg/kg/day in 3 doses, not over 3 g/day, for 3 days — for ${kg} kg: ${dose} mg three times a day.`
       });
     }
+  }
+  if (child && (patient.age as number) < 6 && antibiotics.length) {
+    alerts.push({
+      severity: 'warning',
+      source: 'stewardship',
+      message: fr
+        ? 'Enfant de moins de 6 ans : pas de comprimés ni de gélules à avaler (HAS 2026) ; prescrire une forme buvable.'
+        : 'Child under 6: no tablets or capsules to swallow (HAS 2026); prescribe an oral liquid form.'
+    });
   }
 
   const order: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 };
