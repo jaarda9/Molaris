@@ -42,7 +42,7 @@ test('quote totals apply quantity and per-line discount, to the millime', () => 
 
 test('quote validity defaults to 30 days after the issue date', () => {
   const { quotes } = setup();
-  const q = quotes.create({ patientId: 'pt_1', items: [] }, new Date(2020, 0, 15, 10));
+  const q = quotes.create({ patientId: 'pt_1', items: [{ label: 'Consultation', quantity: 1, unitPriceMillimes: 40_000 }] }, new Date(2020, 0, 15, 10));
   assert.equal(q.issuedAt, '2020-01-15');
   assert.equal(q.validUntil, '2020-02-14');
   assert.equal(q.pastValidity, true);
@@ -74,8 +74,8 @@ test('quote lines are editable while draft only; statuses follow the allowed tra
   quotes.setStatus(q.id, 'accepted');
   assert.throws(() => quotes.setStatus(q.id, 'refused'), status(409));
 
-  const empty = quotes.create({ patientId: 'pt_1', items: [] });
-  assert.throws(() => quotes.setStatus(empty.id, 'accepted'), status(409));
+  // A quote without lines is refused outright (it would use up a DV number for nothing).
+  assert.throws(() => quotes.create({ patientId: 'pt_1', items: [] }), status(400));
 
   const copy = quotes.duplicate(q.id);
   assert.equal(copy.status, 'draft');
@@ -164,7 +164,7 @@ test('receipt and quote numbers are gap-free: failed inserts do not consume a nu
   assert.deepEqual(numbers, [`REC-${year}-0001`, `REC-${year}-0002`, `REC-${year}-0003`]);
 
   assert.throws(() => quotes.create({ patientId: 'pt_1', items: [{ label: 'x', quantity: 1, unitPriceMillimes: 1, discountMillimes: 2 }] }), status(400));
-  assert.equal(quotes.create({ patientId: 'pt_2', items: [] }).number, `DV-${year}-0002`);
+  assert.equal(quotes.create({ patientId: 'pt_2', items: [{ label: 'Consultation', quantity: 1, unitPriceMillimes: 40_000 }] }).number, `DV-${year}-0002`);
 });
 
 test('daily takings: total and per method for one day, cancelled payments shown but not counted', () => {

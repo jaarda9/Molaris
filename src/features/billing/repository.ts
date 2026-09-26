@@ -135,7 +135,7 @@ export class ProcedureRepository {
   }
 
   create(input: ProcedureInput): Procedure {
-    if (!input.labelFr || !input.labelFr.trim()) throw new HttpError(400, 'labelFr: required');
+    if (!input.labelFr || !input.labelFr.trim()) throw new HttpError(400, 'Libellé (français) obligatoire.');
     assertAmount(input.defaultPriceMillimes, 'defaultPriceMillimes', { allowZero: true });
     const id = newId('proc');
     const now = nowIso();
@@ -159,7 +159,7 @@ export class ProcedureRepository {
       cnamCoefficient: current.cnamCoefficient, active: current.active,
       ...input
     };
-    if (!merged.labelFr || !merged.labelFr.trim()) throw new HttpError(400, 'labelFr: required');
+    if (!merged.labelFr || !merged.labelFr.trim()) throw new HttpError(400, 'Libellé (français) obligatoire.');
     assertAmount(merged.defaultPriceMillimes, 'defaultPriceMillimes', { allowZero: true });
     this.db.prepare(`
       UPDATE procedures SET code = ?, label_fr = ?, label_ar = ?, category = ?, default_price_millimes = ?,
@@ -279,25 +279,29 @@ export function lineTotal(item: Pick<QuoteItemInput, 'quantity' | 'unitPriceMill
   return item.quantity * item.unitPriceMillimes - (item.discountMillimes ?? 0);
 }
 
+const QUOTE_STATUS_FR: Record<string, string> = { draft: 'Brouillon', sent: 'Envoyé', accepted: 'Accepté', refused: 'Refusé', expired: 'Expiré' };
+
 function validateItems(items: QuoteItemInput[]): void {
-  if (items.length > 100) throw new HttpError(400, 'items: at most 100 lines');
+  // Shown as-is in the (French) clinic UI.
+  if (items.length === 0) throw new HttpError(400, 'Le devis doit comporter au moins une ligne.');
+  if (items.length > 100) throw new HttpError(400, 'Un devis comporte au plus 100 lignes.');
   items.forEach((item, i) => {
-    const where = `items.${i}`;
-    if (!item.label || !item.label.trim()) throw new HttpError(400, `${where}.label: required`);
+    const where = `Ligne ${i + 1}`;
+    if (!item.label || !item.label.trim()) throw new HttpError(400, `${where} : libellé obligatoire.`);
     if (!Number.isSafeInteger(item.quantity) || item.quantity < 1 || item.quantity > 99) {
-      throw new HttpError(400, `${where}.quantity: must be a whole number between 1 and 99`);
+      throw new HttpError(400, `${where} : la quantité doit être un nombre entier entre 1 et 99.`);
     }
-    assertAmount(item.unitPriceMillimes, `${where}.unitPriceMillimes`, { allowZero: true });
-    assertAmount(item.discountMillimes ?? 0, `${where}.discountMillimes`, { allowZero: true });
+    assertAmount(item.unitPriceMillimes, `${where} (prix unitaire)`, { allowZero: true });
+    assertAmount(item.discountMillimes ?? 0, `${where} (remise)`, { allowZero: true });
     if ((item.discountMillimes ?? 0) > item.quantity * item.unitPriceMillimes) {
-      throw new HttpError(400, `${where}.discountMillimes: discount exceeds the line amount`);
+      throw new HttpError(400, `${where} : la remise dépasse le montant de la ligne.`);
     }
     if (item.toothFdi != null && !isValidFdiTooth(item.toothFdi)) {
-      throw new HttpError(400, `${where}.toothFdi: not a valid FDI tooth number`);
+      throw new HttpError(400, `${where} : ${item.toothFdi} n’est pas un numéro de dent FDI.`);
     }
   });
   const total = items.reduce((sum, item) => sum + lineTotal(item), 0);
-  if (total > MAX_AMOUNT_MILLIMES) throw new HttpError(400, 'items: quote total is too large');
+  if (total > MAX_AMOUNT_MILLIMES) throw new HttpError(400, 'Le total du devis est trop élevé.');
 }
 
 const QUOTE_SELECT = `
@@ -394,8 +398,8 @@ export class QuoteRepository {
     const id = newId('quote');
     const issuedAt = localDate(now);
     const validUntil = input.validUntil === undefined ? addDays(issuedAt, 30) : input.validUntil;
-    if (validUntil && !isRealLocalDate(validUntil)) throw new HttpError(400, 'validUntil: not a real date');
-    if (validUntil && validUntil < issuedAt) throw new HttpError(400, 'validUntil: must not be before the issue date');
+    if (validUntil && !isRealLocalDate(validUntil)) throw new HttpError(400, 'Date de validité inexistante.');
+    if (validUntil && validUntil < issuedAt) throw new HttpError(400, 'La date de validité précède la date d’émission du devis.');
     this.db.transaction(() => {
       const number = nextDocumentNumber(this.db, 'DV', now);
       const ts = nowIso();
@@ -415,8 +419,8 @@ export class QuoteRepository {
     if (current.status !== 'draft') throw new HttpError(409, 'Seul un devis brouillon peut être modifié.');
     if (input.items) validateItems(input.items);
     const validUntil = input.validUntil === undefined ? current.validUntil : input.validUntil;
-    if (validUntil && !isRealLocalDate(validUntil)) throw new HttpError(400, 'validUntil: not a real date');
-    if (validUntil && validUntil < current.issuedAt) throw new HttpError(400, 'validUntil: must not be before the issue date');
+    if (validUntil && !isRealLocalDate(validUntil)) throw new HttpError(400, 'Date de validité inexistante.');
+    if (validUntil && validUntil < current.issuedAt) throw new HttpError(400, 'La date de validité précède la date d’émission du devis.');
     this.db.transaction(() => {
       this.db.prepare('UPDATE quotes SET valid_until = ?, notes = ?, updated_at = ? WHERE id = ?')
         .run(validUntil, input.notes === undefined ? current.notes : blankToNull(input.notes), nowIso(), id);
@@ -433,7 +437,7 @@ export class QuoteRepository {
     if (!current) throw notFound('Quote');
     if (current.status === status) return current;
     if (!QUOTE_TRANSITIONS[current.status].includes(status)) {
-      throw new HttpError(409, `Cannot change a quote from ${current.status} to ${status}`);
+      throw new HttpError(409, `Le devis ${current.number} ne peut pas passer de « ${QUOTE_STATUS_FR[current.status]} » à « ${QUOTE_STATUS_FR[status]} ».`);
     }
     // Past its validity date the prices are no longer binding: re-issue (duplicate) instead.
     if (status === 'accepted' && current.pastValidity) {

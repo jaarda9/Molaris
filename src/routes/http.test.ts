@@ -34,3 +34,12 @@ test('a malformed JSON body is a 400 with a French message, not a server error',
   assert.equal(status, 400);
   assert.deepEqual(body, { error: 'Requête invalide (données mal formées).' });
 });
+
+test('rules without their own message still answer in French', () => {
+  const schema = z.object({ quantity: z.number().int().min(1).max(99), label: z.string().max(3), status: z.enum(['a', 'b']) });
+  assert.equal(messageOf(() => parse(schema, { quantity: 0, label: 'x', status: 'a' })), 'Quantité : au moins 1');
+  assert.equal(messageOf(() => parse(schema, { quantity: 100, label: 'x', status: 'a' })), 'Quantité : 99 au plus');
+  assert.equal(messageOf(() => parse(schema, { quantity: 'x', label: 'x', status: 'a' })), 'Quantité : nombre attendu');
+  assert.equal(messageOf(() => parse(schema, { quantity: 1, label: 'xxxx', status: 'a' })), 'Libellé : 3 caractères au plus');
+  assert.equal(messageOf(() => parse(schema, { quantity: 1, label: 'x', status: 'z' })), 'Statut : valeur non reconnue');
+});

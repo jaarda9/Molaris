@@ -34,8 +34,8 @@ const procedureSchema = z.object({
 const quoteItemSchema = z.object({
   procedureId: z.string().max(100).nullable().optional(),
   label: z.string().trim().min(1, 'obligatoire').max(300),
-  toothFdi: z.number().int().min(11).max(85).nullable().optional(),
-  quantity: z.number().int().min(1).max(99),
+  toothFdi: z.number().int().min(11, 'numéro de dent FDI attendu').max(85, 'numéro de dent FDI attendu').nullable().optional(),
+  quantity: z.number().int('nombre entier attendu').min(1, 'au moins 1').max(99, '99 au plus'),
   unitPriceMillimes: millimes,
   discountMillimes: millimes.optional()
 }).strict();
@@ -44,7 +44,7 @@ const quoteCreateSchema = z.object({
   patientId: z.string().min(1),
   validUntil: isoDate.nullable().optional(),
   notes: optionalText(2000),
-  items: z.array(quoteItemSchema).max(100)
+  items: z.array(quoteItemSchema).min(1, 'au moins une ligne').max(100, '100 lignes au plus')
 }).strict();
 
 const quoteUpdateSchema = z.object({
