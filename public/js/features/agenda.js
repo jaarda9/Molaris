@@ -971,9 +971,20 @@
       const open = detailOverlay && findAppointment(detailId);
       if (open) fillDetail(open);
     });
-    // Keep waiting times, the "now" line and other workstations' changes fresh.
+    // Keep waiting times, the "now" line and other workstations' changes fresh — and follow
+    // the calendar when the PC stays on overnight: the agenda that showed "today" moves to the
+    // new day. Paused while a dialog is open (the page's hidden dialogs do not count: they used
+    // to match and stopped this refresh for good).
+    let lastToday = Molaris.format.isoDate();
     setInterval(() => {
-      if (isVisible() && !document.querySelector('.fixed.inset-0.z-50')) refresh({ quiet: true });
+      const today = Molaris.format.isoDate();
+      if (today !== lastToday) {
+        const wasOnToday = state.view === 'day' ? state.date === lastToday : visibleRange().from <= lastToday && lastToday <= visibleRange().to;
+        if (wasOnToday) state.date = today;
+        lastToday = today;
+      }
+      const dialogOpen = [...document.querySelectorAll('.fixed.inset-0.z-50')].some(el => !el.classList.contains('hidden'));
+      if (isVisible() && !dialogOpen) refresh({ quiet: true });
     }, 60_000);
 
     Molaris.showTab('agenda');
