@@ -157,11 +157,16 @@ Patient names and chart numbers are removed before anything is sent to the AI.
 - Voice commands: start a timer (« lance un minuteur de 20 secondes »), open a screen,
   back up the database, mute/unmute.
 
-### Radiographies (X-ray second opinion)
-- Upload a periapical, bitewing or panoramic X-ray, or an intra-oral photo (JPEG, PNG or WebP,
-  up to 20 MB), or try the two sample cases.
-- Optional precise question (e.g. « Alvéolyse autour de la 36 ? »).
-- Returns a structured reading **to be confirmed** by the dentist; **Copier la lecture**.
+### Radiographies (X-ray file)
+- The patient's **X-ray file**: every radiograph and photo, newest first, stored in the database
+  (so in the **Sauvegarde complète**).
+- Add an image (JPEG, PNG or WebP, up to 20 MB) with its type (periapical, bitewing, panoramic,
+  CBCT, photo), date, tooth and **your interpretation**: **Enregistrer au dossier**, or
+  **Enregistrer et analyser (IA)**.
+- For each image: full-size view, editable interpretation, **AI second reading to confirm** (kept,
+  dated, can be re-run with a specific question).
+- An image can be deleted only on the day it was added (mistake); afterwards it stays in the file.
+- The two teaching examples are analysed but never stored.
 
 ### Comptes-rendus (SOAP notes)
 - Enter the procedure, tooth, anaesthesia, materials and outcome → **Générer le compte-rendu**.

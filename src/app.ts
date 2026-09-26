@@ -14,6 +14,7 @@ import { aiRouter } from './routes/ai.js';
 import { agendaRouter } from './features/agenda/routes.js';
 import { billingRouter } from './features/billing/routes.js';
 import { prescriptionsRouter } from './features/prescriptions/routes.js';
+import { imagingRouter } from './features/imaging/routes.js';
 
 export function createApp(): express.Express {
   const app = express();
@@ -75,6 +76,7 @@ export function createApp(): express.Express {
   app.use(agendaRouter);
   app.use(billingRouter);
   app.use(prescriptionsRouter);
+  app.use(imagingRouter);
 
   app.use('/api', (req: Request, res: Response) => {
     res.status(404).json({ error: `Unknown API route: ${req.method} ${req.originalUrl}` });

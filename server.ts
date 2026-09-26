@@ -5,6 +5,7 @@ import { createApp } from './src/app.js';
 import { AUTH_ENABLED } from './src/middleware/auth.js';
 import { getPatientRepository } from './src/repositories/patients.js';
 import { DEFAULT_DB_FILE, getDb } from './src/db/connection.js';
+import { importLegacyImages } from './src/features/imaging/legacy.js';
 import { scheduleDailyBackups } from './src/db/backup.js';
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -26,6 +27,12 @@ getPatientRepository();
 
 // Daily copy next to the database (data/backups/ by default), 30 days kept.
 const dbFile = process.env.MOLARIS_DB_FILE || DEFAULT_DB_FILE;
+
+// X-rays saved before the imaging feature (files next to the database) move into it, once.
+if (dbFile !== ':memory:') {
+  const moved = importLegacyImages(getDb(), getPatientRepository().getAllPatients(), path.join(path.dirname(dbFile), 'images'));
+  if (moved) console.log(`[Imaging] ${moved} radiographie(s) existante(s) importée(s) dans le dossier patient.`);
+}
 if (dbFile !== ':memory:') scheduleDailyBackups(getDb(), path.join(path.dirname(dbFile), 'backups'));
 
 http.createServer(createApp()).listen(PORT, host, () => {

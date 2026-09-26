@@ -621,7 +621,7 @@ export class PatientRepository {
       this.db.prepare('DELETE FROM patients WHERE id = ?').run(id);
     } catch (err: any) {
       if (String(err?.code).startsWith('SQLITE_CONSTRAINT')) {
-        throw new Error('Ce patient a des devis, paiements ou ordonnances enregistrés : son dossier ne peut pas être supprimé.');
+        throw new Error('Ce patient a des devis, paiements, ordonnances ou radiographies enregistrés : son dossier ne peut pas être supprimé.');
       }
       throw err;
     }

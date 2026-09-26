@@ -18,6 +18,7 @@ import { HttpError, languageOf, parse, route } from './http.js';
 import { z } from 'zod';
 import { toothId as toothIdSchema } from './clinical-validation.js';
 import { cleanSoapDraft } from '../ai/soap-draft.js';
+import { readDentalImage } from '../ai/vision.js';
 import { historyForModel } from '../ai/chat-history.js';
 
 const MAX_QUESTION_CHARS = 4000;
@@ -250,97 +251,30 @@ function actionOnlyReply(action: ReturnType<typeof executeMolarisAction>) {
 
 // --- Radiograph / intraoral photo second opinion -----------------------------------
 
+// One-off reading of an image that is NOT kept (the screen's sample drawings). Patient
+// X-rays are stored and read through the imaging feature (/api/patients/:id/xrays).
 aiRouter.post('/api/analyze-image', aiLimiter, upload.single('image'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'No image file uploaded' });
+      return res.status(400).json({ error: 'Aucune image reçue.' });
     }
     // Checked before the AI call: an unreadable file would only waste quota.
     const mimeType = detectImageType(req.file.buffer);
     if (!mimeType) {
       return res.status(400).json({ error: 'Format non pris en charge : envoyez une image JPEG, PNG ou WebP (exportez d’abord les radios DICOM dans l’un de ces formats).' });
     }
-
-    const language = req.body.language || 'en';
-    const clinicalQuery = req.body.query || (language === 'fr'
-      ? 'Évaluation clinique complète de cette image dentaire (rétro-alvéolaire, bitewing, panoramique ou photo intra-orale).'
-      : 'Comprehensive clinical evaluation of this dental image (periapical, bitewing, panoramic, or intraoral photograph).');
-    const toothNumber = req.body.toothId;
     const activePatient = patientDb.getActivePatient();
-    // toothId is the internal (Universal) id; the model is only given the FDI number.
-    const focusTooth = toothNumber ? findPatientTooth(activePatient, Number(toothNumber)) : null;
-
-    // The screen's two sample cases are schematic drawings made for demonstrations: the model
-    // is told so, and walks through them as a labelled teaching exercise instead of refusing.
-    const sampleNote = req.body.sample === '1'
-      ? (language === 'fr'
-        ? `
-CETTE IMAGE EST UN SCHÉMA PÉDAGOGIQUE fourni par le logiciel pour la démonstration, PAS une radiographie de patient. Ne la refusez pas : commencez par « Exemple pédagogique — schéma, pas une radiographie réelle », décrivez ce que le schéma représente (formes sombres = zones radioclaires), puis suivez la structure ci-dessous comme exercice, en rappelant qu'aucune conclusion clinique ne peut en être tirée.
-`
-        : `
-THIS IMAGE IS A SCHEMATIC TEACHING DRAWING supplied by the software for demonstrations, NOT a patient radiograph. Do not refuse it: start with "Teaching example — schematic, not a real radiograph", describe what the drawing depicts (dark shapes = radiolucent areas), then follow the structure below as an exercise, recalling that no clinical conclusion can be drawn from it.
-`)
-      : '';
-
-    let visionPrompt = `${sampleNote}
-Read this dental radiograph or intraoral image as a decision-support aid for the treating dentist (Tunisia).
-Everything you report is a finding to be confirmed by the dentist, not a diagnosis.
-FIRST check the image: if it is not a dental radiograph or intraoral photograph, or it is too blurred, dark,
-cropped or low-resolution to read, say so in two sentences, say what image is needed, and STOP.
-Never describe teeth, bone or lesions you cannot actually see.
-
-CLINICAL QUERY: ${clinicalQuery}
-${focusTooth ? `FOCUS AREA: tooth ${focusTooth.fdi} (FDI) - ${focusTooth.name}` : ''}
-PATIENT (anonymized): ${activePatient.age}y ${activePatient.gender} | ASA: ${activePatient.asaStatus} | Chief Complaint: "${activePatient.chiefComplaint}" | Medical Alerts: ${activePatient.medicalAlerts || 'not recorded'}
-
-Structure the assessment as follows (FDI tooth numbers, no procedure codes):
-1. **Image type & quality**: (bitewing, periapical, panoramic, intraoral photo; angulation, contrast, crown/apex coverage).
-2. **Radiographic / clinical findings**:
-   - Caries (enamel, dentin involvement, pulpal proximity, recurrent caries under existing margins).
-   - Periodontal bone (alveolar crest height, horizontal/vertical bone loss, furcation involvement, lamina dura, PDL space widening).
-   - Periapical status (normal, periapical radiolucency / apical periodontitis, condensing osteitis, hypercementosis).
-   - Existing restorations or endodontic treatments (margins, overhangs, obturation density/length).
-3. **Diagnostic hypotheses to confirm**: with the clinical tests that would confirm or rule them out.
-4. **Treatment options to discuss**: options for the dentist to weigh, not a prescription.
-5. **⚠️ Red flags & chairside precautions**: (anatomical risks: mental foramen, inferior alveolar canal, maxillary sinus floor, root fractures).
-State the limits of reading a single image.
-`;
-
-    if (language === 'fr') {
-      visionPrompt += `\n[DIRECTIVE DE LANGUE OBLIGATOIRE] : Rédigez l'ensemble du rapport exclusivement en français odontologique professionnel (numérotation FDI, médicaments en DCI), intitulés des sections compris : 1. **Type et qualité de l'image** 2. **Constatations radiographiques / cliniques** 3. **Hypothèses diagnostiques à confirmer** 4. **Options thérapeutiques à discuter** 5. **⚠️ Signaux d'alerte et précautions au fauteuil**.\n`;
-    } else {
-      visionPrompt += `\n[LANGUAGE DIRECTIVE]: write the whole report in English.\n`;
-    }
-
-    const result = await callGeminiWithResilience({
-      preferredModel: 'gemini-3.8-flash',
-      contents: [{
-        role: 'user',
-        parts: [
-          { text: visionPrompt },
-          { inlineData: { data: req.file.buffer.toString('base64'), mimeType } }
-        ]
-      }],
-      config: { systemInstruction: MOLARIS_SYSTEM_PROMPT, temperature: 0.2 }
-    });
-
-    // Keep the image and its AI read on the patient's chart for later review.
-    const imageId = newId('img');
-    const ext = mimeTypeToExtension(mimeType);
-    fs.mkdirSync(IMAGES_DIR, { recursive: true });
-    fs.writeFileSync(path.join(IMAGES_DIR, `${imageId}.${ext}`), req.file.buffer);
-
-    const imageRecord = patientDb.addImageRecordForActivePatient({
-      id: imageId,
-      filename: req.file.originalname || `${imageId}.${ext}`,
+    const focus = req.body.toothId ? findPatientTooth(activePatient, Number(req.body.toothId)) : null;
+    const result = await readDentalImage({
+      data: req.file.buffer,
       mimeType,
-      toothId: toothNumber ? Number(toothNumber) : undefined,
-      query: clinicalQuery,
-      analysis: result.text,
-      modelUsed: result.modelUsed
+      query: req.body.query,
+      language: languageOf(req.body.language),
+      focusTooth: focus ? { fdi: focus.fdi, name: focus.name } : null,
+      patient: activePatient,
+      sample: req.body.sample === '1'
     });
-
-    res.json({ analysis: result.text, modelUsed: result.modelUsed, image: imageRecord, timestamp: new Date().toISOString() });
+    res.json({ analysis: result.text, modelUsed: result.modelUsed, timestamp: new Date().toISOString() });
   } catch (err: any) {
     console.error('Vision analysis error:', err);
     sendAiError(res, err, req);

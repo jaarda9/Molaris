@@ -170,11 +170,16 @@ Les noms des patients et les n° de dossier sont retirés avant tout envoi à l�
 - Commandes vocales : lancer un minuteur (« lance un minuteur de 20 secondes »), ouvrir un
   écran, sauvegarder la base, couper / remettre le son.
 
-### Radiographies (seconde lecture)
-- Importez une rétro-alvéolaire, un bitewing, une panoramique ou une photo intra-orale
-  (JPEG, PNG ou WebP, jusqu’à 20 Mo), ou testez l’un des deux cas d’exemple.
-- Question précise facultative (ex. « Alvéolyse autour de la 36 ? »).
-- Rend une lecture structurée **à confirmer** par le praticien ; **Copier la lecture**.
+### Radiographies (dossier radiographique)
+- **Dossier radiographique** du patient : toutes ses radiographies et photos, de la plus récente à la
+  plus ancienne, conservées dans la base (donc dans la **Sauvegarde complète**).
+- Ajouter un cliché (JPEG, PNG ou WebP, jusqu’à 20 Mo) avec son type (rétro-alvéolaire, bitewing,
+  panoramique, cone beam, photo), sa date, la dent et **votre interprétation** : **Enregistrer au
+  dossier**, ou **Enregistrer et analyser (IA)**.
+- Pour chaque cliché : ouverture en grand, interprétation modifiable, **seconde lecture IA à
+  confirmer** (conservée et datée, relançable avec une question précise).
+- Un cliché ne peut être supprimé que le jour de son ajout (erreur) ; ensuite il reste au dossier.
+- Les deux exemples pédagogiques sont analysés mais jamais enregistrés.
 
 ### Comptes-rendus (SOAP)
 - Saisissez l’acte, la dent, l’anesthésie, les matériaux et le déroulement →

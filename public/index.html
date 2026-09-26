@@ -982,95 +982,100 @@
     <!-- VIEW 4: RADIOGRAPHIC & VISION DIAGNOSTIC STATION -->
     <section id="view-vision" class="hidden space-y-6">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <!-- Upload & Preview (5 cols) -->
+
+        <!-- New X-ray (5 cols): stored in the patient's file, with or without an AI reading -->
         <div class="lg:col-span-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-4">
           <div>
-            <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span data-i18n="vision.title">Radiograph &amp; Intraoral Vision Analysis</span>
-              <span class="text-[10px] font-mono bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 px-2 py-0.5 rounded font-bold whitespace-nowrap" data-i18n="vision.badge">Gemini Multimodal</span>
-            </h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="vision.subtitle">Upload periapical x-rays, bitewings, panoramic radiographs, or intraoral camera photographs for senior second-opinion diagnostic review.</p>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white"><span data-i18n="vision.title">X-rays</span></h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="vision.subtitle">Store the patient's radiographs and photos with your reading; ask the AI for a second reading if needed.</p>
           </div>
 
-          <!-- Drop Zone -->
           <div id="drop-zone" class="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-6 text-center hover:border-teal-500 dark:hover:border-teal-400 transition cursor-pointer bg-slate-50 dark:bg-slate-800/40">
             <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" class="hidden">
             <div class="space-y-2">
               <div class="w-12 h-12 mx-auto rounded-full bg-teal-50 dark:bg-teal-950 flex items-center justify-center text-teal-600 dark:text-teal-400">
-                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="17 8 12 3 7 8"></polyline>
-                  <line x1="12" y1="3" x2="12" y2="15"></line>
-                </svg>
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
               </div>
-              <div class="text-xs font-semibold text-slate-700 dark:text-slate-300" data-i18n="vision.dropPrompt">Click or drag &amp; drop dental radiograph</div>
-              <div class="text-[11px] text-slate-400" data-i18n="vision.dropSub">JPEG, PNG, DICOM-exported formats up to 20MB</div>
+              <div class="text-xs font-semibold text-slate-700 dark:text-slate-300" data-i18n="vision.dropPrompt">Click or drag &amp; drop a dental radiograph</div>
+              <div class="text-[11px] text-slate-400" data-i18n="vision.dropSub">JPEG, PNG or WebP, up to 20 MB</div>
             </div>
           </div>
 
-          <!-- Image Preview -->
           <div id="preview-container" class="hidden space-y-2">
             <div class="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 max-h-64 bg-black flex items-center justify-center">
               <img id="image-preview" src="" alt="" class="object-contain max-h-64 w-full">
-              <button id="remove-image-btn" class="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80">&times;</button>
+              <button id="remove-image-btn" type="button" class="absolute top-2 right-2 bg-black/60 text-white rounded-full w-7 h-7 hover:bg-black/80">&times;</button>
+            </div>
+            <p id="sample-note" class="hidden text-[11px] font-semibold text-amber-700 dark:text-amber-300" data-i18n="vision.sampleNote">Teaching example: analysed but never stored in a patient file.</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1" for="xray-kind" data-i18n="vision.kind">Type</label>
+              <select id="xray-kind" class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
+                <option value="periapical" data-i18n="vision.kind.periapical">Periapical</option>
+                <option value="bitewing" data-i18n="vision.kind.bitewing">Bitewing</option>
+                <option value="panoramic" data-i18n="vision.kind.panoramic">Panoramic</option>
+                <option value="cbct" data-i18n="vision.kind.cbct">CBCT (slice)</option>
+                <option value="photo" data-i18n="vision.kind.photo">Intraoral photo</option>
+                <option value="other" data-i18n="vision.kind.other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1" for="xray-date" data-i18n="vision.takenOn">Date taken</label>
+              <input type="date" id="xray-date" class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 dark:[color-scheme:dark]">
+            </div>
+            <div class="col-span-2">
+              <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1" for="xray-tooth" data-i18n="vision.tooth">Tooth (FDI, optional)</label>
+              <select id="xray-tooth" class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2"></select>
+            </div>
+            <div class="col-span-2">
+              <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1" for="xray-interpretation" data-i18n="vision.interpretation">Your interpretation (optional)</label>
+              <textarea id="xray-interpretation" rows="2" maxlength="10000" class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2"></textarea>
+            </div>
+            <div class="col-span-2">
+              <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1" for="vision-query-input" data-i18n="vision.questionLabel">Question for the AI (optional)</label>
+              <input type="text" id="vision-query-input" data-i18n-placeholder="vision.questionPlaceholder" class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
             </div>
           </div>
 
-          <!-- Sample Radiographs Quick Select -->
+          <div class="flex flex-wrap gap-2">
+            <button id="save-xray-btn" type="button" class="flex-1 min-w-[10rem] py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-xs rounded-xl" data-i18n="vision.saveBtn">Save to the file</button>
+            <button id="run-vision-btn" type="button" class="flex-1 min-w-[10rem] py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs rounded-xl shadow-sm" data-i18n="vision.saveAnalyzeBtn">Save and analyse (AI)</button>
+          </div>
+
           <div class="space-y-1.5">
-            <span class="text-xs font-semibold text-slate-600 dark:text-slate-400" data-i18n="vision.samplesTitle">Or test with clinical sample cases:</span>
+            <span class="text-xs font-semibold text-slate-600 dark:text-slate-400" data-i18n="vision.samplesTitle">Or try a teaching example (not stored):</span>
             <div class="grid grid-cols-2 gap-2">
-              <button class="sample-case-btn text-left p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-teal-50 dark:hover:bg-teal-950/50 text-xs text-slate-700 dark:text-slate-300 transition" data-case="periapical">
+              <button type="button" class="sample-case-btn text-left p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-teal-50 dark:hover:bg-teal-950/50 text-xs text-slate-700 dark:text-slate-300 transition" data-case="periapical">
                 <div class="font-semibold text-teal-700 dark:text-teal-300" data-i18n="vision.sampleA">Case A: Periapical 46</div>
                 <div class="text-[10px] text-slate-400" data-i18n="vision.sampleADesc">PA radiolucency &amp; deep caries</div>
               </button>
-              <button class="sample-case-btn text-left p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-teal-50 dark:hover:bg-teal-950/50 text-xs text-slate-700 dark:text-slate-300 transition" data-case="bitewing">
+              <button type="button" class="sample-case-btn text-left p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-teal-50 dark:hover:bg-teal-950/50 text-xs text-slate-700 dark:text-slate-300 transition" data-case="bitewing">
                 <div class="font-semibold text-teal-700 dark:text-teal-300" data-i18n="vision.sampleB">Case B: Bitewing 26-27</div>
                 <div class="text-[10px] text-slate-400" data-i18n="vision.sampleBDesc">Interproximal lesion &amp; bone loss</div>
               </button>
             </div>
           </div>
-
-          <!-- Diagnostic Focus Prompt -->
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" data-i18n="vision.questionLabel">Specific Diagnostic Focus:</label>
-            <input type="text" id="vision-query-input" placeholder="Optional: a specific question" data-i18n-placeholder="vision.questionPlaceholder" class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
-          </div>
-
-          <button id="run-vision-btn" class="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs rounded-xl shadow-sm transition flex items-center justify-center space-x-2">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <span data-i18n="vision.analyzeBtn">Analyze image</span>
-          </button>
         </div>
 
-        <!-- Vision Results Breakdown (7 cols) -->
-        <div class="lg:col-span-7 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm flex flex-col h-[680px]">
-          <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-            <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <span data-i18n="vision.resultTitle">Senior Specialist Radiographic Findings</span>
-              <span id="vision-status-chip" class="hidden text-[10px] font-mono bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 rounded" data-i18n="vision.evaluated">Evaluated</span>
-            </h3>
-            <button id="copy-vision-btn" class="text-xs text-teal-600 dark:text-teal-400 hover:underline hidden" data-i18n="vision.copyBtn">
-              Copy Assessment
-            </button>
+        <!-- Reading of the selected X-ray (7 cols) -->
+        <div class="lg:col-span-7 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm flex flex-col min-h-[420px]">
+          <div class="flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white" data-i18n="vision.resultTitle">Reading</h3>
+            <button id="copy-vision-btn" type="button" class="text-xs text-teal-600 dark:text-teal-400 hover:underline hidden" data-i18n="vision.copyBtn">Copy the reading</button>
           </div>
-
-          <div id="vision-output-area" class="flex-1 overflow-y-auto py-4 text-xs text-slate-700 dark:text-slate-300 space-y-3 leading-relaxed">
-            <div class="text-center py-20 text-slate-400 space-y-2">
-              <svg class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
-                <circle cx="9" cy="9" r="2"></circle>
-                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
-              </svg>
-              <p data-i18n="vision.resultEmpty">Upload a periapical x-ray, bitewing, or clinical photo to trigger senior multimodal analysis.</p>
-            </div>
-          </div>
+          <div id="vision-output-area" class="flex-1 overflow-y-auto py-4 text-xs text-slate-700 dark:text-slate-300 space-y-3 leading-relaxed"></div>
         </div>
+      </div>
 
+      <!-- The patient's X-ray file -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h3 class="font-bold text-sm text-slate-900 dark:text-white"><span data-i18n="vision.fileTitle">X-ray file</span> — <span id="xray-file-patient"></span></h3>
+          <span id="xray-count" class="text-[11px] text-slate-500 dark:text-slate-400"></span>
+        </div>
+        <div id="xray-gallery" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"></div>
       </div>
     </section>
 

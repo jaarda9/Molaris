@@ -282,5 +282,32 @@ export const MIGRATIONS: Array<{ name: string; sql: string }> = [
       -- they were called in, not the booked time.
       ALTER TABLE appointments ADD COLUMN started_at TEXT;
     `
+  },
+  {
+    name: 'imaging: patient X-rays with interpretation and AI reading',
+    sql: `
+      -- Radiographs and intraoral photos kept in the database itself, so the full backup
+      -- (a copy of this file) carries them. An X-ray is part of the medical record: patient
+      -- deletion is refused while one exists.
+      CREATE TABLE xrays (
+        id              TEXT PRIMARY KEY,
+        patient_id      TEXT NOT NULL REFERENCES patients(id) ON DELETE RESTRICT,
+        kind            TEXT NOT NULL CHECK (kind IN ('periapical', 'bitewing', 'panoramic', 'cbct', 'photo', 'other')),
+        taken_on        TEXT NOT NULL,             -- 'YYYY-MM-DD', the day the image was taken
+        tooth_fdi       INTEGER,
+        filename        TEXT,
+        mime_type       TEXT NOT NULL,
+        size_bytes      INTEGER NOT NULL,
+        data            BLOB NOT NULL,
+        interpretation  TEXT,                      -- the dentist's own reading
+        ai_query        TEXT,
+        ai_analysis     TEXT,                      -- the AI second reading (decision support)
+        ai_model        TEXT,
+        ai_at           TEXT,
+        created_at      TEXT NOT NULL,
+        updated_at      TEXT NOT NULL
+      );
+      CREATE INDEX idx_xrays_patient ON xrays(patient_id, taken_on);
+    `
   }
 ];
