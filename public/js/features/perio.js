@@ -62,13 +62,51 @@ function renderPerioHistory() {
     return;
   }
 
-  const sorted = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
-  container.innerHTML = sorted.map(snap => `
-    <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2">
-      <span class="font-mono font-semibold text-slate-700 dark:text-slate-300">${new Date(snap.date).toLocaleString(isFr ? 'fr-FR' : 'en-US')}</span>
-      ${snap.notes ? `<span class="text-slate-500 dark:text-slate-400 italic truncate ml-3">${escapeHtml(snap.notes)}</span>` : ''}
-    </div>
-  `).join('');
+  // Oldest first to compute each exam's change since the previous one, newest shown on top.
+  const chronological = [...history].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const stats = chronological.map(perioSnapshotStats);
+  const delta = (now, before, key, unit, digits = 0) => {
+    if (!before) return '';
+    const d = now[key] - before[key];
+    if (Math.abs(d) < (digits ? 0.05 : 1)) return '';
+    // Lower is better for every figure shown (bleeding, depth, deep sites).
+    const tone = d < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+    return ` <span class="${tone}">(${d > 0 ? '+' : ''}${d.toFixed(digits).replace('.', ',')}${unit})</span>`;
+  };
+  const rows = chronological.map((snap, i) => {
+    const s = stats[i], p = stats[i - 1];
+    const figures = s.sites ? [
+      `${s.teeth} ${escapeHtml(molarisT('perio.statTeeth'))}`,
+      `${escapeHtml(molarisT('perio.statBop'))} ${s.bop}%${delta(s, p, 'bop', ' pt')}`,
+      `${escapeHtml(molarisT('perio.statMean'))} ${s.mean.toFixed(1).replace('.', ',')} mm${delta(s, p, 'mean', ' mm', 1)}`,
+      `≥ 4 mm : ${s.deep4}${delta(s, p, 'deep4', '')}`,
+      `≥ 6 mm : ${s.deep6}${delta(s, p, 'deep6', '')}`
+    ].join(' · ') : escapeHtml(molarisT('perio.statEmpty'));
+    return `
+    <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 space-y-0.5">
+      <div class="flex items-center justify-between gap-3">
+        <span class="font-mono font-semibold text-slate-700 dark:text-slate-300">${escapeHtml(Molaris.format.dateTime(snap.date))}</span>
+        ${snap.notes ? `<span class="text-slate-500 dark:text-slate-400 italic truncate">${escapeHtml(snap.notes)}</span>` : ''}
+      </div>
+      <div class="text-[11px] text-slate-600 dark:text-slate-400">${figures}</div>
+    </div>`;
+  });
+  container.innerHTML = rows.reverse().join('');
+}
+
+/** Summary of one exam, from the recorded sites only: teeth, bleeding %, mean depth, deep sites. */
+function perioSnapshotStats(snap) {
+  const teeth = snap.teeth || [];
+  const sites = teeth.flatMap(t => Object.values(t.sites || {}));
+  const n = sites.length;
+  return {
+    teeth: teeth.length,
+    sites: n,
+    bop: n ? Math.round(100 * sites.filter(s => s.bleeding).length / n) : 0,
+    mean: n ? sites.reduce((sum, s) => sum + (Number(s.pocketDepth) || 0), 0) / n : 0,
+    deep4: sites.filter(s => Number(s.pocketDepth) >= 4).length,
+    deep6: sites.filter(s => Number(s.pocketDepth) >= 6).length
+  };
 }
 
 function renderPerioGrid() {
