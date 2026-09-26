@@ -8,6 +8,8 @@ export interface AnestheticDoseInput {
   carpulesGiven: number;
   /** Other injections earlier today (any drug), e.g. from the anesthesia log. */
   priorDoses?: Array<{ drug: AnestheticDrug; carpules: number }>;
+  /** Patient age in years: children get the paediatric maximum (AAPD) and age warnings. */
+  ageYears?: number;
   language?: 'en' | 'fr';
 }
 
@@ -26,9 +28,36 @@ export interface AnestheticDoseResult {
   warning: string | null;
 }
 
+/** Under this age the paediatric dental limits apply (AAPD Best Practices, local anesthesia). */
+export const PEDIATRIC_LA_AGE = 18;
+
+/**
+ * AAPD « Use of local anesthesia for pediatric dental patients », table of maximum doses:
+ * lidocaine 4.4 mg/kg (more conservative than the 7 mg/kg manufacturer dose), mepivacaine
+ * 4.4 mg/kg, articaine 7 mg/kg, bupivacaine 1.3 mg/kg.
+ */
+const PEDIATRIC_MG_PER_KG: Record<string, number> = { lido_100k: 4.4, mepi_plain: 4.4, arti_100k: 7, bupi_200k: 1.3 };
+
+function maxMgPerKg(drug: AnestheticDrug, ageYears?: number): number {
+  const child = ageYears !== undefined && ageYears < PEDIATRIC_LA_AGE;
+  return child && PEDIATRIC_MG_PER_KG[drug.id] !== undefined ? Math.min(drug.maxDoseMgKg, PEDIATRIC_MG_PER_KG[drug.id]) : drug.maxDoseMgKg;
+}
+
 /** Maximum mg of this agent for this patient (mg/kg limit, capped by the absolute maximum). */
-function allowedMgFor(drug: AnestheticDrug, weightKg: number): number {
-  return Math.min(weightKg * drug.maxDoseMgKg, drug.absoluteMaxMg);
+function allowedMgFor(drug: AnestheticDrug, weightKg: number, ageYears?: number): number {
+  return Math.min(weightKg * maxMgPerKg(drug, ageYears), drug.absoluteMaxMg);
+}
+
+/** AAPD: articaine not recommended under 4 years, bupivacaine not under 12 years. */
+function ageWarning(drug: AnestheticDrug, ageYears: number | undefined, fr: boolean): string | null {
+  if (ageYears === undefined) return null;
+  if (drug.id === 'arti_100k' && ageYears < 4) {
+    return fr ? 'Articaïne : utilisation non recommandée avant 4 ans (fabricant, AAPD).' : 'Articaine: not recommended under 4 years of age (manufacturer, AAPD).';
+  }
+  if (drug.id === 'bupi_200k' && ageYears < 12) {
+    return fr ? 'Bupivacaïne : utilisation non recommandée avant 12 ans (AAPD).' : 'Bupivacaine: not recommended under 12 years of age (AAPD).';
+  }
+  return null;
 }
 
 /**
@@ -74,7 +103,7 @@ export function calculateAnestheticDose(input: AnestheticDoseInput): AnestheticD
   const weight = input.weightKg;
   const carpules = input.carpulesGiven;
 
-  const weightMaxMg = weight * drug.maxDoseMgKg;
+  const weightMaxMg = weight * maxMgPerKg(drug, input.ageYears);
   const allowedMaxMg = Math.min(weightMaxMg, drug.absoluteMaxMg);
   const maxCarpulesByAgent = Math.floor((allowedMaxMg / drug.mgPerCartridge) * 10) / 10;
 
@@ -92,7 +121,7 @@ export function calculateAnestheticDose(input: AnestheticDoseInput): AnestheticD
   // Local-anesthetic toxicity is additive: each dose uses a fraction of ITS OWN maximum
   // for this patient; adrenaline simply adds up across all drugs.
   const doses = [...(input.priorDoses ?? []), { drug, carpules }];
-  const toxicFractionUsed = doses.reduce((sum, d) => sum + (d.carpules * d.drug.mgPerCartridge) / allowedMgFor(d.drug, weight), 0);
+  const toxicFractionUsed = doses.reduce((sum, d) => sum + (d.carpules * d.drug.mgPerCartridge) / allowedMgFor(d.drug, weight, input.ageYears), 0);
   const epiDelivered = doses.reduce((sum, d) => sum + d.carpules * epiMgPerCartridge(d.drug), 0);
   const epiLimit = isCardiacRisk ? 0.04 : 0.2;
 
@@ -106,11 +135,16 @@ export function calculateAnestheticDose(input: AnestheticDoseInput): AnestheticD
     ? (language === 'fr' ? 'Adrénaline (plafond cardiovasculaire 0,04 mg)' : 'Epinephrine (Cardiac threshold)')
     : (language === 'fr' ? 'Toxicité du principe actif (Limite mg/kg)' : 'Anesthetic agent toxicity (Mg/kg limit)');
 
-  const warning = isExceeded
+  const child = input.ageYears !== undefined && input.ageYears < PEDIATRIC_LA_AGE;
+  const warning = ageWarning(drug, input.ageYears, language === 'fr') ?? (isExceeded
     ? (language === 'fr' ? 'DANGER : Dose maximale recommandée dépassée. Surveillez le patient pour tout signe de toxicité systémique (LAST) et tachycardie.' : 'DANGER: Maximum recommended dose exceeded. Monitor patient for Local Anesthetic Systemic Toxicity (LAST) and tachycardia.')
     : isCardiacRisk && safeMaxCarpules <= 2.2
     ? (language === 'fr' ? 'NOTE : Alerte cardiaque active. Adrénaline plafonnée à 0,04 mg (~2 cartouches dosées à 1:100 000).' : 'NOTE: Patient has cardiac alerts. Epinephrine restricted to 0.04mg (~2 cartridges of 1:100k).')
-    : null;
+    : child && maxMgPerKg(drug, input.ageYears) < drug.maxDoseMgKg
+    ? (language === 'fr'
+      ? `Enfant : dose maximale pédiatrique de ${String(maxMgPerKg(drug, input.ageYears)).replace('.', ',')} mg/kg (AAPD), plus prudente que celle de l’adulte.`
+      : `Child: paediatric maximum of ${maxMgPerKg(drug, input.ageYears)} mg/kg (AAPD), more conservative than the adult dose.`)
+    : null);
 
   return {
     drugName: drug.name,

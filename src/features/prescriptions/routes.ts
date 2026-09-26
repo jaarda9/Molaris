@@ -4,6 +4,7 @@ import { getDb } from '../../db/connection.js';
 import { HttpError, notFound, parse, route } from '../../routes/http.js';
 import { patientDb, type PatientRecord } from '../../repositories/patients.js';
 import { DRUG_CATEGORIES, DrugRepository, PRESCRIPTION_LANGUAGES, PrescriptionRepository } from './repository.js';
+import { loadWhoStarterDrugs } from './starter.js';
 import { checkPrescriptionSafety } from './safety.js';
 import { issuePrescription, PrescriptionInputError, renewalItems, type IssueResult } from './service.js';
 
@@ -102,6 +103,12 @@ prescriptionsRouter.post('/api/drugs', route((req, res) => {
   const input = parse(drugSchema, req.body);
   const drug = new DrugRepository(getDb()).create(input);
   res.status(201).json({ success: true, drug });
+}));
+
+// WHO starter list (AWaRe 2022, dental chapter), loaded on request by a new clinic.
+prescriptionsRouter.post('/api/drugs/starter', route((req, res) => {
+  const added = loadWhoStarterDrugs(getDb());
+  res.json({ success: true, added, drugs: new DrugRepository(getDb()).list() });
 }));
 
 // Partial update; send { active: false } to deactivate. Drugs are never deleted.

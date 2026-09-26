@@ -7,6 +7,9 @@ const severities = (r: ReturnType<typeof checkPrescriptionSafety>) => r.alerts.m
 
 // --- Allergies beyond the penicillin class ----------------------------------------
 
+/** Safety alerts proper (the WHO antibiotic reminders are checked separately). */
+const clinical = <T extends { source: string }>(r: { alerts: T[] }): T[] => r.alerts.filter(a => a.source !== 'stewardship');
+
 test('an allergy to the exact drug blocks (any drug, not only penicillins)', () => {
   const r = checkPrescriptionSafety(patient('Ibuprofène (œdème de Quincke)'), [{ drugLabel: 'Ibuprofène', strength: '400 mg' }]);
   assert.equal(r.hasCritical, true);
@@ -31,7 +34,7 @@ test('an aspirin allergy blocks NSAIDs (cross-reactivity)', () => {
 test('a penicillin allergy warns (does not block) on a cephalosporin', () => {
   const r = checkPrescriptionSafety(patient('Pénicilline (urticaire)'), [{ drugLabel: 'Céfalexine' }]);
   assert.equal(r.hasCritical, false);
-  assert.deepEqual(severities(r), ['warning']);
+  assert.deepEqual(severities({ ...r, alerts: clinical(r) }), ['warning']);
 });
 
 test('no allergy alert when the allergy text is a negative statement', () => {
@@ -41,7 +44,7 @@ test('no allergy alert when the allergy text is a negative statement', () => {
 });
 
 test('an unrelated allergy does not raise an alert', () => {
-  assert.equal(checkPrescriptionSafety(patient('Latex, pollen'), [{ drugLabel: 'Amoxicilline', strength: '1 g' }]).alerts.length, 0);
+  assert.equal(clinical(checkPrescriptionSafety(patient('Latex, pollen'), [{ drugLabel: 'Amoxicilline', strength: '1 g' }])).length, 0);
 });
 
 // --- Duplicates within one prescription -------------------------------------------
@@ -72,11 +75,31 @@ test('a prescription for a child warns that default doses are adult doses', () =
 });
 
 test('no child warning for an adult', () => {
-  assert.equal(checkPrescriptionSafety(patient('', { age: 30, weightKg: 70 }), [{ drugLabel: 'Amoxicilline' }]).alerts.length, 0);
+  assert.equal(clinical(checkPrescriptionSafety(patient('', { age: 30, weightKg: 70 }), [{ drugLabel: 'Amoxicilline' }])).length, 0);
 });
 
 test('the same drug on two lines blocks (double dose)', () => {
   const r = checkPrescriptionSafety(patient(''), [{ drugLabel: 'Amoxicilline', strength: '1 g' }, { drugLabel: 'amoxicilline', strength: '1 g' }]);
   assert.equal(r.hasCritical, true);
   assert.ok(r.alerts.some(a => a.source === 'duplicate' && /Amoxicilline/.test(a.message)));
+});
+
+// --- WHO AWaRe antibiotic stewardship ------------------------------------------------
+
+test('an antibiotic brings the WHO dental-indication reminder; a Watch antibiotic a warning', () => {
+  const amox = checkPrescriptionSafety(patient(''), [{ drugLabel: 'Amoxicilline', strength: '500 mg' }]);
+  const reminder = amox.alerts.find(a => a.source === 'stewardship');
+  assert.equal(reminder?.severity, 'info');
+  assert.match(reminder!.message, /3 jours si la cause est traitée, sinon 5 jours/);
+  assert.equal(amox.hasCritical, false);
+  const azi = checkPrescriptionSafety(patient(''), [{ drugLabel: 'Azithromycine' }]);
+  assert.ok(azi.alerts.some(a => a.source === 'stewardship' && a.severity === 'warning' && /Watch/.test(a.message)));
+  assert.equal(checkPrescriptionSafety(patient(''), [{ drugLabel: 'Paracétamol' }]).alerts.length, 0);
+});
+
+test('a child on amoxicillin gets the WHO weight-band dose', () => {
+  const r = checkPrescriptionSafety(patient('', { age: 7, weightKg: 24 }), [{ drugLabel: 'Amoxicilline' }]);
+  assert.ok(r.alerts.some(a => /80–90 mg\/kg\/jour, soit pour 24 kg : 500 mg toutes les 8 h ou 1 g toutes les 12 h/.test(a.message)));
+  const toddler = checkPrescriptionSafety(patient('', { age: 2, weightKg: 12 }), [{ drugLabel: 'Amoxicilline' }]);
+  assert.ok(toddler.alerts.some(a => /12 kg : 500 mg toutes les 12 h/.test(a.message)));
 });

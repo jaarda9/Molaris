@@ -324,13 +324,16 @@
     const issueBtn = byId('rx-issue');
     if (!el) return;
     const critical = state.alerts.filter(a => a.severity === 'critical');
-    const others = state.alerts.filter(a => a.severity !== 'critical');
+    const others = state.alerts.filter(a => a.severity === 'warning');
+    // Guidance (WHO antibiotic use), not a safety problem: shown apart, never alarming.
+    const guidance = state.alerts.filter(a => a.severity === 'info');
+    const safetyCount = critical.length + others.length;
     const hasLines = state.lines.some(l => l.drugLabel.trim());
 
     let html = '';
     if (state.checking && !state.alerts.length) {
       html = `<p class="text-[11px] text-slate-400">${esc(t('prescriptions.checking'))}</p>`;
-    } else if (hasLines && state.patientId && !state.alerts.length) {
+    } else if (hasLines && state.patientId && !safetyCount) {
       html = `<p class="text-[11px] text-emerald-700 dark:text-emerald-400">✓ ${esc(t('prescriptions.noAlerts'))}</p>`;
     }
     if (critical.length) {
@@ -351,6 +354,13 @@
         <div class="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 p-3">
           <div class="text-xs font-bold text-amber-800 dark:text-amber-300 mb-1">${esc(t('prescriptions.alertsTitle'))}</div>
           <ul class="list-disc pl-5 space-y-1 text-xs text-amber-900 dark:text-amber-200">${others.map(a => `<li>${esc(a.message)}</li>`).join('')}</ul>
+        </div>`;
+    }
+    if (guidance.length) {
+      html += `
+        <div class="rounded-xl border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/40 p-3">
+          <div class="text-xs font-bold text-teal-800 dark:text-teal-300 mb-1">${esc(t('prescriptions.guidanceTitle'))}</div>
+          <ul class="list-disc pl-5 space-y-1 text-xs text-teal-900 dark:text-teal-200">${guidance.map(a => `<li>${esc(a.message)}</li>`).join('')}</ul>
         </div>`;
     }
     el.innerHTML = `<div class="space-y-2">${html}</div>`;
@@ -391,7 +401,13 @@
     const el = byId('rx-drugs');
     if (!el) return;
     if (!state.catalog.length) {
-      el.innerHTML = `<p class="text-center py-10 text-slate-400 text-xs">${esc(t('prescriptions.drugsEmpty'))}</p>`;
+      // A new clinic: offer the WHO starter list (loaded only on request, to review).
+      el.innerHTML = `
+        <div class="text-center py-8 space-y-3">
+          <p class="text-slate-400 text-xs">${esc(t('prescriptions.drugsEmpty'))}</p>
+          <button type="button" data-action="load-starter" class="${BTN_PRIMARY}">${esc(t('prescriptions.starterLoad'))}</button>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 max-w-md mx-auto">${esc(t('prescriptions.starterHint'))}</p>
+        </div>`;
       return;
     }
     el.innerHTML = `
@@ -565,6 +581,12 @@
       case 'rx-drug-new':
         openDrugForm(null);
         break;
+      case 'load-starter': {
+        const { added } = await Molaris.api.post('/api/drugs/starter');
+        Molaris.ui.toast(t('prescriptions.starterLoaded').replace('{n}', added));
+        await refreshDrugs();
+        break;
+      }
       case 'edit-drug':
         openDrugForm(state.catalog.find(d => d.id === target.dataset.id));
         break;

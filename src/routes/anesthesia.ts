@@ -29,6 +29,7 @@ anesthesiaRouter.post('/api/calc-la', (req: Request, res: Response) => {
         isCardiacRisk: isCardiacRisk !== undefined ? !!isCardiacRisk : activePatient.cardiacRisk,
         carpulesGiven: carpulesGiven !== undefined ? Number(carpulesGiven) : 0,
         priorDoses: loggedToday,
+        ageYears: activePatient.age,
         language
       }),
       loggedToday: loggedToday.map(d => ({ drugId: d.drug.id, drugName: d.drug.name, carpules: d.carpules })),

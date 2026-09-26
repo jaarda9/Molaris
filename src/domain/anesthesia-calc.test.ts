@@ -140,3 +140,21 @@ test('a cancelled anesthesia entry no longer counts toward the day', () => {
   ];
   assert.equal(dosesLoggedOn(log, now).reduce((s, d) => s + d.carpules, 0), 2);
 });
+
+test('children get the AAPD paediatric maximum: lidocaine 4.4 mg/kg instead of 7', () => {
+  const lido = ANESTHETICS.find(d => d.id === 'lido_100k')!;
+  const adult = calculateAnestheticDose({ drug: lido, weightKg: 24, isCardiacRisk: false, carpulesGiven: 0, ageYears: 30 });
+  const child = calculateAnestheticDose({ drug: lido, weightKg: 24, isCardiacRisk: false, carpulesGiven: 0, ageYears: 7, language: 'fr' });
+  assert.equal(adult.allowedMaxMg, 168);            // 24 kg × 7 mg/kg
+  assert.equal(child.allowedMaxMg, 106);            // 24 kg × 4.4 mg/kg = 105.6
+  assert.equal(child.safeMaxCarpules, 2.9);         // 105.6 / 36 mg
+  assert.match(child.warning!, /4,4 mg\/kg \(AAPD\)/);
+});
+
+test('articaine under 4 years and bupivacaine under 12 years are flagged', () => {
+  const arti = ANESTHETICS.find(d => d.id === 'arti_100k')!;
+  const bupi = ANESTHETICS.find(d => d.id === 'bupi_200k')!;
+  assert.match(calculateAnestheticDose({ drug: arti, weightKg: 15, isCardiacRisk: false, carpulesGiven: 0, ageYears: 3, language: 'fr' }).warning!, /avant 4 ans/);
+  assert.match(calculateAnestheticDose({ drug: bupi, weightKg: 35, isCardiacRisk: false, carpulesGiven: 0, ageYears: 10, language: 'fr' }).warning!, /avant 12 ans/);
+  assert.equal(calculateAnestheticDose({ drug: arti, weightKg: 60, isCardiacRisk: false, carpulesGiven: 0, ageYears: 30 }).warning, null);
+});

@@ -9,12 +9,33 @@ export interface PrescriptionSafetyAlert {
    * 'patient' = a standing alert about the patient that this prescription does not cause;
    * 'duplicate' = two lines of the same class (two NSAIDs, paracetamol twice).
    */
-  source: 'allergy' | 'interaction' | 'patient' | 'duplicate';
+  source: 'allergy' | 'interaction' | 'patient' | 'duplicate' | 'stewardship';
   /** The prescription line that triggered it (allergy alerts only). */
   drugLabel?: string;
 }
 
 export type SafetyPatient = Pick<PatientRecord, 'allergies' | 'medications'> & Partial<Pick<PatientRecord, 'age' | 'weightKg'>>;
+
+// --- Antibiotic stewardship: WHO AWaRe antibiotic book (2022), « Oral and dental infections » ---
+const plainName = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+const ANTIBIOTIC_TERMS = ['amoxicill', 'penicill', 'phenoxymethyl', 'clavulan', 'clindamycin', 'metronidazol', 'azithromycin',
+  'clarithromycin', 'erythromycin', 'spiramycin', 'doxycyclin', 'tetracyclin', 'cefalexin', 'cefuroxim', 'cefadroxil',
+  'cefixim', 'cefpodoxim', 'ciprofloxacin', 'levofloxacin', 'ofloxacin', 'pristinamycin', 'lincomycin'];
+/** Antibiotics the WHO classes « Watch » (higher resistance risk) that dentists commonly prescribe. */
+const WATCH_TERMS = ['azithromycin', 'clarithromycin'];
+export const isAntibiotic = (name: string) => ANTIBIOTIC_TERMS.some(t => plainName(name).includes(t));
+
+/** WHO AWaRe amoxicillin weight bands for children (80–90 mg/kg/day). */
+function whoChildAmoxicillin(weightKg: number, fr: boolean): string | null {
+  if (!(weightKg >= 3)) return null;
+  const bands: Array<[number, string, string]> = [
+    [6, '250 mg toutes les 12 h', '250 mg every 12 h'], [10, '375 mg toutes les 12 h', '375 mg every 12 h'],
+    [15, '500 mg toutes les 12 h', '500 mg every 12 h'], [20, '750 mg toutes les 12 h', '750 mg every 12 h'],
+    [Infinity, '500 mg toutes les 8 h ou 1 g toutes les 12 h', '500 mg every 8 h or 1 g every 12 h']
+  ];
+  const band = bands.find(([max]) => weightKg < max)!;
+  return fr ? band[1] : band[2];
+}
 
 /** Under this age the catalog's default (adult) doses must be adapted to the child's weight. */
 export const PEDIATRIC_AGE_LIMIT = 15;
@@ -110,6 +131,42 @@ export function checkPrescriptionSafety(
         ? `Enfant de ${patient.age} ans${weight} : la liste des médicaments contient des dosages adultes. Écrire chaque dose selon le poids, avec une forme pédiatrique.`
         : `Child aged ${patient.age}${weight}: the drug list holds adult strengths. Write each dose for the weight, with a paediatric form.`
     });
+  }
+
+  // WHO AWaRe: most dental infections are treated by the dental procedure, not antibiotics.
+  const fr = language === 'fr';
+  const antibiotics = planned.filter(isAntibiotic);
+  if (antibiotics.length) {
+    alerts.push({
+      severity: 'info',
+      source: 'stewardship',
+      message: fr
+        ? 'Antibiotique (OMS, guide AWaRe 2022) : non indiqué pour la douleur, la pulpite ni avant un acte courant ; le traitement est le geste dentaire (drainage, extraction). À réserver aux infections qui s’étendent avec signes généraux (tuméfaction faciale, trismus, fièvre ≥ 38 °C), à l’immunodépression sévère ou au diabète non équilibré. Durée : 3 jours si la cause est traitée, sinon 5 jours ; premier choix amoxicilline ou phénoxyméthylpénicilline.'
+        : 'Antibiotic (WHO AWaRe book 2022): not indicated for pain, pulpitis or before routine procedures; the treatment is the dental procedure (drainage, extraction). Keep for spreading infections with systemic signs (facial swelling, trismus, fever ≥ 38 °C), severe immunosuppression or uncontrolled diabetes. Duration: 3 days if the source is treated, otherwise 5 days; first choice amoxicillin or phenoxymethylpenicillin.'
+    });
+  }
+  const watch = antibiotics.filter(name => WATCH_TERMS.some(t => plainName(name).includes(t)));
+  if (watch.length) {
+    alerts.push({
+      severity: 'warning',
+      source: 'stewardship',
+      message: fr
+        ? `${watch.join(', ')} : antibiotique du groupe « Watch » de l’OMS (risque plus élevé de résistances). Pour une infection dentaire, les antibiotiques du groupe « Access » (amoxicilline, phénoxyméthylpénicilline) sont le premier choix.`
+        : `${watch.join(', ')}: WHO « Watch » group antibiotic (higher resistance risk). For dental infections, « Access » antibiotics (amoxicillin, phenoxymethylpenicillin) are the first choice.`
+    });
+  }
+  if (typeof patient.age === 'number' && patient.age < PEDIATRIC_AGE_LIMIT && patient.weightKg
+    && antibiotics.some(name => plainName(name).includes('amoxicill') && !plainName(name).includes('clavulan'))) {
+    const band = whoChildAmoxicillin(patient.weightKg, fr);
+    if (band) {
+      alerts.push({
+        severity: 'info',
+        source: 'stewardship',
+        message: fr
+          ? `Repère OMS (AWaRe 2022) pour l’amoxicilline chez l’enfant : 80–90 mg/kg/jour, soit pour ${String(patient.weightKg).replace('.', ',')} kg : ${band}.`
+          : `WHO reference (AWaRe 2022) for amoxicillin in children: 80–90 mg/kg/day, i.e. for ${patient.weightKg} kg: ${band}.`
+      });
+    }
   }
 
   const order: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 };
