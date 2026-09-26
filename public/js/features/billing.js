@@ -16,6 +16,8 @@
     patients: [],
     tab: 'quotes',         // quotes | payments | daily | catalog
     dailyDate: Molaris.format.isoDate(),
+    // "Today" follows the calendar (PC left on overnight) until another day is picked.
+    dailyFollowsToday: true,
     showInactive: false
   };
 
@@ -733,6 +735,7 @@
   // ---------------------------------------------------------------------------
 
   async function renderDaily(content) {
+    if (state.dailyFollowsToday) state.dailyDate = Molaris.format.isoDate();
     const { daily } = await Molaris.api.get(`/api/payments/daily?date=${encodeURIComponent(state.dailyDate)}`);
     const methodTiles = METHODS.map(m => `
       <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3">
@@ -923,7 +926,7 @@
         state.patientId = btn.dataset.patientId;
         state.tab = 'payments';
         return refresh();
-      case 'daily-today': state.dailyDate = Molaris.format.isoDate(); return refresh();
+      case 'daily-today': state.dailyDate = Molaris.format.isoDate(); state.dailyFollowsToday = true; return refresh();
       case 'print-daily': return printDaily();
       case 'new-procedure': return openProcedureForm(null);
       case 'edit-procedure': {
@@ -938,7 +941,11 @@
 
   function onChange(e) {
     if (e.target.id === 'billing-patient') { state.patientId = e.target.value; refresh(); }
-    else if (e.target.id === 'billing-daily-date' && e.target.value) { state.dailyDate = e.target.value; refresh(); }
+    else if (e.target.id === 'billing-daily-date' && e.target.value) {
+      state.dailyDate = e.target.value;
+      state.dailyFollowsToday = e.target.value === Molaris.format.isoDate();
+      refresh();
+    }
     else if (e.target.id === 'billing-show-inactive') { state.showInactive = e.target.checked; refresh(); }
   }
 
